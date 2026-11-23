@@ -1,0 +1,705 @@
+/* ==========================================================================
+   Pico CSS Custom Overrides & Modern Web Guidance Patterns
+   ========================================================================== */
+
+:root {
+  --vf-true-color: #16a34a;
+  --vf-true-bg: rgba(22, 163, 74, 0.12);
+  --vf-false-color: #dc2626;
+  --vf-false-bg: rgba(220, 38, 38, 0.12);
+  --vf-box0-color: #e11d48;
+  --vf-box1-color: #d97706;
+  --vf-box2-color: #16a34a;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* Header & Navigation */
+.app-header {
+  padding-top: 0.75rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--pico-muted-border-color);
+  margin-bottom: 1.25rem;
+}
+
+.brand-title {
+  font-size: 1.15rem;
+  display: block;
+  line-height: 1.2;
+}
+
+.brand-sub {
+  color: var(--pico-muted-color);
+  font-size: 0.78rem;
+}
+
+.btn-sm {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.btn-lg {
+  width: 100%;
+  font-weight: 700;
+  padding: 0.85rem 1.2rem;
+}
+
+/* Dashboard Welcome Banner */
+.welcome-banner {
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border-left: 5px solid var(--pico-primary);
+}
+
+.welcome-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.welcome-banner h2 {
+  margin-bottom: 0.35rem;
+  font-size: 1.35rem;
+}
+
+.muted-text {
+  color: var(--pico-muted-color);
+  margin-bottom: 0;
+  font-size: 0.92rem;
+}
+
+.day-badge-box {
+  background: var(--pico-card-sectioning-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.5rem 0.9rem;
+  text-align: center;
+  min-width: 130px;
+}
+
+.day-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pico-muted-color);
+}
+
+/* Subject Cards */
+.subject-grid {
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 1.15rem;
+}
+
+.subject-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 0;
+  border-top: 4px solid var(--pico-primary);
+}
+
+.subject-card[data-subject="quimica"] {
+  border-top-color: #0284c7;
+}
+.subject-card[data-subject="biologia"] {
+  border-top-color: #16a34a;
+}
+.subject-card[data-subject="fisica"] {
+  border-top-color: #7c3aed;
+}
+
+.subject-card header {
+  margin-bottom: 0.75rem;
+}
+
+.subject-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.subject-card h3 {
+  margin-bottom: 0.2rem;
+  font-size: 1.2rem;
+}
+
+.subject-subtitle {
+  color: var(--pico-muted-color);
+  font-size: 0.82rem;
+  display: block;
+}
+
+.status-chip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.chip-done {
+  background: var(--vf-true-bg);
+  color: var(--vf-true-color);
+}
+
+.chip-progress {
+  background: rgba(217, 119, 6, 0.15);
+  color: var(--vf-box1-color);
+}
+
+.chip-pending {
+  background: var(--pico-card-sectioning-background-color);
+  color: var(--pico-muted-color);
+}
+
+.step-box {
+  background: var(--pico-card-sectioning-background-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.7rem 0.85rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.88rem;
+}
+
+.step-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.step-row:last-child {
+  margin-bottom: 0;
+}
+
+.subject-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.subject-actions button {
+  margin-bottom: 0;
+}
+
+/* Top Bar Nav inside views */
+.top-bar-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.block-sub {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--pico-muted-color);
+}
+
+.badge-pill {
+  background: var(--pico-card-sectioning-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+/* Leitner Boxes Bar */
+.leitner-bars {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.leitner-box {
+  background: var(--pico-card-background-color);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.5rem 0.65rem;
+  text-align: center;
+  border-bottom: 3px solid transparent;
+}
+
+.leitner-box.box-0 { border-bottom-color: var(--vf-box0-color); }
+.leitner-box.box-1 { border-bottom-color: var(--vf-box1-color); }
+.leitner-box.box-2 { border-bottom-color: var(--vf-box2-color); }
+
+.box-title {
+  display: block;
+  font-size: 0.73rem;
+  color: var(--pico-muted-color);
+}
+
+.leitner-box strong {
+  font-size: 1.15rem;
+}
+
+.swipe-hint {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+  color: var(--pico-muted-color);
+  margin-bottom: 0.6rem;
+  padding: 0 0.25rem;
+}
+
+/* ==========================================================================
+   Swipeable Flashcard Component (modern-web-guidance: swipe-to-remove)
+   ========================================================================== */
+
+.SwipeableList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 1.25rem 0;
+}
+
+.SwipeableList-item {
+  contain: content;
+  position: relative;
+  border-radius: var(--pico-border-radius);
+  box-shadow: var(--pico-card-box-shadow);
+  border: 1px solid var(--pico-muted-border-color);
+  margin-bottom: 0;
+  /* Note: Swiping RIGHT reveals the LEFT side (--left-action = VERDADEIRO);
+     Swiping LEFT reveals the RIGHT side (--right-action = FALSO). */
+  --left-action-color: #16a34a;
+  --left-action-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/></svg>");
+  --right-action-color: #dc2626;
+  --right-action-icon: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'><path d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/></svg>");
+}
+
+.SwipeableList-item.is-initialized .SwipeableList-track {
+  display: grid;
+  grid-template-columns: 100% 100% 100%;
+  overflow: scroll clip;
+  overscroll-behavior-x: none;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  background-image: linear-gradient(
+    to right,
+    var(--left-action-color) 50%,
+    var(--right-action-color) 50%
+  );
+  background-attachment: local;
+  cursor: grab;
+}
+
+.SwipeableList-item.is-initialized .SwipeableList-track::-webkit-scrollbar {
+  display: none;
+}
+
+.SwipeableList-item.is-initialized .SwipeableList-track::before,
+.SwipeableList-item.is-initialized .SwipeableList-track::after {
+  content: '';
+  scroll-snap-align: start;
+}
+
+.SwipeableList-content {
+  position: relative;
+  z-index: 2;
+  scroll-snap-align: start;
+  background: var(--pico-card-background-color);
+  padding: 1.5rem 1.35rem;
+  min-height: 250px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  user-select: none;
+}
+
+.SwipeableList-item.is-initialized .SwipeableList-content {
+  scroll-initial-target: nearest;
+}
+
+.SwipeableList-track:focus-visible .SwipeableList-content {
+  outline: auto;
+  outline-offset: -2px;
+}
+
+.SwipeableList-item.is-initialized::before,
+.SwipeableList-item.is-initialized::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  width: 2.5rem;
+  aspect-ratio: 1;
+  top: 50%;
+  translate: 0 -50%;
+  transition: scale 0.2s ease, opacity 0.2s ease;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+.SwipeableList-item.is-initialized::before {
+  left: 1.5rem;
+  background-image: var(--left-action-icon);
+}
+
+.SwipeableList-item.is-initialized::after {
+  right: 1.5rem;
+  background-image: var(--right-action-icon);
+}
+
+.SwipeableList-item.is-activating::before,
+.SwipeableList-item.is-activating::after {
+  scale: 1.35;
+}
+
+.SwipeableList-item.is-removing::before,
+.SwipeableList-item.is-removing::after {
+  scale: 0.5;
+  opacity: 0;
+}
+
+.SwipeableList-item.is-activating[data-swipe-direction="left"]::after,
+.SwipeableList-item.is-activating[data-swipe-direction="right"]::before {
+  visibility: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .SwipeableList-item.is-activating::before,
+  .SwipeableList-item.is-activating::after {
+    scale: 1;
+  }
+}
+
+/* Flashcard internal layout */
+.card-meta-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.card-topic-tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--pico-primary);
+  background: var(--pico-card-sectioning-background-color);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+.card-box-tag {
+  font-size: 0.75rem;
+  color: var(--pico-muted-color);
+}
+
+.card-statement-text {
+  font-size: 1.22rem;
+  line-height: 1.45;
+  font-weight: 500;
+  text-align: center;
+  margin: 1.1rem 0 1.5rem 0;
+}
+
+.vf-button-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+.btn-vf-false {
+  background-color: transparent;
+  border: 2px solid var(--vf-false-color);
+  color: var(--vf-false-color);
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+.btn-vf-false:hover,
+.btn-vf-false:focus {
+  background-color: var(--vf-false-color);
+  color: #fff;
+}
+
+.btn-vf-true {
+  background-color: transparent;
+  border: 2px solid var(--vf-true-color);
+  color: var(--vf-true-color);
+  font-weight: 700;
+  margin-bottom: 0;
+}
+
+.btn-vf-true:hover,
+.btn-vf-true:focus {
+  background-color: var(--vf-true-color);
+  color: #fff;
+}
+
+/* Feedback Card on Error */
+.vf-feedback-card {
+  border-left: 5px solid var(--vf-false-color);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.feedback-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.feedback-stmt {
+  font-style: italic;
+  color: var(--pico-muted-color);
+  margin-bottom: 0.5rem;
+}
+
+.feedback-ans {
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.feedback-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.feedback-actions button {
+  margin-bottom: 0;
+}
+
+.explanation-collapse {
+  margin-top: 0.75rem;
+  background: var(--pico-card-sectioning-background-color);
+  padding: 0.85rem 1rem;
+  border-radius: var(--pico-border-radius);
+}
+
+.explanation-collapse hr {
+  display: none;
+}
+
+.explanation-collapse p {
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+/* Toast notification for right answers */
+.quick-hit-banner {
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.45rem;
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 0.75rem;
+  background: var(--vf-true-bg);
+  color: var(--vf-true-color);
+}
+
+/* ==========================================================================
+   Exam Simulado Styles
+   ========================================================================== */
+
+.simulado-notice {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--pico-card-sectioning-background-color);
+  border-left: 4px solid var(--pico-primary);
+}
+
+.question-card {
+  margin-bottom: 1.1rem;
+  padding: 1.15rem 1.25rem;
+}
+
+.question-num {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--pico-primary);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
+.question-text {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.9rem;
+}
+
+.option-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.option-label:hover {
+  background: var(--pico-card-sectioning-background-color);
+}
+
+.option-label input[type="radio"] {
+  margin-top: 0.22rem;
+  flex-shrink: 0;
+}
+
+.option-label:has(input:checked) {
+  border-color: var(--pico-primary);
+  background: var(--pico-card-sectioning-background-color);
+  font-weight: 600;
+}
+
+.exam-submit-footer {
+  margin-top: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.error-msg {
+  color: var(--vf-false-color);
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+/* Result & Gabarito */
+.result-hero-card {
+  text-align: center;
+  padding: 1.5rem;
+  border-top: 5px solid var(--pico-primary);
+}
+
+.result-hero-card.passed {
+  border-top-color: var(--vf-true-color);
+}
+
+.result-hero-card.retry {
+  border-top-color: var(--vf-box1-color);
+}
+
+.result-cta-group {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.review-q-card {
+  border-left: 5px solid var(--pico-muted-border-color);
+  margin-bottom: 1rem;
+}
+
+.review-q-card.is-correct {
+  border-left-color: var(--vf-true-color);
+}
+
+.review-q-card.is-wrong {
+  border-left-color: var(--vf-false-color);
+}
+
+.review-ans-line {
+  font-size: 0.92rem;
+  margin-bottom: 0.35rem;
+}
+
+/* ==========================================================================
+   Modal Dialog (modern-web-guidance: dialog)
+   ========================================================================== */
+
+dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.dialog-box {
+  max-width: 640px;
+  width: 100%;
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dialog-header h1 {
+  font-size: 1.2rem;
+  margin-bottom: 0;
+}
+
+.dialog-header form {
+  margin-bottom: 0;
+}
+
+.dialog-btn-grid {
+  margin-bottom: 0.75rem;
+}
+
+.file-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--pico-form-element-spacing-vertical) var(--pico-form-element-spacing-horizontal);
+  border: 1px solid var(--pico-secondary-border);
+  border-radius: var(--pico-border-radius);
+  color: var(--pico-secondary);
+  cursor: pointer;
+  text-align: center;
+  font-weight: 600;
+  margin-bottom: var(--pico-spacing);
+}
+
+.admin-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.danger-text {
+  color: var(--vf-false-color);
+  border-color: var(--vf-false-color);
+}
+
+.toast-msg {
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--pico-border-radius);
+  background: var(--vf-true-bg);
+  color: var(--vf-true-color);
+  font-weight: 600;
+  text-align: center;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

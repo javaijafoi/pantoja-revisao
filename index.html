@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Revisão Ciências 8º Ano — Pantoja</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="container app-header">
+    <nav>
+      <ul>
+        <li>
+          <strong class="brand-title">🧬 Revisão Pantoja</strong>
+          <small class="brand-sub">Ciências • 8º Ano (4º Bim)</small>
+        </li>
+      </ul>
+      <ul>
+        <li>
+          <button type="button" class="outline secondary btn-sm" id="btn-open-report" command="show-modal" commandfor="dialog-report">
+            📊 Relatório / Save
+          </button>
+        </li>
+        <li>
+          <button type="button" class="outline contrast btn-sm" id="btn-theme-toggle" aria-label="Alternar tema claro ou escuro">
+            🌓
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container" id="app-main">
+    <!-- DASHBOARD VIEW -->
+    <section id="view-dashboard">
+      <article class="welcome-banner">
+        <div class="welcome-flex">
+          <div>
+            <h2>Bora gabaritar, Pantoja! 🚀</h2>
+            <p class="muted-text">
+              Fluxo do dia por frente: <strong>1)</strong> Revisar os 30 cards V/F até dominar todos (2 acertos seguidos na Caixa 2) → <strong>2)</strong> Fazer a prova de 10 questões (meta: <strong>8/10 ou mais</strong>; até 3 tentativas no dia).
+            </p>
+          </div>
+          <div class="day-badge-box">
+            <span class="day-label">Progresso de Hoje</span>
+            <strong id="today-date-label">--/--</strong>
+          </div>
+        </div>
+      </article>
+
+      <div class="grid subject-grid" id="subject-cards-container">
+        <!-- Populated by app.js -->
+      </div>
+    </section>
+
+    <!-- FLASHCARDS V/F VIEW -->
+    <section id="view-flashcards" hidden>
+      <div class="top-bar-nav">
+        <button type="button" class="outline secondary btn-sm" id="btn-back-from-vf">← Voltar ao Início</button>
+        <strong id="vf-subject-title">Química</strong>
+        <span class="badge-pill" id="vf-counter-badge">0 / 30</span>
+      </div>
+
+      <!-- Leitner Boxes Summary -->
+      <div class="leitner-bars" aria-label="Progresso nas caixas de memorização">
+        <div class="leitner-box box-0">
+          <span class="box-title">Caixa 0 (Falta 2x)</span>
+          <strong id="count-box-0">30</strong>
+        </div>
+        <div class="leitner-box box-1">
+          <span class="box-title">Caixa 1 (Falta 1x)</span>
+          <strong id="count-box-1">0</strong>
+        </div>
+        <div class="leitner-box box-2">
+          <span class="box-title">Dominados (2/2 ✅)</span>
+          <strong id="count-box-2">0</strong>
+        </div>
+      </div>
+
+      <progress id="vf-progress-bar" value="0" max="60"></progress>
+
+      <!-- Swipe instructions -->
+      <p class="swipe-hint">
+        <span>👈 Arraste p/ Esquerda = <strong>FALSO</strong></span>
+        <span><strong>VERDADEIRO</strong> = Arraste p/ Direita 👉</span>
+      </p>
+
+      <!-- Native CSS Scroll-Snap Swipe Deck (modern-web-guidance swipe-to-remove pattern) -->
+      <ul class="SwipeableList" id="vf-swipe-list" role="list" aria-label="Cartão atual de Verdadeiro ou Falso">
+        <!-- Active flashcard item rendered dynamically here -->
+      </ul>
+      <p role="status" class="SwipeableList-status visually-hidden" id="vf-live-status"></p>
+
+      <!-- Feedback Banner when user makes a mistake or completes a card -->
+      <article id="vf-feedback-box" class="vf-feedback-card" hidden>
+        <header class="feedback-header">
+          <strong id="vf-feedback-title">Ops, você errou!</strong>
+          <span id="vf-feedback-badge" class="badge-pill">Voltou p/ Caixa 0</span>
+        </header>
+        <p id="vf-feedback-statement" class="feedback-stmt"></p>
+        <p id="vf-feedback-correct-ans" class="feedback-ans"></p>
+
+        <div class="feedback-actions">
+          <button type="button" class="outline secondary" id="btn-toggle-explanation">
+            💡 Ver Explicação
+          </button>
+          <button type="button" class="primary" id="btn-next-card">
+            Próximo Card →
+          </button>
+        </div>
+
+        <div id="vf-explanation-content" class="explanation-collapse" hidden>
+          <hr>
+          <p id="vf-explanation-text"></p>
+        </div>
+      </article>
+    </section>
+
+    <!-- EXAM SIMULADO VIEW -->
+    <section id="view-exam" hidden>
+      <div class="top-bar-nav">
+        <button type="button" class="outline secondary btn-sm" id="btn-back-from-exam">← Voltar</button>
+        <div>
+          <strong id="exam-subject-title">Química — Prova 1</strong>
+          <small id="exam-attempt-label" class="block-sub">Tentativa 1 de 3 hoje</small>
+        </div>
+        <span class="badge-pill" id="exam-answered-badge">0 / 10 respondidas</span>
+      </div>
+
+      <article class="simulado-notice">
+        <small>📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.</small>
+      </article>
+
+      <form id="exam-form">
+        <div id="exam-questions-container">
+          <!-- 10 questions rendered here -->
+        </div>
+
+        <footer class="exam-submit-footer">
+          <p id="exam-incomplete-msg" class="error-msg" hidden>⚠️ Responda todas as 10 questões antes de entregar a prova!</p>
+          <button type="submit" class="primary btn-lg" id="btn-submit-exam">
+            ✅ Entregar Prova e Ver Nota
+          </button>
+        </footer>
+      </form>
+    </section>
+
+    <!-- EXAM RESULT & GABARITO VIEW -->
+    <section id="view-exam-result" hidden>
+      <div class="top-bar-nav">
+        <button type="button" class="outline secondary btn-sm" id="btn-back-from-result">← Voltar ao Painel</button>
+        <strong id="result-exam-title">Resultado da Prova</strong>
+        <span></span>
+      </div>
+
+      <article id="result-summary-card" class="result-hero-card">
+        <h2 id="result-score-heading">Nota: 9 / 10</h2>
+        <p id="result-status-message"></p>
+        <div class="result-cta-group" id="result-cta-container">
+          <!-- Dynamic action buttons: Next exam or back to dashboard -->
+        </div>
+      </article>
+
+      <h3>Gabarito Comentado</h3>
+      <div id="result-review-container">
+        <!-- Detailed review of each question with optional/expanded explanation -->
+      </div>
+    </section>
+  </main>
+
+  <!-- NATIVE MODAL DIALOG FOR REPORT & JSON SAVE -->
+  <dialog id="dialog-report" closedby="any" aria-labelledby="dialog-report-title">
+    <article class="dialog-box">
+      <header class="dialog-header">
+        <h1 id="dialog-report-title">📊 Relatório do Dia & Backup (Save)</h1>
+        <form method="dialog">
+          <button value="close" aria-label="Fechar janela" class="outline secondary btn-sm">✕</button>
+        </form>
+      </header>
+
+      <p class="muted-text">
+        Envie o resumo do dia para o Peter ajustar os cartões de amanhã, ou salve/carregue seu arquivo JSON de progresso.
+      </p>
+
+      <label for="report-textarea"><strong>Resumo para WhatsApp + JSON de Save:</strong></label>
+      <textarea id="report-textarea" rows="8" readonly></textarea>
+
+      <div class="grid dialog-btn-grid">
+        <button type="button" class="primary" id="btn-copy-report" autofocus>
+          📋 Copiar Relatório + Save
+        </button>
+        <button type="button" class="secondary" id="btn-download-json">
+          💾 Baixar Save (.json)
+        </button>
+      </div>
+
+      <hr>
+
+      <details>
+        <summary><strong>🔄 Restaurar / Carregar Save JSON ou Ajuste do Dia Seguinte</strong></summary>
+        <p class="muted-text"><small>Cole abaixo o código JSON enviado pelo Peter ou carregue um arquivo <code>.json</code> salvo:</small></p>
+        <textarea id="import-json-textarea" rows="4" placeholder='Cole o JSON de save aqui...'></textarea>
+        <div class="grid">
+          <button type="button" class="outline primary" id="btn-import-json-text">
+            📥 Carregar JSON Colado
+          </button>
+          <label class="file-upload-btn outline secondary">
+            📂 Escolher Arquivo .json
+            <input type="file" id="input-import-file" accept=".json,application/json" hidden>
+          </label>
+        </div>
+        <hr>
+        <div class="admin-actions">
+          <button type="button" class="outline contrast btn-sm" id="btn-advance-day">
+            ⏭️ Virar o Dia (Preparar Revisão de Amanhã com foco nos erros)
+          </button>
+          <button type="button" class="outline secondary btn-sm danger-text" id="btn-reset-all">
+            🗑️ Zerar Todo o Progresso
+          </button>
+        </div>
+      </details>
+
+      <p id="report-feedback-toast" role="status" class="toast-msg" hidden></p>
+    </article>
+  </dialog>
+
+  <script src="data-quimica.js"></script>
+  <script src="data-biologia.js"></script>
+  <script src="data-fisica.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
