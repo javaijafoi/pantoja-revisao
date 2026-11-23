@@ -1,217 +1,217 @@
 window.DATA_BIOLOGIA = {
   id: "biologia",
   title: "Biologia",
-  subtitle: "Cap. 07 Bernoulli — Briófitas, Pteridófitas, Gimnospermas, Angiospermas e Aplicações",
+  subtitle: "Cap. 07 Bernoulli (Dia 2) — Foco em Vasos, Flor, Pteridófitas, Frutos e Grupos Vegetais",
   cards: [
     {
       id: "b-vf-1",
       topic: "Características das Plantas",
-      statement: "Todas as plantas do Reino Plantae são organismos eucariontes, pluricelulares e autótrofos, realizando fotossíntese para converter energia luminosa em energia química.",
-      answer: true,
-      explanation: "Verdadeiro! Como visto no Capítulo 07 do Bernoulli, as plantas possuem células eucarióticas, são pluricelulares e produzem seu próprio alimento (glicose) pela fotossíntese."
+      statement: "As plantas do Reino Plantae são organismos procariontes e heterótrofos que precisam ingerir outros seres para obter energia.",
+      answer: false,
+      explanation: "Falso! Todas as plantas são EUCARIONTES (célula com núcleo), pluricelulares e AUTÓTROFAS (fabricam seu próprio alimento pela fotossíntese)."
     },
     {
       id: "b-vf-2",
-      topic: "Fotossíntese",
-      statement: "A clorofila, pigmento responsável pela cor verde das plantas e pela absorção da energia solar na fotossíntese, fica localizada no interior de organelas chamadas cloroplastos.",
+      topic: "Fotossíntese e Cloroplasto",
+      statement: "A clorofila (pigmento verde que absorve a luz solar na fotossíntese) fica guardada dentro de organelas da célula vegetal chamadas cloroplastos.",
       answer: true,
-      explanation: "Verdadeiro! Nos cloroplastos das células vegetais, a clorofila absorve a luz solar para transformar água e gás carbônico em glicose e oxigênio."
+      explanation: "Verdadeiro! Nos cloroplastos, a clorofila usa a luz do Sol para transformar água e CO₂ em glicose e oxigênio (O₂)."
     },
     {
       id: "b-vf-3",
-      topic: "Vasos Condutores",
-      statement: "O xilema é o vaso condutor periférico responsável por transportar a seiva elaborada (nutrientes da fotossíntese) em fluxo bidirecional, enquanto o floema transporta água e sais minerais.",
+      topic: "Xilema vs. Floema (Reforço)",
+      statement: "O xilema é o vaso condutor que transporta a seiva elaborada (açúcares da fotossíntese) em fluxo bidirecional.",
       answer: false,
-      explanation: "Falso! É o contrário: o XILEMA (central) transporta a seiva bruta (água e sais minerais absorvidos pela raiz) em fluxo unidirecional, enquanto o FLOEMA (periférico) transporta a seiva elaborada em fluxo bidirecional."
+      explanation: "Falso! Dica para nunca mais esquecer: XILEMA começa com som de CH (puxa água e sais do CHÃO = seiva bruta!). Quem leva a seiva elaborada das folhas é o FLOEMA."
     },
     {
       id: "b-vf-4",
-      topic: "Briófitas",
-      statement: "As briófitas (como musgos, hepáticas e antóceros) são plantas avasculares e, por isso, transportam água e nutrientes de célula a célula por difusão, o que limita seu porte a poucos centímetros.",
+      topic: "Xilema — Fluxo Unidirecional",
+      statement: "O xilema (vaso central) transporta água e sais minerais (seiva bruta) em fluxo unidirecional, apenas subindo das raízes até as folhas.",
       answer: true,
-      explanation: "Verdadeiro! Sem vasos condutores (xilema e floema), o transporte ocorre por difusão lenta célula a célula, obrigando as briófitas a serem pequenas e viverem em locais úmidos e sombreados."
+      explanation: "Verdadeiro! O xilema leva água e sais minerais das raízes para cima (unidirecional), alimentando as folhas para a fotossíntese."
     },
     {
       id: "b-vf-5",
-      topic: "Briófitas",
-      statement: "As briófitas possuem raízes, caules e folhas verdadeiros, exatamente iguais aos das samambaias e pinheiros.",
+      topic: "Briófitas — Estruturas",
+      statement: "As briófitas (musgos) possuem raízes, caules e folhas verdadeiros, iguais aos das samambaias e pinheiros.",
       answer: false,
-      explanation: "Falso! Por não terem vasos condutores, as estruturas das briófitas não são órgãos verdadeiros e recebem os nomes de rizoide (fixação e absorção), cauloide (sustentação) e filoide (fotossíntese)."
+      explanation: "Falso! Briófitas não têm vasos condutores e, por isso, não formam órgãos verdadeiros: suas partes chamam-se rizoide, cauloide e filoide."
     },
     {
       id: "b-vf-6",
-      topic: "Briófitas",
-      statement: "Se uma pessoa plantar musgos em um muro que recebe sol forte e direto o dia inteiro e sem umidade, os musgos morrerão desidratados e não conseguirão se reproduzir.",
+      topic: "Briófitas — Ambiente",
+      statement: "Se plantarmos musgos em um muro com sol forte o dia inteiro e sem umidade, eles morrerão desidratados porque dependem de locais úmidos e sombreados.",
       answer: true,
-      explanation: "Verdadeiro! Como na questão 08 da apostila Bernoulli, os musgos são avasculares, desidratam facilmente sob sol intenso e dependem diretamente da água líquida para que o anterozoide nade até a oosfera."
+      explanation: "Verdadeiro! Sem vasos condutores e sem casca protetora espessa, os musgos perdem água rápido sob sol direto e precisam de umidade para viver e se reproduzir."
     },
     {
       id: "b-vf-7",
-      topic: "Briófitas vs Pteridófitas",
-      statement: "No ciclo de vida das briófitas (alternância de gerações), a fase duradoura e autossustentável é o gametófito, enquanto o esporófito é a fase transitória que cresce sobre a planta feminina.",
+      topic: "Fase Duradoura (Briófitas vs. Pteridófitas)",
+      statement: "Nas briófitas a fase duradoura é o gametófito (tapete verde), enquanto nas pteridófitas a fase duradoura é o esporófito (samambaia adulta).",
       answer: true,
-      explanation: "Verdadeiro! Nas briófitas, o tapete verde permanente é o gametófito (fase duradoura), e a haste com cápsula produtora de esporos é o esporófito (fase transitória e dependente)."
+      explanation: "Verdadeiro! Só nas briófitas o gametófito dura mais; a partir das pteridófitas (plantas vasculares), a planta grande e duradoura é sempre o esporófito."
     },
     {
       id: "b-vf-8",
-      topic: "Pteridófitas",
-      statement: "As pteridófitas (como samambaias, avencas, licopódios e samambaiaçus) foram o primeiro grupo vegetal a apresentar vasos condutores de seiva e órgãos verdadeiros (raiz, caule e folha).",
+      topic: "Floema — Seiva Elaborada",
+      statement: "O floema (vaso periférico) transporta a seiva elaborada — os nutrientes produzidos na fotossíntese — em fluxo bidirecional para toda a planta.",
       answer: true,
-      explanation: "Verdadeiro! O surgimento dos vasos condutores (xilema e floema) é a grande novidade evolutiva das pteridófitas em relação às briófitas, permitindo que atinjam porte maior."
+      explanation: "Verdadeiro! Dica: FLOEMA vem de FOLHA/FABRICADO — leva o alimento fabricado nas folhas tanto para cima quanto para baixo (fluxo bidirecional)."
     },
     {
       id: "b-vf-9",
-      topic: "Pteridófitas",
-      statement: "Nas pteridófitas, a fase duradoura do ciclo de vida é o protalo (gametófito), enquanto a samambaia adulta com folhas grandes é o esporófito transitório.",
+      topic: "Pteridófitas — Esporófito vs. Protalo",
+      statement: "Nas samambaias (pteridófitas), a planta grande e duradoura que vemos nos vasos chama-se protalo (gametófito).",
       answer: false,
-      explanation: "Falso! Nas pteridófitas ocorre a inversão em relação às briófitas: o ESPORÓFITO (a samambaia que vemos nos vasos) é a fase duradoura, enquanto o gametófito (protalo, em forma de coração) é pequeno e transitório."
+      explanation: "Falso! A samambaia grande e duradoura é o ESPORÓFITO. O protalo (gametófito em forma de coração, de ~1 cm) é pequeno e transitório (desaparece rápido)."
     },
     {
       id: "b-vf-10",
-      topic: "Pteridófitas",
-      statement: "Os pontinhos escuros visíveis na face inferior das folhas das samambaias no período reprodutivo são doenças causadas por fungos.",
+      topic: "Pteridófitas — Soros",
+      statement: "Os pontinhos escuros na parte de baixo das folhas das samambaias são fungos parasitas que deixam a planta doente.",
       answer: false,
-      explanation: "Falso! Esses pontinhos são os SOROS (esporângios), estruturas naturais responsáveis pela produção de esporos para a reprodução da samambaia."
+      explanation: "Falso! Esses pontinhos são os SOROS (esporângios), estruturas saudáveis da própria samambaia que produzem os esporos."
     },
     {
       id: "b-vf-11",
-      topic: "Pteridófitas",
-      statement: "Na anatomia de uma samambaia, o caule subterrâneo horizontal chama-se rizoma e a folha jovem enrolada chama-se báculo.",
-      answer: true,
-      explanation: "Verdadeiro! Como mostra o esquema do capítulo 07, a samambaia apresenta raízes, rizoma (caule), báculo (folha jovem enrolada) e folhas com soros."
+      topic: "Briófitas — Avasculares",
+      statement: "Assim como as pteridófitas, as briófitas já possuem xilema e floema para transportar água rapidamente até grandes alturas.",
+      answer: false,
+      explanation: "Falso! Briófitas são AVASCULARES (não têm xilema nem floema). Elas transportam água lentamente de célula a célula por difusão, ficando com poucos centímetros."
     },
     {
       id: "b-vf-12",
-      topic: "Pteridófitas e Ecologia",
-      statement: "A extração comercial de vasos de xaxim, feitos do caule do samambaiaçu (Dicksonia sellowiana), é proibida atualmente porque essa pteridófita entrou na lista de espécies ameaçadas de extinção, sendo substituída por vasos de fibra de coco.",
+      topic: "Dependência de Água (Briófitas e Pteridófitas)",
+      statement: "Tanto as briófitas quanto as pteridófitas dependem diretamente da água líquida para a reprodução, pois seus gametas masculinos têm flagelos para nadar.",
       answer: true,
-      explanation: "Verdadeiro! O samambaiaçu leva muitos anos para crescer e a exploração predatória para fazer vasos de xaxim colocou a espécie em risco de extinção."
+      explanation: "Verdadeiro! Sem grão de pólen, tanto os musgos quanto as samambaias precisam da água da chuva ou do orvalho para o anterozoide nadar até o gameta feminino."
     },
     {
       id: "b-vf-13",
-      topic: "Pteridófitas",
-      statement: "Apesar de possuírem vasos condutores, as pteridófitas ainda dependem da água líquida do ambiente para a fecundação, pois seus gametas masculinos possuem flagelos para nadar até o gameta feminino.",
-      answer: true,
-      explanation: "Verdadeiro! Tanto briófitas quanto pteridófitas têm gametas masculinos flagelados (anterozoides) que precisam nadar na água até a oosfera, restringindo-as a ambientes úmidos."
+      topic: "Independência de Água (Gimnospermas e Angiospermas)",
+      statement: "As gimnospermas e as angiospermas ainda dependem da água da chuva para que seus gametas masculinos nadem até o óvulo.",
+      answer: false,
+      explanation: "Falso! Gimnospermas e angiospermas desenvolveram grão de pólen e tubo polínico: o pólen viaja pelo vento ou por animais, sem precisar de água líquida para a fecundação."
     },
     {
       id: "b-vf-14",
-      topic: "Gimnospermas",
-      statement: "O nome 'gimnosperma' vem do grego gymnos (nu) e sperma (semente), pois essas plantas produzem sementes que protegem o embrião, mas NÃO possuem frutos envolvendo essas sementes.",
+      topic: "Flor — Androceu (Masculino)",
+      statement: "O androceu é a parte MASCULINA da flor, formado pelos estames (filete + antera, que produz os grãos de pólen).",
       answer: true,
-      explanation: "Verdadeiro! As gimnospermas (pinheiros, araucárias, cicas, sequoias e ginkgo) têm sementes nuas formadas em estróbilos (cones), sem a presença de flores nem frutos."
+      explanation: "Verdadeiro! Dica: o prefixo 'ANDRO' significa masculino (como em androide/homem). Os estames (antera + filete) produzem o pólen!"
     },
     {
       id: "b-vf-15",
-      topic: "Gimnospermas",
-      statement: "As gimnospermas conquistaram definitivamente o ambiente terrestre seco porque desenvolveram o grão de pólen (levado pelo vento) e o tubo polínico, deixando de depender da água para o encontro dos gametas.",
+      topic: "Flor — Gineceu (Feminino)",
+      statement: "O gineceu é a parte FEMININA da flor, composto por estigma (onde o pólen gruda), estilete e ovário (que guarda os óvulos).",
       answer: true,
-      explanation: "Verdadeiro! A polinização pelo vento (anemofilia) e a formação do tubo polínico conduzem o gameta masculino até a oosfera sem precisar de água líquida para nadar."
+      explanation: "Verdadeiro! Dica: 'GINE' vem de mulher/feminino (igual a ginecologista!). Nele ficam estigma, estilete e ovário com os óvulos."
     },
     {
       id: "b-vf-16",
-      topic: "Gimnospermas",
-      statement: "O pinhão, muito consumido no outono e inverno no Sul do Brasil, é o fruto seco produzido pela araucária (pinheiro-do-paraná), e a pinha é a semente.",
+      topic: "Gimnospermas — Pinhão",
+      statement: "O pinhão produzido pela araucária (pinheiro-do-paraná) é um fruto seco comestível, e a pinha é uma flor.",
       answer: false,
-      explanation: "Falso! Pegadinha clássica das questões 09 e 14 da apostila: a araucária é uma gimnosperma e NÃO tem frutos! O pinhão é a SEMENTE (composta por tegumento, endosperma e embrião) e a pinha é o estróbilo (cone) feminino maduro."
+      explanation: "Falso! A araucária é uma GIMNOSPERMA (não tem flores nem frutos!). O pinhão é a SEMENTE nua, e a pinha é o estróbilo (cone) feminino maduro."
     },
     {
       id: "b-vf-17",
-      topic: "Gimnospermas",
-      statement: "Nas gimnospermas, os estróbilos masculinos são menores e produzem os grãos de pólen, enquanto os estróbilos femininos (pinhas) são maiores e abrigam os óvulos (com o gameta feminino chamado oosfera).",
+      topic: "Tabela dos 4 Grupos Vegetais",
+      statement: "Na evolução das plantas: vasos condutores e órgãos verdadeiros surgem nas pteridófitas; sementes e pólen surgem nas gimnospermas; e flores e frutos são exclusivos das angiospermas.",
       answer: true,
-      explanation: "Verdadeiro! O vento leva o pólen do cone masculino até o cone feminino; lá o tubo polínico fecunda a oosfera e origina a semente (pinhão), que pode ser dispersada por animais como a gralha-azul."
+      explanation: "Verdadeiro! Essa escadinha evolutiva resume toda a tabela dos 4 grupos: Briófitas (nada disso) → Pteridófitas (+vasos) → Gimnospermas (+sementes e pólen) → Angiospermas (+flores e frutos)."
     },
     {
       id: "b-vf-18",
-      topic: "Gimnospermas",
-      statement: "As sequoias gigantes possuem uma casca muito grossa (de até 46 cm) que resiste ao fogo, e os incêndios periódicos ajudam a aquecer e abrir seus cones velhos para liberar as sementes e limpar o solo para a germinação.",
+      topic: "Gimnospermas — Sequoias e Fogo",
+      statement: "As sequoias gigantes têm casca muito grossa (até 46 cm) que resiste ao fogo, e os incêndios periódicos aquecem seus cones para liberar as sementes e limpar o solo.",
       answer: true,
-      explanation: "Verdadeiro! Como destacado no boxe 'Indo além' da apostila, a casca espessa isola a sequoia do calor e o fogo abre os cones e reduz a competição por luz solar para as novas mudas."
+      explanation: "Verdadeiro! A casca grossa protege a árvore viva do calor, enquanto o fogo abre as pinhas velhas e queima o mato rasteiro que competiria por luz solar."
     },
     {
       id: "b-vf-19",
-      topic: "Gimnospermas e Pólen",
-      statement: "A parede externa dos grãos de pólen, chamada exina, é extremamente rígida e resistente a compostos químicos, protegendo o material genético masculino contra a desidratação durante o transporte pelo ar.",
-      answer: true,
-      explanation: "Verdadeiro! Como visto na questão 10 (Pesquisa Fapesp), a dureza da exina protege o gameta masculino no ambiente aéreo até que enzimas do órgão feminino a tornem maleável para germinar o tubo polínico."
+      topic: "Dispersão de Sementes — Mamona",
+      statement: "A mamona precisa ser comida por aves como o tucano e o sabiá para conseguir espalhar suas sementes pelo ambiente.",
+      answer: false,
+      explanation: "Falso! A mamona faz dispersão por MECANISMO PRÓPRIO (o fruto seca, estoura e arremessa as sementes longe). Aves frugívoras dispersam frutos carnosos suculentos."
     },
     {
       id: "b-vf-20",
-      topic: "Angiospermas",
-      statement: "As angiospermas constituem o grupo de plantas com maior diversidade de espécies no planeta e são as únicas que apresentam flores e frutos.",
-      answer: true,
-      explanation: "Verdadeiro! Flores (que atraem polinizadores) e frutos (que protegem as sementes e auxiliam na dispersão) são novidades evolutivas exclusivas das angiospermas."
+      topic: "Flores e Frutos",
+      statement: "Tanto as gimnospermas quanto as angiospermas produzem flores vistosas com pétalas e frutos para proteger suas sementes.",
+      answer: false,
+      explanation: "Falso! Flores e frutos são exclusivos das ANGIOSPERMAS! Gimnospermas ('sementes nuas') possuem cones/estróbilos e não formam frutos."
     },
     {
       id: "b-vf-21",
-      topic: "Angiospermas — Flor",
-      statement: "Em uma flor de angiosperma, o androceu é a parte feminina (formada por estigma, estilete e ovário) e o gineceu é a parte masculina (formada por antera e filete).",
+      topic: "Flor — Androceu vs. Gineceu (Reforço)",
+      statement: "Em uma flor de angiosperma, o androceu é a estrutura feminina (estigma, estilete e ovário) e o gineceu é a estrutura masculina (antera e filete).",
       answer: false,
-      explanation: "Falso! O ANDROCEU é o conjunto de estames (parte masculina: antera que produz o pólen + filete), enquanto o GINECEU é a parte feminina (estigma que recebe o pólen, estilete e ovário com os óvulos)."
+      explanation: "Falso! Está invertido: GINECEU (de 'ginecologista') é a parte FEMININA (estigma, estilete e ovário); ANDROCEU é a parte MASCULINA (antera com pólen + filete)."
     },
     {
       id: "b-vf-22",
-      topic: "Angiospermas — Monoicas e Dioicas",
-      statement: "Se uma pessoa plantar apenas uma semente de kiwi (ou de Ginkgo biloba) e a árvore adulta produzir flores mas nunca der frutos/sementes, isso pode ocorrer porque a espécie é dioica (tem indivíduos só masculinos e indivíduos só femininos separados).",
+      topic: "Plantas Dioicas (Kiwi e Ginkgo)",
+      statement: "Uma árvore de kiwi (ou de Ginkgo biloba) plantada sozinha pode dar flores todo ano e nunca produzir frutos se a espécie for dioica (tiver indivíduos só masculinos e só femininos).",
       answer: true,
-      explanation: "Verdadeiro! Como nas questões 05 e 06 da apostila, plantas dioicas têm sexos separados em indivíduos distintos; uma única árvore masculina (ou feminina sem pólen masculino por perto) não formará frutos."
+      explanation: "Verdadeiro! Em plantas dioicas, flores masculinas e femininas ficam em árvores separadas: sem o par do outro sexo (e o pólen chegando até ele), não há fecundação nem fruto."
     },
     {
       id: "b-vf-23",
-      topic: "Angiospermas — Polinização",
-      statement: "Todas as flores de angiospermas têm cheiro doce e perfumado, pois flores com odor fétido de carne podre afastam qualquer inseto e não conseguem ser polinizadas.",
+      topic: "Polinização — Flores com Odor Fétido",
+      statement: "Flores que exalam cheiro forte de carne podre não atraem nenhum animal polinizador e só conseguem se reproduzir pelo vento.",
       answer: false,
-      explanation: "Falso! Como visto na questão 18 da apostila, o odor fétido de carne podre é uma adaptação evolutiva de certas flores para atrair polinizadores específicos, como moscas e besouros, enquanto flores que abrem à noite atraem mariposas e morcegos."
+      explanation: "Falso! O cheiro fétido de carne podre é uma estratégia evolutiva para atrair polinizadores específicos, como moscas e besouros."
     },
     {
       id: "b-vf-24",
-      topic: "Angiospermas — Fruto",
-      statement: "Após a fecundação nas angiospermas, o óvulo da flor desenvolve-se formando a semente, enquanto o ovário da flor cresce e transforma-se no fruto verdadeiro (composto por epicarpo, mesocarpo e endocarpo).",
+      topic: "Origem do Fruto e da Semente",
+      statement: "Após a fecundação na flor da angiosperma, o ÓVULO origina a semente e o OVÁRIO da flor cresce formando o fruto verdadeiro (epicarpo, mesocarpo e endocarpo).",
       answer: true,
-      explanation: "Verdadeiro! O fruto verdadeiro origina-se do desenvolvimento do ovário (como manga, uva, abacate e tomate), envolvendo a semente formada pelo óvulo fecundado."
+      explanation: "Verdadeiro! Dica: ÓVULo → Semente; OVÁRIo → Fruto verdadeiro (com casca = epicarpo, polpa = mesocarpo e camada interna = endocarpo)."
     },
     {
       id: "b-vf-25",
-      topic: "Angiospermas — Classificação dos Frutos",
-      statement: "A maçã, o abacaxi e o caju são classificados como pseudofrutos porque sua parte suculenta desenvolve-se de outras partes da flor (como o pedúnculo ou o receptáculo floral), e não apenas do ovário.",
+      topic: "Pseudofrutos (Maçã, Abacaxi e Caju)",
+      statement: "A maçã, o abacaxi e o caju são chamados de pseudofrutos porque sua parte suculenta vem do pedúnculo ou do receptáculo da flor, e não apenas do ovário.",
       answer: true,
-      explanation: "Verdadeiro! Como mostra o quadro da página 43 da apostila, frutos verdadeiros vêm do ovário (manga, uva, ameixa), enquanto pseudofrutos vêm do pedúnculo ou receptáculo (maçã, abacaxi, caju)."
+      explanation: "Verdadeiro! Frutos verdadeiros (manga, uva, tomate, abacate) vêm do ovário; pseudofrutos (maçã, abacaxi, caju) têm a polpa formada pelo receptáculo ou pedúnculo floral."
     },
     {
       id: "b-vf-26",
-      topic: "Angiospermas — Baga, Drupa e Frutos Secos",
-      statement: "Entre os frutos carnosos, o abacate e a azeitona são classificados como 'bagas' por terem uma única semente, enquanto a melancia e o tomate são 'drupas' por terem várias sementes.",
+      topic: "Baga vs. Drupa (Reforço)",
+      statement: "Entre os frutos carnosos, o abacate e a manga (com 1 semente) são classificados como bagas, enquanto a melancia e o tomate (com várias sementes) são drupas.",
       answer: false,
-      explanation: "Falso! É o inverso: BAGA é o fruto carnoso com várias sementes (melancia, tomate, uva), enquanto DRUPA é o fruto carnoso que possui apenas uma semente/caroço duro (abacate, manga, pêssego, ameixa)."
+      explanation: "Falso! Dica de ouro: BAGA = B de BASTANTE sementes (melancia, tomate, uva); DRUPA = D de caroço DURO único / 1 semente (abacate, manga, pêssego, ameixa)."
     },
     {
       id: "b-vf-27",
-      topic: "Dispersão de Sementes",
-      statement: "Sementes aladas (com expansões em forma de 'asas') ou com estruturas plumosas como o dente-de-leão são dispersadas principalmente pelo vento, enquanto o coco-da-baía é dispersado pela água e a mamona por mecanismo explosivo próprio.",
+      topic: "Dispersão (Vento e Água)",
+      statement: "Sementes aladas (com 'asas') ou com estruturas plumosas como o dente-de-leão são levadas pelo VENTO, e o coco-da-baía flutua sendo levado pela ÁGUA.",
       answer: true,
-      explanation: "Verdadeiro! Como nas páginas 39, 43 e 44 da apostila: sementes leves/aladas/dente-de-leão usam o vento; o coco flutua na água; frutos carnosos atraem animais frugívoros (tucanos, sabiás); e a mamona lança sementes sozinha."
+      explanation: "Verdadeiro! Resumo dos 4 dispersores: Vento (aladas e dente-de-leão); Água (coco-da-baía); Animais (frutos carnosos comidos por aves); Mecanismo próprio (mamona)."
     },
     {
       id: "b-vf-28",
-      topic: "Utilidades — Propagação Vegetativa",
-      statement: "Técnicas agrícolas como estaquia, mergulhia, alporquia e enxertia (cavalo + cavaleiro) são formas de reprodução sexuada que aumentam a variabilidade genética das árvores frutíferas.",
+      topic: "Propagação Vegetativa (Enxertia e Estaquia)",
+      statement: "Técnicas como estaquia, mergulhia, alporquia e enxertia (cavalo + cavaleiro) são formas de reprodução sexuada porque usam partes de duas plantas diferentes.",
       answer: false,
-      explanation: "Falso! Como visto na questão 20 e nas páginas 45-46 da apostila, essas técnicas são formas de propagação vegetativa (reprodução ASSEXUADA): não há encontro de gametas, geram clones idênticos à planta-mãe para produzir frutos mais rápido, porém com baixa variabilidade genética."
+      explanation: "Falso! Não há encontro de gametas nem fecundação! Todas essas técnicas são propagação vegetativa (reprodução ASSEXUADA), gerando clones rápidos porém com baixa variabilidade genética."
     },
     {
       id: "b-vf-29",
-      topic: "Utilidades — Alimentação",
-      statement: "Na nossa alimentação, consumimos diferentes partes de angiospermas: raízes (cenoura, mandioca, batata-doce), caules (batata-inglesa, cana-de-açúcar e cebola/bulbo), folhas (alface, couve), flores (brócolis, couve-flor, alcachofra), frutos (tomate, abacate) e sementes (feijão, soja, amendoim).",
+      topic: "Partes das Plantas na Alimentação",
+      statement: "Na nossa alimentação, batata-inglesa e cebola são CAULES; brócolis e couve-flor são FLORES; e tomate e abacate são FRUTOS.",
       answer: true,
-      explanation: "Verdadeiro! Atenção especial para a batata-inglesa e a cebola (que são caules/bulbo, e não raízes!), brócolis e couve-flor (que são flores/inflorescências) e tomate (que é fruto)."
+      explanation: "Verdadeiro! Cuidado com as clássicas: batata-doce, cenoura e mandioca são raízes; já batata-inglesa e cebola são CAULES, brócolis/couve-flor/alcachofra são FLORES e tomate é FRUTO!"
     },
     {
       id: "b-vf-30",
-      topic: "Utilidades — Saúde, Cosméticos e Biocombustíveis",
-      statement: "Além da alimentação, as plantas fornecem princípios ativos para fitoterápicos (droga vegetal), extratos cosméticos (camomila cicatrizante, babosa e lavanda calmantes/anti-inflamatórias, óleos de coco e girassol hidratantes) e biomassa para biocombustíveis renováveis como etanol e biodiesel.",
-      answer: true,
-      explanation: "Verdadeiro! O Capítulo 07 destaca o uso de plantas na indústria cosmética, farmacêutica (fitoterápicos) e energética (etanol da fermentação da cana/milho e biodiesel de óleos vegetais, reduzindo o impacto dos combustíveis fósseis)."
+      topic: "Frutos Secos (Deiscentes vs. Indeiscentes)",
+      statement: "Os frutos secos indeiscentes, como a vagem do feijão e o urucum, abrem-se naturalmente quando maduros para liberar suas sementes.",
+      answer: false,
+      explanation: "Falso! Quem se abre naturalmente quando maduro são os frutos secos DEISCENTES (como feijão e urucum). INDEISCENTES (IN = não) são os que NÃO se abrem sozinhos."
     }
   ],
   exams: [

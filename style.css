@@ -98,6 +98,20 @@ body {
   border-left: 5px solid var(--pico-primary);
 }
 
+.next-day-banner {
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  border: 2px solid var(--vf-true-color);
+  border-left: 6px solid var(--vf-true-color);
+  background: var(--pico-card-background-color);
+  background: color-mix(in srgb, var(--vf-true-color) 10%, var(--pico-card-background-color));
+}
+
+.next-day-banner button {
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
 .welcome-flex {
   display: flex;
   justify-content: space-between;

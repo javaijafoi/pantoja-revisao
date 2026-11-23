@@ -151,12 +151,29 @@
     st.vfCompletedToday = pending.length === 0;
   }
 
+  function isDayFullyFinished(state) {
+    if (!state || !state.subjects) return false;
+    const keys = ['quimica', 'biologia', 'fisica'];
+    return keys.every((k) => {
+      const st = state.subjects[k];
+      return st && (st.passedToday || st.examsTodayCount >= 3);
+    });
+  }
+
+  function hasAnyProgressToday(state) {
+    if (!state || !state.subjects) return false;
+    return Object.values(state.subjects).some((st) => {
+      if (!st) return false;
+      if (st.examsTodayCount > 0 || st.passedToday || st.vfCompletedToday) return true;
+      return Object.values(st.cardBoxes || {}).some((b) => b > 0);
+    });
+  }
+
   // Prepare next day's spaced repetition:
   // Cards she missed previously start at Box 0 (need 2 hits) and appear at the front of the queue;
-  // Cards she mastered without errors can start at Box 0 or Box 1 depending on error history.
   // Since the rule requires all 30 cards to be reviewed every day, we put all 30 in the queue,
-  // with previous errors prioritized at Box 0 and front of the deck!
-  function advanceToNextDay() {
+  // with previous errors prioritized at the front of the deck!
+  function advanceToNextDay(shouldRender = true) {
     const subjects = getSubjectsMap();
     appState.dayNumber = (appState.dayNumber || 1) + 1;
     appState.currentDay = getTodayString();
@@ -169,18 +186,18 @@
       for (const c of subjData.cards) {
         const hadErrorYesterday = (st.cardErrorsToday[c.id] || 0) > 0;
         const totalErr = st.cardErrorsTotal[c.id] || 0;
-        // Cards she got wrong start at Box 0 (must hit 2x today).
-        // Cards she already mastered cleanly also reset to Box 0 for daily 2x session,
-        // or if you want pure Leitner, cards with errors go to front of the queue.
         st.cardBoxes[c.id] = 0;
         st.cardErrorsToday[c.id] = 0;
-        // Keep a priority weight based on errors
         c._weight = (hadErrorYesterday ? 10 : 0) + totalErr * 3 + Math.random();
       }
 
       const sortedQueue = [...subjData.cards]
         .sort((a, b) => b._weight - a._weight)
         .map((c) => c.id);
+
+      for (const c of subjData.cards) {
+        delete c._weight;
+      }
 
       st.vfQueue = sortedQueue;
       st.vfCompletedToday = false;
@@ -190,10 +207,26 @@
     }
 
     saveState();
-    renderDashboard();
+    if (shouldRender) {
+      renderDashboard();
+    }
+  }
+
+  function checkDailyRollover() {
+    const today = getTodayString();
+    if (!appState.currentDay || today <= appState.currentDay) return;
+
+    if (isDayFullyFinished(appState)) {
+      advanceToNextDay(false);
+    } else {
+      // Preserve partial progress (or untouched state) when moving to a new calendar date
+      appState.currentDay = today;
+      saveState();
+    }
   }
 
   let appState = loadState();
+  checkDailyRollover();
   let activeSubjectKey = null;
   let activeExamObj = null;
 
@@ -230,6 +263,22 @@
     const dateLabel = document.getElementById('today-date-label');
     if (dateLabel) {
       dateLabel.textContent = `Dia ${appState.dayNumber || 1} (${formatDateBR(appState.currentDay)})`;
+    }
+
+    const nextDayBanner = document.getElementById('next-day-banner');
+    if (nextDayBanner) {
+      const finished = isDayFullyFinished(appState);
+      nextDayBanner.hidden = !finished;
+      if (finished) {
+        const currentNum = appState.dayNumber || 1;
+        const nextNum = currentNum + 1;
+        const titleEl = document.getElementById('next-day-banner-title');
+        const textEl = document.getElementById('next-day-banner-text');
+        const btnNext = document.getElementById('btn-dashboard-next-day');
+        if (titleEl) titleEl.textContent = `🏆 Dia ${currentNum} concluído com sucesso!`;
+        if (textEl) textEl.textContent = `Amanhã o app vira sozinho para o Dia ${nextNum} (30 novos cards focados nos seus erros + próxima prova). Se quiser começar ou testar agora, clique ao lado.`;
+        if (btnNext) btnNext.textContent = `🌅 Iniciar Dia ${nextNum} Agora`;
+      }
     }
 
     container.innerHTML = '';
@@ -1090,6 +1139,10 @@
       importSaveFromText(String(reader.result || ''));
     };
     reader.readAsText(file);
+  });
+
+  document.getElementById('btn-dashboard-next-day')?.addEventListener('click', () => {
+    advanceToNextDay();
   });
 
   document.getElementById('btn-advance-day').addEventListener('click', () => {

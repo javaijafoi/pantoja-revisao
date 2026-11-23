@@ -1,217 +1,217 @@
 window.DATA_FISICA = {
   id: "fisica",
   title: "Física",
-  subtitle: "Cap. 08 Bernoulli — Lua, Eclipses, Marés, Estações do Ano, Kepler e Gravitação",
+  subtitle: "Cap. 08 Bernoulli (Dia 2) — Foco em Eclipses, Antípodas/Marés, Lado Oculto e Calendário Lunar",
   cards: [
     {
       id: "f-vf-1",
-      topic: "Fases da Lua e Movimentos",
-      statement: "A Lua completa um giro em torno da Terra em cerca de 27,3 dias, mas o ciclo completo de suas fases visto da Terra (de uma Lua Cheia até a próxima, por exemplo) dura cerca de 29,5 dias (aproximadamente um mês).",
-      answer: true,
-      explanation: "Verdadeiro! Como destacado na página 72 da apostila Bernoulli, a Lua gira ao redor da Terra em 27,3 dias, mas como a Terra também está se movendo ao redor do Sol, a aparência das fases no céu noturno se repete a cada 29,5 dias."
+      topic: "Inclinação da Órbita Lunar",
+      statement: "Ocorre um eclipse solar em toda Lua Nova e um eclipse lunar em toda Lua Cheia porque a órbita da Lua é perfeitamente alinhada com a órbita da Terra.",
+      answer: false,
+      explanation: "Falso! A órbita da Lua ao redor da Terra é inclinada (~5°), por isso a sombra passa acima ou abaixo na maioria dos meses e não há eclipses todo mês."
     },
     {
       id: "f-vf-2",
       topic: "Lado Oculto da Lua",
       statement: "A Lua possui um 'lado escuro' permanente que nunca recebe a luz do Sol em nenhuma fase do mês.",
       answer: false,
-      explanation: "Falso! Como explicam as páginas 73 e 74 da apostila, NÃO devemos usar o termo 'lado escuro', e sim 'lado oculto' ou 'lado afastado': o Sol ilumina metade da Lua o tempo todo (inclusive o lado oculto é totalmente iluminado na Lua Nova!)."
+      explanation: "Falso! Não existe 'lado escuro', e sim LADO OCULTO: o Sol ilumina metade da Lua o tempo todo (inclusive o lado oculto fica totalmente iluminado durante a Lua Nova!)."
     },
     {
       id: "f-vf-3",
-      topic: "Lado Oculto da Lua",
-      statement: "Da Terra enxergamos sempre a mesma face da Lua porque o tempo que a Lua leva para dar uma volta em torno de seu próprio eixo (rotação) é igual ao tempo que ela leva para dar uma volta ao redor da Terra (revolução/translação).",
+      topic: "Mesma Face da Lua (Reforço)",
+      statement: "Da Terra vemos sempre a mesma face da Lua porque o tempo que ela leva para girar em torno de si mesma (rotação) é igual ao tempo que leva para girar ao redor da Terra (revolução).",
       answer: true,
-      explanation: "Verdadeiro! Como visto na página 74 (questão 01) e na questão 05-B (pág. 76): os movimentos de rotação da Lua em torno de si mesma e de giro ao redor da Terra têm a mesma duração (~27,3 dias), mantendo sempre a mesma face voltada para nós."
+      explanation: "Verdadeiro! Rotação e revolução da Lua duram exatamente o mesmo (~27,3 dias), fazendo com que o mesmo lado fique sempre voltado para a Terra."
     },
     {
       id: "f-vf-4",
-      topic: "Fases da Lua no Hemisfério Sul",
-      statement: "Para um observador situado no Hemisfério Sul da Terra (como no Brasil), durante a fase de Lua Crescente a parte iluminada tem o formato da letra 'C', e na fase de Lua Minguante tem o formato da letra 'D'.",
+      topic: "Sondas no Lado Oculto (Reforço Prova 1)",
+      statement: "Conhecemos a superfície do lado oculto da Lua graças às fotografias enviadas por naves e sondas espaciais (desde 1959, sonda Clementine em 1994 e missão Artêmis II).",
       answer: true,
-      explanation: "Verdadeiro! Conforme o quadro 'Sintetizando' da página 73 da apostila: na perspectiva do Hemisfério Sul, a partir da Lua Nova a porção iluminada aumenta na forma da letra 'C' (Lua Crescente) e, após a Lua Cheia, diminui na forma da letra 'D' (Lua Minguante)."
+      explanation: "Verdadeiro! Como o lado oculto nunca aponta para a Terra, só conseguimos fotografá-lo com naves/sondas espaciais que dão a volta por trás da Lua."
     },
     {
       id: "f-vf-5",
-      topic: "Fases da Lua",
-      statement: "Cada uma das quatro fases principais da Lua (Nova, Quarto Crescente, Cheia e Quarto Minguante) dura aproximadamente uma semana (cerca de 7 dias).",
-      answer: true,
-      explanation: "Verdadeiro! Como o ciclo completo dura cerca de 29,5 dias (~28 a 30 dias), no calendário da questão 05 (página 76) vemos que cada fase principal se estende por cerca de 7 dias (ex.: 01/10 Lua Cheia → 07/10 Minguante → 15/10 Nova → 22/10 Crescente → 29/10 Cheia)."
+      topic: "Lado Oculto — Telescópios (Reforço Prova 1)",
+      statement: "Durante um eclipse lunar total, a Lua gira ao contrário e permite que telescópios da Terra fotografem seu lado oculto.",
+      answer: false,
+      explanation: "Falso! O lado oculto nunca fica visível da superfície da Terra; só pôde ser visto quando naves e sondas espaciais orbitaram a Lua."
     },
     {
       id: "f-vf-6",
-      topic: "Movimentos da Lua",
-      statement: "Como a Pantoja anotou na questão 03 da página 75, os três movimentos principais da Lua são: rotação (gira em torno de si mesma), revolução (gira em volta da Terra) e translação (gira em volta do Sol acompanhando a Terra).",
+      topic: "Calendário Lunar (Reforço Prova 1)",
+      statement: "As fases da Lua avançam a cada ~7 dias na ordem Cheia → Minguante → Nova → Crescente: se dia 01/10 foi Lua Cheia, então 07/10 foi Minguante, 15/10 Nova, 22/10 Crescente e 29/10 Cheia.",
       answer: true,
-      explanation: "Verdadeiro! A Lua não está parada: ela gira em torno de seu eixo (rotação), orbita a Terra (revolução) e acompanha a Terra ao redor do Sol (translação)."
+      explanation: "Verdadeiro! Cada fase dura cerca de 1 semana (~7 dias) na ordem: Cheia → Minguante → Nova → Crescente → Cheia (~29,5 dias no total)."
     },
     {
       id: "f-vf-7",
-      topic: "Eclipses",
-      statement: "O eclipse lunar acontece na fase de Lua Cheia, durante a noite, quando a Terra fica entre o Sol e a Lua e a Lua mergulha no cone de sombra (umbra/penumbra) projetado pela Terra.",
+      topic: "Eclipse Lunar — Alinhamento",
+      statement: "No eclipse LUNAR, a Terra fica no meio (Sol – Terra – Lua), acontecendo na fase de Lua Cheia e sendo visto durante a noite.",
       answer: true,
-      explanation: "Verdadeiro! Conforme a questão 02-A da página 75 e a questão 07-A da página 77 (respondida pela Pantoja): o eclipse lunar ocorre na Lua Cheia e é observado à noite."
+      explanation: "Verdadeiro! Dica: quem fica escondida (eclipsada) é a LUA, porque a TERRA entra na frente do Sol à noite (Lua Cheia)."
     },
     {
       id: "f-vf-8",
-      topic: "Eclipses",
-      statement: "O eclipse solar acontece na fase de Lua Nova, durante o dia, quando a Lua se posiciona entre o Sol e a Terra e projeta sua sombra (umbra na posição central A e penumbra na região B) sobre uma parte da superfície da Terra.",
+      topic: "Eclipse Solar — Alinhamento",
+      statement: "No eclipse SOLAR, a Lua fica no meio (Sol – Lua – Terra), acontecendo na fase de Lua Nova e sendo visto durante o dia.",
       answer: true,
-      explanation: "Verdadeiro! Como na questão 02-B da página 75 (onde há um erro de digitação no livro dizendo 'noites', mas como a Pantoja corrigiu na questão 07-B da página 77: o eclipse solar ocorre na Lua Nova e acontece durante o DIA!)."
+      explanation: "Verdadeiro! Dica: quem fica escondido (eclipsado) é o SOL, porque a LUA entra na frente dele durante o dia (Lua Nova)."
     },
     {
       id: "f-vf-9",
-      topic: "Eclipses — Pegadinha da Questão 09",
+      topic: "Pegadinha Eclipse Solar vs. Lunar (Reforço)",
       statement: "Durante um eclipse solar, a Terra bloqueia completamente a luz do Sol, impedindo que ela alcance a Lua.",
       answer: false,
-      explanation: "Falso! Essa é literalmente a frase da questão 09 da página 77 da apostila: ela é FALSA porque a Terra bloqueia a luz do Sol para a Lua no eclipse LUNAR! No eclipse SOLAR, é a LUA que bloqueia a luz do Sol sobre uma parte da Terra."
+      explanation: "Falso! Atenção: se a Terra bloqueia a luz do Sol para a Lua, é eclipse LUNAR! No eclipse SOLAR, é a LUA que bloqueia a luz do Sol sobre uma parte da Terra."
     },
     {
       id: "f-vf-10",
-      topic: "Eclipses — Experimento",
-      statement: "No experimento de simulação de eclipse com uma lâmpada acesa, uma bolinha de isopor num palito e um globo terrestre (questão 01 de 'Aprimorando', pág. 104), quando a bolinha de isopor fica entre a lâmpada e o globo terrestre, está representado um eclipse solar, e a sombra da bolinha cobre apenas uma pequena área do globo, e não a Terra inteira.",
+      topic: "Experimento Lâmpada + Bolinha + Globo",
+      statement: "No experimento da lâmpada (Sol), bolinha de isopor (Lua) e globo (Terra): bolinha ENTRE a lâmpada e o globo mostra eclipse solar; bolinha ATRÁS do globo mostra eclipse lunar.",
       answer: true,
-      explanation: "Verdadeiro! A lâmpada faz o papel do Sol, a bolinha de isopor faz o papel da Lua e o globo é a Terra. Como a Lua é bem menor que a Terra, sua sombra cobre apenas uma pequena região (onde é dia). Se a bolinha for colocada atrás do globo, simula-se o eclipse lunar!"
+      explanation: "Verdadeiro! Bolinha na frente do globo bloqueia a luz sobre um pedacinho da Terra (eclipse solar); bolinha atrás do globo entra na sombra da Terra (eclipse lunar)."
     },
     {
       id: "f-vf-11",
-      topic: "Órbita da Lua e Eclipses",
-      statement: "Não temos eclipses lunares e solares todos os meses (em toda Lua Cheia e toda Lua Nova) porque o plano da órbita da Lua ao redor da Terra é inclinado (~5°) em relação ao plano da órbita da Terra ao redor do Sol.",
-      answer: true,
-      explanation: "Verdadeiro! Como investigado na questão 08 da página 77: devido à inclinação orbital da Lua, na maioria dos meses a sombra passa acima ou abaixo; o eclipse só ocorre quando Sol, Terra e Lua ficam exatamente no mesmo alinhamento/plano."
+      topic: "Tamanho da Sombra no Eclipse Solar",
+      statement: "Em um eclipse solar, a sombra projetada pela Lua deixa o planeta Terra inteiro na escuridão ao mesmo tempo.",
+      answer: false,
+      explanation: "Falso! A Lua é muito menor que a Terra: sua sombra cobre apenas uma pequena área/faixa da superfície terrestre (onde é dia)."
     },
     {
       id: "f-vf-12",
-      topic: "Gravitação e Marés",
-      statement: "Embora a força gravitacional do Sol sobre a Terra seja maior que a da Lua (devido à enorme massa do Sol), o Sol exerce MENOR influência sobre as marés porque está muito mais distante da Terra do que a Lua.",
-      answer: true,
-      explanation: "Verdadeiro! Exatamente como explicado na página 72 e respondido pela Pantoja na questão 11-A da página 82: a contribuição do Sol para as marés é menor que a da Lua porque a Lua está muito mais próxima da Terra."
+      topic: "Influência nas Marés (Sol vs. Lua)",
+      statement: "Por ter massa muito maior que a da Lua, o Sol exerce uma influência maior do que a Lua na formação das marés oceânicas.",
+      answer: false,
+      explanation: "Falso! A força gravitacional total do Sol sobre a Terra é maior, mas nas MARÉS a LUA manda mais porque está ~400 vezes mais próxima da Terra."
     },
     {
       id: "f-vf-13",
-      topic: "Mecanismo das Marés (A e A')",
-      statement: "No esquema da página 80 da apostila, ocorre maré alta simultaneamente em dois lados opostos da Terra: no ponto A (mais próximo da Lua, onde a atração da Lua sobre a água é maior que sobre o centro da Terra T) e no ponto A' (lado oposto, onde a atração da Lua sobre o centro da Terra T é maior que sobre a água em A').",
+      topic: "Cidades Antípodas — Fase da Lua",
+      statement: "Mesmo estando em lados opostos da Terra, Naha (Japão) e Honório Serpa (Paraná) vivenciam exatamente a mesma fase da Lua (ex.: Lua Nova nas duas) no mesmo dia.",
       answer: true,
-      explanation: "Verdadeiro! O fluxograma da página 80 demonstra exatamente por que a água se aglomera em dois bojos opostos (A e A' = maré alta), enquanto os pontos laterais B e B' ficam em maré baixa."
+      explanation: "Verdadeiro! O horário do dia é oposto (meio-dia em uma, meia-noite na outra), mas a fase da Lua no céu é a mesma para toda a Terra naquele instante!"
     },
     {
       id: "f-vf-14",
-      topic: "Cidades Antípodas e Marés (Questão 13)",
-      statement: "As cidades de Honório Serpa (no Paraná, Brasil) e Naha (em Okinawa, Japão) ficam em lados diametralmente opostos da Terra (antípodas). Se em Naha a maré estiver ALTA e for Lua Nova, em Honório Serpa a maré estará BAIXA e será Lua Cheia.",
+      topic: "Cidades Antípodas e Marés (Reforço)",
+      statement: "Honório Serpa (PR) e Naha (Japão) ficam em lados opostos da Terra. Se em Naha a maré está ALTA na Lua Nova, em Honório Serpa a maré está BAIXA e é Lua Cheia.",
       answer: false,
-      explanation: "Falso! Pegadinha genial da questão 13 (página 83): como a maré alta ocorre nos dois lados diametralmente opostos da Terra ao mesmo tempo (pontos A e A' da pág. 80), se em Naha a maré está ALTA, na cidade antípoda Honório Serpa a maré TAMBÉM está ALTA! E a fase da Lua é a mesma para todo o planeta Terra: Lua Nova!"
+      explanation: "Falso! As marés altas ocorrem NOS DOIS LADOS OPOSTOS da Terra ao mesmo tempo (pontos A e A')! Então em Honório Serpa também é maré ALTA e também é Lua Nova."
     },
     {
       id: "f-vf-15",
-      topic: "Tábua das Marés (Angra dos Reis)",
-      statement: "Analisando as tábuas de marés da Marinha do Brasil para o Porto de Angra dos Reis (páginas 78 e 82), vemos que ao longo de um dia inteiro (~24 horas) ocorrem 2 marés altas e 2 marés baixas, alternando-se a cada cerca de 6 horas.",
+      topic: "Esquema das Marés (A e A')",
+      statement: "A atração da Lua cria duas marés altas simultâneas em lados opostos da Terra (ponto A voltado para a Lua e ponto oposto A'), enquanto os lados B e B' ficam em maré baixa.",
       answer: true,
-      explanation: "Verdadeiro! Na questão 10 (pág. 78) e questão 12 (pág. 82), em cada dia há 4 registros: 2 marés altas (1,1 m ou 1,2 m nas Luas Nova e Cheia) e 2 marés baixas (0,0 m a 0,4 m), pois a Terra gira em 24h passando pelos dois bojos de maré."
+      explanation: "Verdadeiro! Em A a Lua puxa a água mais forte que a Terra; em A' a Lua puxa a Terra mais forte que a água atrás dela, deixando dois bojos de maré alta opostos."
     },
     {
       id: "f-vf-16",
-      topic: "Marés e Fases da Lua (Questões 11 e 12)",
-      statement: "As marés altas mais elevadas (de até 1,2 m na tabela de Angra dos Reis) e as marés baixas mais baixas (0,0 m) ocorrem durante as fases de Lua Nova e Lua Cheia, quando Sol, Terra e Lua estão alinhados.",
+      topic: "Marés Mais Altas (Lua Nova e Lua Cheia)",
+      statement: "Na tábua de marés (como Angra dos Reis), as marés altas mais elevadas (até 1,2 m) e as mais baixas (0,0 m) ocorrem na Lua Nova e na Lua Cheia.",
       answer: true,
-      explanation: "Verdadeiro! Como a Pantoja respondeu na questão 11-B (pág. 82) e como comprova a tabela da questão 12: na Lua Nova (12/jan: altas de 1,2 m e 1,1 m) e na Lua Cheia (26/jan: altas de 1,1 m e 1,2 m) a maré solar se soma à maré lunar. Já nas Luas Minguante e Crescente (05/jan e 19/jan), as marés altas atingem apenas 0,6 m a 0,9 m!"
+      explanation: "Verdadeiro! Na Lua Nova e Lua Cheia, Sol, Terra e Lua ficam alinhados e suas forças de maré se somam (produzindo 2 marés altas e 2 baixas por dia)."
     },
     {
       id: "f-vf-17",
-      topic: "Estações do Ano",
-      statement: "O acontecimento das estações do ano depende de dois fatores combinados: a inclinação de cerca de 23,5° do eixo de rotação da Terra em relação ao plano de sua órbita e o movimento de translação que a Terra faz ao redor do Sol ao longo de 365 dias.",
+      topic: "Causas das Estações do Ano",
+      statement: "As estações do ano ocorrem pela combinação de dois fatores: a inclinação do eixo da Terra (~23,5°) e a translação da Terra ao redor do Sol (365 dias).",
       answer: true,
-      explanation: "Verdadeiro! Esta é a definição exata da questão 01 de 'Testando' (página 2 do PDF) e da página 84 da apostila."
+      explanation: "Verdadeiro! A inclinação fixa de 23,5° enquanto a Terra translada faz cada hemisfério receber mais luz no verão e menos luz no inverno."
     },
     {
       id: "f-vf-18",
-      topic: "Estações do Ano",
-      statement: "À medida que a Terra se desloca ao redor do Sol, o hemisfério (Norte ou Sul) que fica mais inclinado e mais exposto à radiação solar vivencia a estação do VERÃO, enquanto o hemisfério oposto vivencia o INVERNO.",
-      answer: true,
-      explanation: "Verdadeiro! Conforme a questão 03 de 'Testando' (página 2 do PDF) e a tabela da página 87: o hemisfério mais inclinado em direção ao Sol recebe mais luz e calor, estando no verão."
+      topic: "Fases no Hemisfério Sul ('C' e 'D')",
+      statement: "Para quem observa do Hemisfério Sul (Brasil), a Lua Crescente tem o formato da letra 'D' e a Lua Minguante tem o formato da letra 'C'.",
+      answer: false,
+      explanation: "Falso! No Hemisfério Sul é o inverso: Crescente tem formato da letra 'C' (de Crescente!) e Minguante tem formato da letra 'D' (de Decrescente!)."
     },
     {
       id: "f-vf-19",
-      topic: "Solstícios e Equinócios",
-      statement: "O solstício de verão corresponde ao dia mais longo do ano (maior duração de luz solar), o solstício de inverno marca a noite mais longa do ano, e nos dois equinócios (outono e primavera) o dia e a noite têm a mesma duração (~12 horas) e o Sol incide verticalmente no Equador.",
-      answer: true,
-      explanation: "Verdadeiro! O esquema da página 84 da apostila mostra os solstícios (21-22 de junho com Sol vertical em 23,5° N / Trópico de Câncer; 21-22 de dezembro com Sol vertical em 23,5° S / Trópico de Capricórnio) e os equinócios (21-22 de março e 21-23 de setembro com Sol vertical no Equador)."
+      topic: "Pegadinha: Distância vs. Estações",
+      statement: "Faz verão no planeta inteiro em janeiro porque a Terra chega mais perto do Sol em sua órbita (periélio).",
+      answer: false,
+      explanation: "Falso! Em janeiro é verão apenas no Hemisfério Sul e INVERNO no Hemisfério Norte! As estações são opostas porque vêm da inclinação do eixo (23,5°), não da distância."
     },
     {
       id: "f-vf-20",
-      topic: "Solstícios e Equinócios — Datas",
-      statement: "No dia 21/22 de dezembro, começa o verão tanto no Hemisfério Sul quanto no Hemisfério Norte.",
+      topic: "Ciclo da Lua (27,3 vs. 29,5 dias)",
+      statement: "A Lua leva 29,5 dias para dar uma volta em torno da Terra e apenas 27,3 dias para repetir o ciclo completo das suas fases.",
       answer: false,
-      explanation: "Falso! Como mostram o diagrama da questão 14 (página 86) e a tabela da página 87: as estações são sempre OPOSTAS nos dois hemisférios! Em 21/22 de dezembro começa o verão no Hemisfério Sul e o inverno no Hemisfério Norte. Em 20/21 de junho começa o verão no Hemisfério Norte e o inverno no Hemisfério Sul."
+      explanation: "Falso! É o contrário: o giro ao redor da Terra dura 27,3 dias, e o ciclo completo das fases visto da Terra dura 29,5 dias."
     },
     {
       id: "f-vf-21",
-      topic: "Astronomia Indígena Tupi-Guarani",
-      statement: "Os povos indígenas brasileiros, como os tupis-guaranis, já associavam a observação das fases da Lua com a duração das marés, o ciclo das estações do ano, a chegada das chuvas, a época de colheita e a pesca artesanal, além de desenharem constelações próprias como a do Tuivaé (Homem Velho), vista no verão.",
-      answer: true,
-      explanation: "Verdadeiro! O boxe 'Tudo conectado' (páginas 85 e 86 da apostila) valoriza a complementaridade entre o conhecimento ancestral dos povos originários e a ciência formal, destacando a constelação do Tuivaé (Homem Velho), a Ema e a Anta."
+      topic: "Equinócios vs. Solstícios",
+      statement: "Nos equinócios (20-22 de março e 21-23 de setembro), um hemisfério recebe muito mais luz que o outro e os dias duram 18 horas.",
+      answer: false,
+      explanation: "Falso! Nos EQUINÓCIOS o Sol incide verticalmente no Equador, os dois hemisférios recebem luz igual e o dia e a noite duram ~12 horas. Dias mais longos ocorrem nos SOLSTÍCIOS de verão."
     },
     {
       id: "f-vf-22",
-      topic: "1ª Lei de Kepler",
-      statement: "Tanto a Terra ao redor do Sol quanto a Lua ao redor da Terra descrevem trajetórias elípticas (e não círculos perfeitos), de acordo com a 1ª Lei de Kepler (Lei das Órbitas), na qual o astro central ocupa um dos focos da elipse.",
+      topic: "1ª Lei de Kepler (Órbitas Elípticas)",
+      statement: "Pela 1ª Lei de Kepler, tanto os planetas ao redor do Sol quanto a Lua ao redor da Terra descrevem órbitas elípticas, com o astro central em um dos focos.",
       answer: true,
-      explanation: "Verdadeiro! A página 73 da apostila lembra que a Terra realiza sua translação ao redor do Sol em uma trajetória elíptica e isso também acontece com a Lua em torno da Terra."
+      explanation: "Verdadeiro! A órbita não é um círculo com o Sol no centro, e sim uma elipse com o Sol (ou a Terra, no caso da Lua) em um dos focos."
     },
     {
       id: "f-vf-23",
-      topic: "1ª e 2ª Leis de Kepler",
-      statement: "Na órbita de um planeta ao redor do Sol, o ponto mais próximo do Sol chama-se periélio (onde o planeta se move com maior velocidade) e o ponto mais afastado chama-se afélio (onde o planeta se move com menor velocidade).",
+      topic: "2ª Lei de Kepler (Periélio e Afélio)",
+      statement: "Na órbita elíptica, o planeta se move mais RÁPIDO quando está perto do Sol (periélio) e mais DEVAGAR quando está longe (afélio).",
       answer: true,
-      explanation: "Verdadeiro! Pela 2ª Lei de Kepler (Lei das Áreas), o raio vetor que liga o planeta ao Sol varre áreas iguais em tempos iguais, de modo que a velocidade orbital é máxima no periélio e mínima no afélio."
+      explanation: "Verdadeiro! Pela 2ª Lei de Kepler (Lei das Áreas), perto do Sol a gravidade acelera o planeta para que o raio varra áreas iguais em tempos iguais."
     },
     {
       id: "f-vf-24",
-      topic: "Pegadinha: Periélio vs. Estações do Ano",
-      statement: "Na tabela da página 87 da apostila, quando se diz que no solstício de verão um hemisfério fica 'mais próximo do Sol', isso ocorre devido à inclinação de 23,5° do eixo da Terra que inclina aquele hemisfério para o Sol, e NÃO porque o planeta inteiro se aproximou do Sol na órbita.",
+      topic: "Astronomia Indígena Tupi-Guarani",
+      statement: "Os povos tupis-guaranis relacionavam as fases da Lua às marés e à pesca, e observavam constelações sazonais como a do Tuivaé (Homem Velho), vista no verão.",
       answer: true,
-      explanation: "Verdadeiro! O cabeçalho da coluna na página 87 deixa explícito: 'Proximidade ao Sol (devido à inclinação)'. As estações do ano ocorrem por causa da inclinação axial de 23,5°, e não pela distância orbital da Terra como um todo!"
+      explanation: "Verdadeiro! A Astronomia indígena usa a observação do céu (constelações como Tuivaé e fases lunares) para orientar colheitas, chuvas e pesca artesanal."
     },
     {
       id: "f-vf-25",
-      topic: "3ª Lei de Kepler",
-      statement: "De acordo com a 3ª Lei de Kepler (Lei dos Períodos, T²/R³ = k), quanto mais distante um planeta está do Sol, menor é o tempo que ele leva para completar uma volta ao redor do Sol.",
+      topic: "3ª Lei de Kepler (Períodos)",
+      statement: "Pela 3ª Lei de Kepler (T²/R³ = k), quanto mais distante do Sol um planeta estiver, menor será a duração do seu ano.",
       answer: false,
-      explanation: "Falso! É o contrário: quanto MAIOR a distância média R do planeta ao Sol, MAIOR é o seu período de translação T (o ano do planeta é mais longo)."
+      explanation: "Falso! Quanto MAIOR a distância ao Sol (R), MAIOR é o tempo (T) para completar uma volta — planetas distantes têm anos muito mais longos."
     },
     {
       id: "f-vf-26",
-      topic: "Gravitação Universal de Newton",
-      statement: "Como explicado nas páginas 72 e 79 da apostila, a Lei da Gravitação Universal descoberta pelo físico Isaac Newton (1643-1727) revela que matéria atrai matéria: quanto MAIOR a massa dos corpos e quanto MENOR a distância entre eles, mais intensa será a força de atração gravitacional.",
+      topic: "Lei da Gravitação Universal (Newton)",
+      statement: "Pela Lei da Gravitação Universal de Newton, matéria atrai matéria: quanto maior a massa dos corpos e menor a distância entre eles, mais intensa é a atração.",
       answer: true,
-      explanation: "Verdadeiro! Essa é a formulação textual exata da Lei da Gravitação Universal de Newton apresentada na página 79 da apostila Bernoulli."
+      explanation: "Verdadeiro! Na fórmula F = G·(M·m)/d², aumentar a massa aumenta a força e diminuir a distância aumenta ainda mais a atração."
     },
     {
       id: "f-vf-27",
-      topic: "Gravitação Universal de Newton",
-      statement: "Pela equação de Newton F = G·(M·m)/d², como a força gravitacional é inversamente proporcional ao quadrado da distância, se a distância entre dois corpos dobrar (2d), a força de atração entre eles cairá para 1/4 do valor inicial.",
-      answer: true,
-      explanation: "Verdadeiro! Ao multiplicar a distância por 2, o denominador d² fica 2² = 4 vezes maior, dividindo a força gravitacional por 4."
+      topic: "Gravitação — Dobro da Distância",
+      statement: "Se a distância entre dois astros dobrar (passar de d para 2d), a força de atração gravitacional entre eles cairá pela metade.",
+      answer: false,
+      explanation: "Falso! Como a distância está ao quadrado no denominador (d²), dobrar a distância divide a força por 2² = 4 (cai para 1/4!)."
     },
     {
       id: "f-vf-28",
-      topic: "Gravitação — Massa vs. Peso",
-      statement: "A massa de um corpo (medida em kg) representa a quantidade de matéria e não muda se ele for levado da Terra para a Lua; já o peso (força gravitacional P = m·g, medida em Newtons) na Lua é cerca de 6 vezes menor que na Terra porque a Lua tem massa e gravidade menores.",
-      answer: true,
-      explanation: "Verdadeiro! Massa é constante em qualquer astro; Peso é a força de atração gravitacional local."
+      topic: "Massa vs. Peso",
+      statement: "Quando um astronauta viaja da Terra para a Lua, sua massa em quilogramas (kg) diminui 6 vezes, mas seu peso em Newtons (N) não muda.",
+      answer: false,
+      explanation: "Falso! É o inverso: a MASSA (kg) é sempre a mesma em qualquer lugar; o PESO (P = m·g, em Newtons) que cai para cerca de 1/6 na Lua."
     },
     {
       id: "f-vf-29",
       topic: "Gravitação e Ação-Reação",
-      statement: "Como a Terra tem massa muito maior que a da Lua, a força gravitacional com que a Terra puxa a Lua é muito maior do que a força gravitacional com que a Lua puxa a Terra.",
+      statement: "Como a Terra tem muito mais massa que a Lua, a força gravitacional com que a Terra puxa a Lua é maior que a força com que a Lua puxa a Terra.",
       answer: false,
-      explanation: "Falso! Pela Lei da Gravitação Universal de Newton e pelo princípio da Ação e Reação, a força com que a Terra atrai a Lua tem exatamente o MESMO módulo (intensidade) da força com que a Lua atrai a Terra!"
+      explanation: "Falso! Pela 3ª Lei de Newton (Ação e Reação), a Terra atrai a Lua exatamente com a MESMA intensidade com que a Lua atrai a Terra!"
     },
     {
       id: "f-vf-30",
-      topic: "Eclipse Anular e Umbra/Penumbra",
-      statement: "Na figura do eclipse solar (página 75 da apostila), um observador situado na superfície da Terra exatamente na posição central 'A' (atingida pelo cone escuro da umbra da Lua) vê um eclipse solar TOTAL, enquanto quem está na região 'B' (penumbra) vê apenas um eclipse solar PARCIAL.",
+      topic: "Umbra (A) vs. Penumbra (B) no Eclipse Solar",
+      statement: "Na figura do eclipse solar (pág. 75), quem está no centro da sombra na posição 'A' (umbra) vê um eclipse solar TOTAL, e quem está na região 'B' (penumbra) vê um eclipse PARCIAL.",
       answer: true,
-      explanation: "Verdadeiro! Na questão 02-B da página 75, a posição A corresponde ao ponto onde a umbra da Lua toca a superfície terrestre (eclipse solar total), enquanto a região B ao redor está na penumbra (eclipse parcial)."
+      explanation: "Verdadeiro! Posição A = cone escuro da umbra (eclipse solar total); região B = penumbra ao redor (eclipse solar parcial)."
     }
   ],
   exams: [
