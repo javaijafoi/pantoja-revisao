@@ -279,6 +279,20 @@ body {
 .leitner-box.box-1 { border-bottom-color: var(--vf-box1-color); }
 .leitner-box.box-2 { border-bottom-color: var(--vf-box2-color); }
 
+.leitner-box.box-0.is-pulse { --pulse-color: var(--vf-box0-color); }
+.leitner-box.box-1.is-pulse { --pulse-color: var(--vf-box1-color); }
+.leitner-box.box-2.is-pulse { --pulse-color: var(--vf-box2-color); }
+
+.leitner-box.is-pulse {
+  animation: boxPulse 0.45s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .leitner-box.is-pulse {
+    animation: none;
+  }
+}
+
 .box-title {
   display: block;
   font-size: 0.73rem;
@@ -307,6 +321,10 @@ body {
   list-style: none;
   padding: 0;
   margin: 0 0 1.25rem 0;
+}
+
+.SwipeableList:empty {
+  margin-bottom: 0;
 }
 
 .SwipeableList-item {
@@ -408,6 +426,11 @@ body {
   opacity: 0;
 }
 
+.SwipeableList-item.is-removing {
+  border-width: 0;
+  box-shadow: none;
+}
+
 .SwipeableList-item.is-activating[data-swipe-direction="left"]::after,
 .SwipeableList-item.is-activating[data-swipe-direction="right"]::before {
   visibility: hidden;
@@ -487,10 +510,44 @@ body {
   color: #fff;
 }
 
-/* Feedback Card on Error */
+/* Feedback Card (Correct or Wrong) */
 .vf-feedback-card {
-  border-left: 5px solid var(--vf-false-color);
+  border-left: 6px solid var(--pico-muted-border-color);
   animation: fadeIn 0.2s ease-out;
+}
+
+.vf-feedback-card.is-correct {
+  border: 2px solid var(--vf-true-color);
+  border-left: 6px solid var(--vf-true-color);
+  background: var(--pico-card-background-color);
+  background: color-mix(in srgb, var(--vf-true-color) 10%, var(--pico-card-background-color));
+}
+
+.vf-feedback-card.is-correct #vf-feedback-title {
+  color: var(--vf-true-color);
+}
+
+.vf-feedback-card.is-correct #vf-feedback-badge {
+  background: var(--vf-true-bg);
+  color: var(--vf-true-color);
+  border-color: var(--vf-true-color);
+}
+
+.vf-feedback-card.is-wrong {
+  border: 2px solid var(--vf-false-color);
+  border-left: 6px solid var(--vf-false-color);
+  background: var(--pico-card-background-color);
+  background: color-mix(in srgb, var(--vf-false-color) 8%, var(--pico-card-background-color));
+}
+
+.vf-feedback-card.is-wrong #vf-feedback-title {
+  color: var(--vf-false-color);
+}
+
+.vf-feedback-card.is-wrong #vf-feedback-badge {
+  background: var(--vf-false-bg);
+  color: var(--vf-false-color);
+  border-color: var(--vf-false-color);
 }
 
 .feedback-header {
@@ -535,18 +592,6 @@ body {
 .explanation-collapse p {
   margin-bottom: 0;
   font-size: 0.95rem;
-}
-
-/* Toast notification for right answers */
-.quick-hit-banner {
-  text-align: center;
-  font-size: 0.88rem;
-  font-weight: 600;
-  padding: 0.45rem;
-  border-radius: var(--pico-border-radius);
-  margin-bottom: 0.75rem;
-  background: var(--vf-true-bg);
-  color: var(--vf-true-color);
 }
 
 /* ==========================================================================
@@ -739,4 +784,10 @@ dialog::backdrop {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes boxPulse {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.06); box-shadow: 0 0 0 4px color-mix(in srgb, var(--pulse-color) 28%, transparent); }
+  100% { transform: scale(1); }
 }

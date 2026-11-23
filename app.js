@@ -426,6 +426,7 @@
       : -(x + rect.width);
 
     item.classList.add('is-removing');
+    item.animate([{ height: `${rect.height}px` }, { height: '0px' }], opts);
     if (!reduce) {
       content.animate([{ translate: `${translate}px` }], opts);
     }
@@ -518,12 +519,21 @@
     prog.value = totalPoints;
   }
 
+  function pulseLeitnerBox(boxNum) {
+    const boxEl = document.querySelector(`.leitner-box.box-${boxNum}`);
+    if (!boxEl) return;
+    boxEl.classList.remove('is-pulse');
+    void boxEl.offsetWidth;
+    boxEl.classList.add('is-pulse');
+  }
+
   function renderCurrentFlashcard() {
     updateLeitnerCounters();
     const subj = getSubjectsMap()[activeSubjectKey];
     const st = appState.subjects[activeSubjectKey];
     const listEl = document.getElementById('vf-swipe-list');
     const feedbackBox = document.getElementById('vf-feedback-box');
+    const swipeHint = document.getElementById('vf-swipe-hint');
 
     listEl.innerHTML = '';
     feedbackBox.hidden = true;
@@ -532,6 +542,7 @@
     st.vfQueue = st.vfQueue.filter((id) => (st.cardBoxes[id] || 0) < 2);
 
     if (st.vfQueue.length === 0) {
+      if (swipeHint) swipeHint.hidden = true;
       st.vfCompletedToday = true;
       saveState();
 
@@ -558,6 +569,8 @@
       });
       return;
     }
+
+    if (swipeHint) swipeHint.hidden = false;
 
     const currentCardId = st.vfQueue[0];
     const cardObj = subj.cards.find((c) => c.id === currentCardId);
@@ -616,12 +629,22 @@
         st.vfQueue.splice(insertAt, 0, currentCardId);
       }
 
+      const remaining = st.vfQueue.filter((id) => (st.cardBoxes[id] || 0) < 2);
+      const queueEmpty = remaining.length === 0;
+      if (queueEmpty) {
+        st.vfCompletedToday = true;
+      }
+
       if (liveStatus) {
-        liveStatus.textContent = `Acertou! Cartão foi para a Caixa ${nextBox}.`;
+        liveStatus.textContent = nextBox >= 2
+          ? 'Acertou! Cartão dominado na Caixa 2.'
+          : 'Acertou! Cartão subiu para a Caixa 1.';
       }
 
       saveState();
-      renderCurrentFlashcard();
+      updateLeitnerCounters();
+      pulseLeitnerBox(Math.min(2, nextBox));
+      showCardFeedback(cardObj, userAnswerBoolean, true, nextBox, queueEmpty);
     } else {
       // Wrong answer: resets to Box 0 and goes to middle/back of queue
       st.cardBoxes[currentCardId] = 0;
@@ -637,28 +660,53 @@
 
       saveState();
       updateLeitnerCounters();
-      showErrorFeedback(cardObj, userAnswerBoolean);
+      pulseLeitnerBox(0);
+      showCardFeedback(cardObj, userAnswerBoolean, false, 0, false);
     }
   }
 
-  function showErrorFeedback(cardObj, userAnswerBoolean) {
+  function showCardFeedback(cardObj, userAnswerBoolean, isCorrect, nextBox, queueEmpty) {
+    const swipeHint = document.getElementById('vf-swipe-hint');
+    if (swipeHint) swipeHint.hidden = true;
+
     const feedbackBox = document.getElementById('vf-feedback-box');
+    const titleEl = document.getElementById('vf-feedback-title');
+    const badgeEl = document.getElementById('vf-feedback-badge');
     const stmtEl = document.getElementById('vf-feedback-statement');
     const ansEl = document.getElementById('vf-feedback-correct-ans');
     const expContent = document.getElementById('vf-explanation-content');
     const expText = document.getElementById('vf-explanation-text');
     const btnToggleExp = document.getElementById('btn-toggle-explanation');
+    const btnNextCard = document.getElementById('btn-next-card');
+
+    feedbackBox.classList.toggle('is-correct', isCorrect);
+    feedbackBox.classList.toggle('is-wrong', !isCorrect);
+
+    if (isCorrect) {
+      if (nextBox >= 2) {
+        titleEl.textContent = '🌟 Dominado! Acertou 2x seguidas!';
+        badgeEl.textContent = 'Caixa 2 • Dominado ✅';
+      } else {
+        titleEl.textContent = '✅ Acertou! Mandou bem!';
+        badgeEl.textContent = 'Subiu p/ Caixa 1 (1/2)';
+      }
+      ansEl.textContent = `Você marcou ${userAnswerBoolean ? 'VERDADEIRO' : 'FALSO'} e acertou! 🎉`;
+    } else {
+      titleEl.textContent = '❌ Ops, você errou!';
+      badgeEl.textContent = 'Voltou p/ Caixa 0';
+      ansEl.textContent = `Você marcou ${userAnswerBoolean ? 'VERDADEIRO' : 'FALSO'}, mas o gabarito é ${cardObj.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}.`;
+    }
 
     stmtEl.textContent = `"${cardObj.statement}"`;
-    ansEl.textContent = `Você marcou ${userAnswerBoolean ? 'VERDADEIRO' : 'FALSO'}, mas o gabarito é ${cardObj.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}.`;
     expText.textContent = cardObj.explanation;
 
-    // Optional explanation button: hidden by default when she misses!
+    // Optional explanation button: hidden by default!
     expContent.hidden = true;
     btnToggleExp.textContent = '💡 Ver Explicação';
+    btnNextCard.textContent = queueEmpty ? '🎉 Ver Conclusão →' : 'Próximo Card →';
 
     feedbackBox.hidden = false;
-    document.getElementById('btn-next-card').focus();
+    btnNextCard.focus();
   }
 
   document.getElementById('btn-toggle-explanation').addEventListener('click', () => {
