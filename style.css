@@ -3,13 +3,50 @@
    ========================================================================== */
 
 :root {
-  --vf-true-color: #16a34a;
-  --vf-true-bg: rgba(22, 163, 74, 0.12);
-  --vf-false-color: #dc2626;
-  --vf-false-bg: rgba(220, 38, 38, 0.12);
-  --vf-box0-color: #e11d48;
-  --vf-box1-color: #d97706;
-  --vf-box2-color: #16a34a;
+  --pico-font-family-sans-serif: 'Quicksand', system-ui, -apple-system, sans-serif;
+  --pico-font-family: var(--pico-font-family-sans-serif);
+  --pico-border-radius: 1rem;
+  --pico-form-element-spacing-vertical: 0.7rem;
+  --pico-form-element-spacing-horizontal: 1rem;
+  --vf-true-color: #10b981;
+  --vf-true-bg: rgba(16, 185, 129, 0.14);
+  --vf-false-color: #f43f5e;
+  --vf-false-bg: rgba(244, 63, 94, 0.14);
+  --vf-box0-color: #f43f5e;
+  --vf-box1-color: #f59e0b;
+  --vf-box2-color: #10b981;
+}
+
+[data-theme="light"] {
+  --pico-background-color: #faf7ff;
+  --pico-card-background-color: #ffffff;
+  --pico-card-sectioning-background-color: #f3eeff;
+  --pico-primary: #7c3aed;
+  --pico-primary-background: #7c3aed;
+  --pico-primary-hover: #6d28d9;
+  --pico-primary-hover-background: #6d28d9;
+  --pico-primary-focus: rgba(124, 58, 237, 0.25);
+  --pico-muted-border-color: #e9d5ff;
+}
+
+[data-theme="dark"] {
+  --pico-background-color: #13111c;
+  --pico-card-background-color: #1c192b;
+  --pico-card-sectioning-background-color: #26223a;
+  --pico-primary: #a78bfa;
+  --pico-primary-background: #8b5cf6;
+  --pico-primary-hover: #c4b5fd;
+  --pico-primary-hover-background: #7c3aed;
+  --pico-muted-border-color: #362f54;
+}
+
+h1, h2, h3, h4, .brand-title, .card-topic-tag, .question-num, button {
+  font-family: 'Fredoka', 'Quicksand', system-ui, sans-serif;
+  letter-spacing: 0.01em;
+}
+
+body {
+  font-weight: 600;
 }
 
 .visually-hidden {
