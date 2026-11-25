@@ -1,217 +1,217 @@
 window.DATA_FISICA = {
   id: "fisica",
   title: "Física",
-  subtitle: "Cap. 08 Bernoulli (Dia 3) — Reforço Eclipses/Antípodas + Marés e Gravitação (Prova 3)",
+  subtitle: "Cap. 08 Bernoulli (Dia 4) — Reforço Eclipses/Marés/Gravitação + Estações do Ano e Astronomia Indígena (Prova 4)",
   cards: [
     {
       id: "f-vf-1",
-      topic: "Inclinação da Órbita Lunar (Reforço)",
-      statement: "Acontece um eclipse solar em toda Lua Nova porque a órbita da Lua não tem inclinação.",
-      answer: false,
-      explanation: "Falso! A órbita da Lua é inclinada ~5° em relação à órbita da Terra, por isso a sombra passa acima ou abaixo na maioria dos meses."
+      topic: "Translação vs. Rotação (Prova 4 — Testando Q1)",
+      statement: "O movimento que a Terra realiza ao redor do Sol em cerca de 365 dias chama-se TRANSLAÇÃO, enquanto o giro em torno do próprio eixo (24 h) é a ROTAÇÃO.",
+      answer: true,
+      explanation: "Verdadeiro! Questão 01 de Testando: rotação (24 h) gera dias e noites; translação (365 dias) + inclinação de 23,5° gera as estações do ano."
     },
     {
       id: "f-vf-2",
       topic: "Lado Oculto da Lua (Reforço)",
       statement: "O lado oculto da Lua é um 'lado escuro' que nunca recebe luz do Sol.",
       answer: false,
-      explanation: "Falso! O lado oculto recebe Sol normalmente — na fase de Lua Nova, por exemplo, o lado oculto está 100% iluminado!"
+      explanation: "Falso! O lado oculto recebe Sol normalmente — na Lua Nova, por exemplo, ele está 100% iluminado! Só não o vemos da Terra porque rotação e translação lunares duram ~27,3 dias."
     },
     {
       id: "f-vf-3",
-      topic: "Ciclo Diário das Marés (Prova 3)",
-      statement: "Na tábua das marés (como Angra dos Reis), ocorrem 2 marés altas e 2 marés baixas a cada ~24 horas, alternando a cada ~6 horas.",
+      topic: "Ciclo Diário das Marés (Reforço 5x)",
+      statement: "Em um dia (~24 horas), ocorrem 2 marés altas e 2 marés baixas, alternando aproximadamente a cada 6 horas.",
       answer: true,
-      explanation: "Verdadeiro! Em um mesmo dia (ex.: 02 de setembro em Angra dos Reis), registram-se duas marés altas e duas marés baixas."
+      explanation: "Verdadeiro! Na tábua das marés de Angra dos Reis, em um mesmo dia registram-se duas marés altas e duas marés baixas."
     },
     {
       id: "f-vf-4",
-      topic: "Por que 2 Marés Altas por Dia (Prova 3)",
-      statement: "Temos 2 marés altas por dia porque a Terra gira 360° em 24 horas passando pelos dois bojos opostos de água (A e A').",
-      answer: true,
-      explanation: "Verdadeiro! Enquanto a Terra gira em torno de si mesma em 24h, cada cidade costeira atravessa o bojo A (maré alta), B (baixa), A' (maré alta) e B' (baixa)."
+      topic: "Rotação Causa Estações? (Prova 4 — Testando Q1)",
+      statement: "As estações do ano acontecem exclusivamente por causa do movimento de rotação diária (24 h) da Terra.",
+      answer: false,
+      explanation: "Falso! As estações do ano existem pela combinação da TRANSLAÇÃO (365 dias ao redor do Sol) com a INCLINAÇÃO de 23,5° do eixo terrestre."
     },
     {
       id: "f-vf-5",
-      topic: "Símbolos da Tábua das Marés (Prova 3)",
-      statement: "As 'carinhas' (círculos cheios, escuros ou pela metade) na tábua das marés da Marinha representam as 4 fases principais da Lua.",
+      topic: "Hemisfério Inclinado ao Sol = Verão (Prova 4 — Testando Q3)",
+      statement: "Durante a translação, o hemisfério que fica mais inclinado em direção ao Sol recebe mais radiação solar e vivencia o VERÃO.",
       answer: true,
-      explanation: "Verdadeiro! Elas marcam os dias de Lua Nova, Quarto Crescente, Lua Cheia e Quarto Minguante, pois a altura da maré depende da fase lunar."
+      explanation: "Verdadeiro! Questão 03 de Testando: mais inclinado ao Sol = mais luz e calor = VERÃO (enquanto o outro hemisfério está no INVERNO)."
     },
     {
       id: "f-vf-6",
-      topic: "Marés Menores — Crescente/Minguante (Prova 3)",
-      statement: "Nas fases de Lua Quarto Crescente e Quarto Minguante (Sol e Lua a 90°), a diferença entre maré alta e maré baixa é bem menor.",
+      topic: "Inclinação de 23,5° do Eixo (Prova 4 — Pág. 84)",
+      statement: "O eixo imaginário de rotação da Terra tem inclinação aproximada de 23,5° em relação ao plano da órbita, mantendo estações opostas nos dois hemisférios.",
       answer: true,
-      explanation: "Verdadeiro! A 90°, o Sol puxa a água onde a Lua baixaria o mar, reduzindo o desnível entre maré alta e maré baixa."
+      explanation: "Verdadeiro! Página 84 da apostila: a inclinação de 23,5° faz com que Norte e Sul recebam quantidades diferentes de luz ao longo do ano."
     },
     {
       id: "f-vf-7",
-      topic: "Eclipse Lunar — Alinhamento (Reforço)",
-      statement: "O eclipse LUNAR ocorre na Lua CHEIA, durante a NOITE, quando a Terra fica entre o Sol e a Lua (Sol – Terra – Lua).",
-      answer: true,
-      explanation: "Verdadeiro! Quem é escondida (eclipsada) é a LUA, mergulhando na sombra da Terra à noite."
+      topic: "Distância ao Sol NÃO Causa Estações (Prova 4 — Pág. 87)",
+      statement: "O verão no Brasil acontece em dezembro porque a Terra inteira está mais perto do Sol, fazendo verão em todo o planeta ao mesmo tempo.",
+      answer: false,
+      explanation: "Falso! Em dezembro é verão no Hemisfério Sul e INVERNO no Hemisfério Norte; o que define as estações é a inclinação de 23,5°, não a distância orbital."
     },
     {
       id: "f-vf-8",
-      topic: "Eclipse Solar — Alinhamento (Reforço Prova 2)",
-      statement: "O eclipse SOLAR ocorre na Lua NOVA, durante o DIA, quando a Lua fica entre o Sol e a Terra (Sol – Lua – Terra).",
+      topic: "Solstício de Junho — 21–22/06 (Prova 4 — Pág. 84)",
+      statement: "No solstício de 21–22 de junho, o Sol incide verticalmente em 23,5° N: começa o VERÃO no Hemisfério Norte e o INVERNO no Hemisfério Sul.",
       answer: true,
-      explanation: "Verdadeiro! Quem é escondido é o SOL, porque a LUA entra na frente dele durante o dia (Lua Nova)."
+      explanation: "Verdadeiro! Página 84: em junho os raios atingem perpendicularmente o Trópico de Câncer (23,5° N), iniciando o inverno aqui no Sul."
     },
     {
       id: "f-vf-9",
-      topic: "Pegadinha Eclipse Solar vs. Lunar (Reforço)",
+      topic: "Pegadinha Eclipse Solar vs. Lunar (Reforço 15x)",
       statement: "Durante um eclipse SOLAR, a Terra bloqueia a luz do Sol, impedindo que ela chegue à Lua.",
       answer: false,
-      explanation: "Falso! Se a Terra bloqueia a luz do Sol para a Lua, é eclipse LUNAR! No eclipse SOLAR, é a LUA que bloqueia o Sol para uma parte da Terra."
+      explanation: "Falso! Se a Terra bloqueia o Sol para a Lua, é eclipse LUNAR! No eclipse SOLAR, a LUA entra entre o Sol e a Terra (Lua Nova, de dia)."
     },
     {
       id: "f-vf-10",
-      topic: "Tábua de Angra dos Reis — Janeiro (Prova 3)",
+      topic: "Tábua de Angra — Lua Nova e Cheia (Reforço 6x)",
       statement: "Na tabela de Angra dos Reis, as marés mais altas do mês acontecem nos dias de Lua Minguante e Lua Crescente.",
       answer: false,
-      explanation: "Falso! Na tabela de janeiro, as mais altas (1,1 m a 1,2 m) acontecem na Lua NOVA e na Lua CHEIA; na Minguante e Crescente ficam entre 0,6 m e 0,9 m."
+      explanation: "Falso! As maiores marés altas (1,1–1,2 m) acontecem na Lua NOVA e na Lua CHEIA (Sol, Terra e Lua alinhados); na Crescente e Minguante ficam menores."
     },
     {
       id: "f-vf-11",
-      topic: "Área de Sombra no Eclipse Solar (Reforço)",
-      statement: "No eclipse solar, a sombra da Lua cobre a Terra inteira ao mesmo tempo.",
+      topic: "Área de Sombra no Eclipse Solar (Reforço 5x)",
+      statement: "No eclipse solar, a sombra da Lua cobre toda a face diurna da Terra ao mesmo tempo.",
       answer: false,
-      explanation: "Falso! A Lua é bem menor que a Terra, então sua sombra cobre apenas uma pequena faixa da superfície terrestre."
+      explanation: "Falso! Como a Lua é bem menor que a Terra, sua sombra escura (umbra) atinge apenas uma faixa estreita da superfície terrestre."
     },
     {
       id: "f-vf-12",
-      topic: "Influência nas Marés: Lua vs. Sol (Prova 3)",
-      statement: "Por ser muito maior que a Lua, o Sol exerce mais influência nas marés da Terra do que a Lua.",
-      answer: false,
-      explanation: "Falso! Embora a gravidade total do Sol seja maior, nas MARÉS a LUA manda mais (>2x) porque está muito mais perto da Terra."
+      topic: "Solstício de Dezembro — 21–22/12 (Prova 4 — Pág. 84)",
+      statement: "No solstício de 21–22 de dezembro, o Sol incide verticalmente em 23,5° S: começa o VERÃO no Hemisfério Sul (dia mais longo) e o INVERNO no Norte.",
+      answer: true,
+      explanation: "Verdadeiro! Página 84: em dezembro o Sol incide perpendicularmente no Trópico de Capricórnio (23,5° S), trazendo o dia mais longo do ano no Sul."
     },
     {
       id: "f-vf-13",
-      topic: "Cidades Antípodas — Fase da Lua (Prova 3)",
-      statement: "Naha (Japão) e Honório Serpa (PR), mesmo em lados opostos da Terra, têm a MESMA fase da Lua no mesmo instante (ex.: Lua Nova nas duas).",
+      topic: "Equinócios — Março e Setembro (Prova 4 — Pág. 84)",
+      statement: "Nos equinócios (20–22 de março e 21–23 de setembro), o Sol incide verticalmente no Equador, igualando a duração do dia e da noite (~12 h).",
       answer: true,
-      explanation: "Verdadeiro! A hora do dia é oposta, mas a posição da Lua em sua órbita (fase Lua Nova) é a mesma para toda a Terra."
+      explanation: "Verdadeiro! Página 84: equi-nócio significa 'noites iguais', pois os dois hemisférios ficam igualmente iluminados."
     },
     {
       id: "f-vf-14",
-      topic: "Cidades Antípodas e Marés (Reforço 10x)",
+      topic: "Cidades Antípodas e Marés (Reforço 16x)",
       statement: "Se em Naha (Japão) a maré está ALTA, na cidade diametralmente oposta Honório Serpa (PR) a maré está BAIXA.",
       answer: false,
-      explanation: "Falso! Ocorrem DUAS marés altas simultâneas em lados opostos da Terra (pontos A e A')! Logo, em Honório Serpa a maré TAMBÉM está ALTA!"
+      explanation: "Falso! Há DUAS marés altas simultâneas nos bojos opostos A e A' (pág. 80–83)! Logo, em Honório Serpa a maré TAMBÉM está ALTA!"
     },
     {
       id: "f-vf-15",
-      topic: "Bojos Opostos A e A' (Prova 3)",
-      statement: "No esquema das marés (pág. 80), há maré alta em A (Lua puxa a água mais forte que a Terra) e em A' (Lua puxa a Terra mais forte que a água de trás).",
+      topic: "Bojos Opostos A e A' (Reforço)",
+      statement: "No esquema das marés (pág. 80), forma-se maré alta ao mesmo tempo em A (lado da Lua) e em A' (lado oposto da Terra).",
       answer: true,
-      explanation: "Verdadeiro! Por isso a água se aglomera nos dois lados opostos A e A' (maré alta), deixando B e B' em maré baixa."
+      explanation: "Verdadeiro! Em A a Lua puxa a água mais forte que a Terra; em A' a Lua puxa a Terra mais forte que a água de trás — dois bojos opostos."
     },
     {
       id: "f-vf-16",
-      topic: "Marés Altas na Lua Nova e Cheia (Prova 3)",
-      statement: "As maiores marés altas (1,1 m–1,2 m) e menores baixas (0,0 m) acontecem na Lua Nova e na Lua Cheia, quando Sol, Terra e Lua estão alinhados.",
+      topic: "Marés Menores — Crescente/Minguante (Reforço)",
+      statement: "Nas fases de Quarto Crescente e Quarto Minguante (Sol e Lua a 90°), a diferença entre maré alta e maré baixa é menor.",
       answer: true,
-      explanation: "Verdadeiro! No alinhamento da Lua Nova e da Lua Cheia, a atração do Sol se soma à da Lua."
+      explanation: "Verdadeiro! Formando ângulo de 90°, a atração do Sol atenua a da Lua, gerando marés com menor variação."
     },
     {
       id: "f-vf-17",
-      topic: "Oceanos vs. Rochas Sólidas (Prova 3)",
-      statement: "A gravidade da Lua deforma visivelmente os oceanos e quase não deforma os continentes porque a água é fluida e escoa facilmente, enquanto as rochas sólidas resistem mais.",
+      topic: "Estações no Hemisfério Sul — Q14 Pág. 86 (Prova 4)",
+      statement: "No Hemisfério Sul (Brasil): 20/mar inicia Outono, 20–21/jun inicia Inverno, 22–23/set inicia Primavera e 21–22/dez inicia Verão.",
       answer: true,
-      explanation: "Verdadeiro! As partes sólidas resistem à deformação gravitacional, que aparece com clareza nas grandes massas líquidas."
+      explanation: "Verdadeiro! Exatamente as quatro lacunas preenchidas na Questão 14 da página 86 da apostila."
     },
     {
       id: "f-vf-18",
-      topic: "Fases no Hemisfério Sul: C e D (Reforço)",
+      topic: "Hemisfério Sul: C = Crescente, D = Minguante (Reforço)",
       statement: "No Hemisfério Sul (Brasil), a Lua Crescente tem formato de 'D' e a Minguante tem formato de 'C'.",
       answer: false,
-      explanation: "Falso! No Hemisfério Sul, C = Crescente e D = Minguante (Decrescente)!"
+      explanation: "Falso! No Hemisfério Sul é fácil: C = Crescente e D = Decrescente (Minguante)!"
     },
     {
       id: "f-vf-19",
-      topic: "Utilidade das Tábuas das Marés (Prova 3)",
-      statement: "As tábuas das marés da Marinha são essenciais para navegação em portos e rios, pesca costeira e esportes aquáticos como o surfe.",
-      answer: true,
-      explanation: "Verdadeiro! A Marinha do Brasil publica os horários e alturas das marés anualmente para planejamento seguro no litoral."
+      topic: "Pegadinha Estações Opostas — Q14 Pág. 86 (Prova 4)",
+      statement: "Quando começa a Primavera no Hemisfério Norte (20 de março), também começa a Primavera no Hemisfério Sul.",
+      answer: false,
+      explanation: "Falso! As estações são sempre OPOSTAS nos dois hemisférios: em 20 de março começa a Primavera no Norte e o OUTONO no Sul."
     },
     {
       id: "f-vf-20",
-      topic: "27,3 dias vs. 29,5 dias (Reforço)",
-      statement: "A Lua leva 29,5 dias para girar em torno da Terra e 27,3 dias para repetir suas fases.",
-      answer: false,
-      explanation: "Falso! É o contrário: 27,3 dias = volta ao redor da Terra (e rotação); 29,5 dias = ciclo completo das fases visto da Terra."
+      topic: "Tabela Pág. 87 — Data 05/01 e 22/12 (Prova 4)",
+      statement: "Na tabela da pág. 87, em 22/12 e 05/01 o Hemisfério Sul está no Verão ('Mais próximo do Sol devido à inclinação') e o Norte no Inverno.",
+      answer: true,
+      explanation: "Verdadeiro! A tabela da pág. 87 deixa claro que a proximidade sazonal que define verão ou inverno ocorre 'devido à inclinação' de 23,5°."
     },
     {
       id: "f-vf-21",
-      topic: "Equinócios vs. Solstícios (Reforço)",
-      statement: "Nos equinócios (março e setembro), um hemisfério recebe muito mais luz e os dias duram 18 horas.",
+      topic: "Equinócios vs. Solstícios (Prova 4 — Reforço)",
+      statement: "Nos equinócios (março e setembro), um hemisfério recebe muito mais luz e os dias duram cerca de 18 horas.",
       answer: false,
-      explanation: "Falso! EQUI-nócio = dia e noite iguais (~12h), com o Sol vertical no Equador. Dias mais longos ocorrem nos SOLSTÍCIOS de verão."
+      explanation: "Falso! Nos equinócios dia e noite duram iguais (~12 h) nos dois hemisférios. Dias mais longos ocorrem nos SOLSTÍCIOS de verão."
     },
     {
       id: "f-vf-22",
-      topic: "Marés vs. Tsunamis (Prova 3)",
-      statement: "Tsunamis (ondas gigantes) são apenas marés altas comuns provocadas pela Lua Cheia todos os meses.",
+      topic: "Marés vs. Tsunamis (Reforço)",
+      statement: "Tsunamis são marés altas comuns provocadas todos os meses pela gravidade da Lua Cheia.",
       answer: false,
-      explanation: "Falso! As marés são oscilações periódicas e previsíveis causadas pela gravidade da Lua e do Sol; tsunamis vêm de terremotos no fundo do mar."
+      explanation: "Falso! Marés vêm da gravidade da Lua e do Sol; tsunamis são ondas gigantes causadas por terremotos ou vulcões no fundo do mar."
     },
     {
       id: "f-vf-23",
-      topic: "2ª Lei de Kepler (Revisão)",
-      statement: "Pela 2ª Lei de Kepler, um planeta se move mais rápido no periélio (perto do Sol) e mais devagar no afélio (longe do Sol).",
+      topic: "Hipótese: Eixo com Inclinação 0° (Prova 4 — Pág. 85)",
+      statement: "Se o eixo da Terra não tivesse inclinação (0°, perpendicular à órbita), não existiriam estações do ano e viveríamos em equinócio permanente.",
       answer: true,
-      explanation: "Verdadeiro! Perto do Sol a gravidade acelera o planeta para o raio varrer áreas iguais em tempos iguais."
+      explanation: "Verdadeiro! Desafio QR Code da pág. 85: sem inclinação de 23,5°, a insolação de cada região seria sempre a mesma o ano inteiro."
     },
     {
       id: "f-vf-24",
-      topic: "Estações do Ano (Revisão)",
-      statement: "As estações do ano existem pela inclinação de 23,5° do eixo da Terra combinada com a translação (365 dias), sendo sempre opostas nos hemisférios Norte e Sul.",
+      topic: "Constelação Tuivaé — Homem Velho (Prova 4 — Págs. 85–86)",
+      statement: "Registrada em 1614 por Claude d'Abbeville no Maranhão, a constelação tupi-guarani Tuivaé (Homem Velho) aparece no céu anunciando o VERÃO.",
       answer: true,
-      explanation: "Verdadeiro! Quando é verão no Sul (21/dez, Sol no Trópico de Capricórnio), é inverno no Norte."
+      explanation: "Verdadeiro! Págs. 85–86: a constelação Tuivaé (semelhante a um homem velho pegando um galho) marcava a chegada do verão para os tupis-guaranis."
     },
     {
       id: "f-vf-25",
       topic: "3ª Lei de Kepler — Períodos (Reforço)",
       statement: "Pela 3ª Lei de Kepler, quanto mais distante do Sol um planeta está, mais CURTO é o seu ano.",
       answer: false,
-      explanation: "Falso! Planetas mais distantes têm órbita maior e mais lenta: quanto MAIOR a distância (R), mais LONGO é o ano (T²/R³ = k)."
+      explanation: "Falso! Pela 3ª Lei de Kepler (T²/R³ = k), quanto MAIOR a distância R, mais LONGO é o período de translação (o ano do planeta)."
     },
     {
       id: "f-vf-26",
-      topic: "Gravitação Universal de Newton (Prova 3)",
-      statement: "Na Gravitação Universal de Newton, quanto maior a massa e menor a distância entre dois corpos, maior a força de atração.",
+      topic: "Constelação da Ema — Inverno (Prova 4 — Q2 Pág. 104)",
+      statement: "Na astronomia tupi-guarani, a constelação da Ema aparece na segunda metade de junho, anunciando o INVERNO (Sul) e a estação seca (Norte).",
       answer: true,
-      explanation: "Verdadeiro! Matéria atrai matéria: mais massa aumenta a força e menor distância aumenta ainda mais (F = G·M·m/d²)."
+      explanation: "Verdadeiro! Q2 (pág. 104): as 4 constelações sazonais tupis-guaranis são Homem Velho/Tuivaé (verão), Cervo (outono), Ema (inverno) e Anta do Norte (primavera)."
     },
     {
       id: "f-vf-27",
       topic: "Gravitação — Dobro da Distância (Reforço)",
-      statement: "Se a distância entre dois corpos dobrar (2d), a força gravitacional cai pela metade.",
+      statement: "Se a distância entre dois corpos dobrar (2d), a força gravitacional entre eles cai pela metade.",
       answer: false,
-      explanation: "Falso! Como depende de d², dobrar a distância divide a força por 2² = 4 (cai para 1/4)."
+      explanation: "Falso! Como F = G·M·m / d², dobrar a distância divide a força por 2² = 4 (cai para 1/4)!"
     },
     {
       id: "f-vf-28",
-      topic: "Massa vs. Peso na Lua (Reforço)",
-      statement: "Na Lua, a massa (kg) de um astronauta diminui 6 vezes, mas seu peso (N) não muda.",
+      topic: "Pegadinha Astronomia Indígena (Prova 4 — Págs. 85–86)",
+      statement: "A astronomia dos povos originários tupis-guaranis tinha uso apenas mitológico, sem relação com agricultura, pesca ou previsão das chuvas.",
       answer: false,
-      explanation: "Falso! Massa (em kg) é igual no Universo todo; o PESO (força em Newtons, P = m·g) é que cai para ~1/6 na Lua."
+      explanation: "Falso! Págs. 85–86: eles conectavam fases da Lua, marés e constelações diretamente à previsão de chuvas, pesca artesanal, agricultura e orientação."
     },
     {
       id: "f-vf-29",
-      topic: "Ação e Reação Gravitacional (Reforço)",
+      topic: "Ação e Reação Gravitacional (Reforço 5x)",
       statement: "A força gravitacional com que a Terra puxa a Lua é maior que a força com que a Lua puxa a Terra.",
       answer: false,
-      explanation: "Falso! Pela 3ª Lei de Newton (Ação e Reação), a Terra atrai a Lua exatamente com a MESMA intensidade com que a Lua atrai a Terra!"
+      explanation: "Falso! Pela 3ª Lei de Newton (Ação e Reação), a Terra atrai a Lua com a MESMA intensidade com que a Lua atrai a Terra!"
     },
     {
       id: "f-vf-30",
-      topic: "Umbra (A) vs. Penumbra (B) (Reforço Prova 2)",
-      statement: "No eclipse solar (Lua Nova, de dia), quem está no ponto 'A' (umbra) vê eclipse TOTAL; quem está em 'B' (penumbra) vê PARCIAL.",
-      answer: true,
-      explanation: "Verdadeiro! Posição A = umbra (sombra total, sol totalmente oculto); região B = penumbra (sombra parcial)."
+      topic: "Solstício de Verão vs. Inverno (Prova 4 — Pág. 84)",
+      statement: "No solstício de inverno no Hemisfério Sul (junho), temos o dia mais longo e a noite mais curta do ano.",
+      answer: false,
+      explanation: "Falso! Pág. 84: o solstício de INVERNO tem a NOITE mais longa e o dia mais curto; o dia mais longo acontece no solstício de VERÃO (dezembro no Sul)."
     }
   ],
   exams: [

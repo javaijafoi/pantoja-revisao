@@ -1,217 +1,217 @@
 window.DATA_BIOLOGIA = {
   id: "biologia",
   title: "Biologia",
-  subtitle: "Cap. 07 Bernoulli (Dia 3) — Reforço Geral + Gimnospermas, Pinhão e Pólen (Prova 3)",
+  subtitle: "Cap. 07 Bernoulli (Dia 4) — Reforço Gimno/Angio + Frutos e Dispersão (Prova 5) + Reprodução (Págs. 8–19)",
   cards: [
     {
       id: "b-vf-1",
-      topic: "Reino Plantae (Reforço)",
+      topic: "Reino Plantae (Reforço 14x)",
       statement: "As plantas são organismos procariontes e heterótrofos.",
       answer: false,
-      explanation: "Falso! Todas as plantas são EUCARIONTES (têm núcleo), pluricelulares e AUTÓTROFAS (produzem glicose pela fotossíntese)."
+      explanation: "Falso! Todas as plantas são EUCARIONTES (têm núcleo), pluricelulares e AUTÓTROFAS (produzem glicose na fotossíntese)."
     },
     {
       id: "b-vf-2",
-      topic: "Clorofila e Cloroplastos (Reforço)",
-      statement: "A clorofila fica dentro dos cloroplastos e absorve luz solar para fazer fotossíntese.",
-      answer: true,
-      explanation: "Verdadeiro! Nos cloroplastos das folhas, a clorofila usa a energia do Sol para transformar água e CO₂ em glicose e O₂."
+      topic: "Assexuada vs. Variabilidade — Cap. 07 Pt. 1 (Pág. 9)",
+      statement: "A principal vantagem da reprodução assexuada é gerar MAIOR variabilidade genética entre os descendentes.",
+      answer: false,
+      explanation: "Falso! Questão 04 de Testando: a reprodução ASSEXUADA gera clones (baixa variabilidade), mas é rápida e gasta menos energia; quem gera variabilidade é a SEXUADA."
     },
     {
       id: "b-vf-3",
-      topic: "Xilema vs. Floema (Reforço)",
+      topic: "Xilema vs. Floema (Reforço 23x)",
       statement: "O xilema leva a seiva elaborada (açúcares da fotossíntese) das folhas para a raiz.",
       answer: false,
       explanation: "Falso! XILEMA puxa água e sais do CHÃO (seiva bruta); FLOEMA leva a seiva elaborada (açúcares) para toda a planta."
     },
     {
       id: "b-vf-4",
-      topic: "Nome Gimnosperma (Prova 3)",
-      statement: "O nome gimnosperma vem do grego gymnos (nu) e sperma (semente), porque suas sementes não ficam dentro de frutos.",
+      topic: "Pericarpo: 3 Camadas (Prova 5)",
+      statement: "De fora para dentro, o pericarpo do fruto (como no abacate, pág. 42) é formado por epicarpo (casca), mesocarpo (polpa) e endocarpo.",
       answer: true,
-      explanation: "Verdadeiro! As gimnospermas têm sementes nuas expostas nos estróbilos (cones), sem flores nem frutos."
+      explanation: "Verdadeiro! O pericarpo vem da parede do ovário da flor: epicarpo (casca), mesocarpo (polpa comestível) e endocarpo (camada interna junto à semente)."
     },
     {
       id: "b-vf-5",
-      topic: "Briófitas — Estruturas (Reforço)",
-      statement: "As briófitas (musgos) têm raiz, caule e folha verdadeiros.",
+      topic: "Frutos Verdadeiros vs. Pseudofrutos (Prova 5)",
+      statement: "Manga, uva e ameixa são pseudofrutos porque sua polpa se forma a partir do receptáculo floral.",
       answer: false,
-      explanation: "Falso! Sem vasos condutores, briófitas não têm órgãos verdadeiros: suas partes são rizoide, cauloide e filoide."
+      explanation: "Falso! Manga, uva e ameixa vêm do ovário da flor e são FRUTOS VERDADEIROS; pseudofrutos são maçã, abacaxi e caju (pág. 43)."
     },
     {
       id: "b-vf-6",
-      topic: "Exemplos de Gimnospermas (Prova 3)",
-      statement: "Os quatro principais exemplos de gimnospermas da apostila são pinheiros, araucárias, cicas e sequoias.",
-      answer: true,
-      explanation: "Verdadeiro! Além deles, o Ginkgo biloba (com folhas em forma de leque e cones) também é uma gimnosperma."
+      topic: "Frutos Secos: Deiscentes vs. Indeiscentes (Prova 5)",
+      statement: "Frutos secos indeiscentes abrem-se naturalmente quando maduros para soltar as sementes, enquanto os deiscentes ficam fechados.",
+      answer: false,
+      explanation: "Falso! Pág. 43: DEISCENTES abrem-se naturalmente quando maduros (ex.: feijão); INDEISCENTES não se abrem naturalmente (ex.: amendoim)."
     },
     {
       id: "b-vf-7",
-      topic: "Ginkgo biloba (Prova 3)",
+      topic: "Ginkgo biloba (Reforço Prova 3)",
       statement: "O Ginkgo biloba (árvore dioica com folhas em leque, cones e sementes sem frutos) pertence ao grupo das gimnospermas.",
       answer: true,
-      explanation: "Verdadeiro! Se tem cones (estróbilos) e sementes nuas sem frutos, é gimnosperma!"
+      explanation: "Verdadeiro! Questão 05 da apostila: produziu cones (estróbilos) e sementes sem frutos = GIMNOSPERMA!"
     },
     {
       id: "b-vf-8",
-      topic: "Partes do Pinhão (Prova 3)",
-      statement: "A semente do pinhão tem 3 partes: tegumento (casca protetora), endosperma (reserva nutritiva) e embrião (futura planta).",
+      topic: "Sementes Aladas — Vento (Prova 5 — Encceja Q3)",
+      statement: "Sementes aladas (com 'asas' leves) e estruturas plumosas (como dente-de-leão e orquídeas) são dispersadas principalmente pelo VENTO.",
       answer: true,
-      explanation: "Verdadeiro! O endosperma guarda os nutrientes que alimentam o embrião na germinação (e torna o pinhão tão nutritivo)."
+      explanation: "Verdadeiro! Pág. 44 e Testando Q3: estruturas leves, aladas ou plumosas planeiam no ar pelo vento (anemocoria)."
     },
     {
       id: "b-vf-9",
-      topic: "Samambaia — Esporófito vs. Protalo (Reforço)",
-      statement: "Na samambaia (pteridófita), a planta grande e duradoura é o protalo.",
-      answer: false,
-      explanation: "Falso! A samambaia grande e duradoura é o ESPORÓFITO. O protalo (gametófito em forma de coração) é pequeno e transitório."
+      topic: "Dispersão por Água e Aves (Prova 5)",
+      statement: "O coco-da-baía flutua e dispersa-se pela água; já frutos carnosos comidos por tucanos e sabiás têm sementes eliminadas intactas nas fezes.",
+      answer: true,
+      explanation: "Verdadeiro! Pág. 44: a casca fibrosa do coco retém ar para flutuar na água, e aves frugívoras digerem a polpa e soltam as sementes longe."
     },
     {
       id: "b-vf-10",
-      topic: "Nutrição da Semente (Prova 3)",
+      topic: "Nutrição da Semente vs. Pericarpo (Prova 5 — Reforço)",
       statement: "Na semente do pinhão, a parte que armazena nutrientes para nutrir o embrião chama-se epicarpo.",
       answer: false,
-      explanation: "Falso! Epicarpo é a casca externa de um fruto; na semente, a reserva de nutrientes é o ENDOSPERMA!"
+      explanation: "Falso! Na semente, a reserva de nutrientes chama-se ENDOSPERMA! Epicarpo é a casca externa de um fruto (pág. 42)."
     },
     {
       id: "b-vf-11",
-      topic: "Briófitas São Avasculares (Reforço)",
-      statement: "As briófitas possuem vasos condutores (xilema e floema) como as samambaias.",
-      answer: false,
-      explanation: "Falso! Briófitas são as ÚNICAS plantas avasculares (sem xilema nem floema): transportam água célula a célula por difusão."
+      topic: "Importância da Dispersão (Prova 5)",
+      statement: "Espalhar as sementes para longe da planta-mãe reduz a competição entre pais e filhos e amplia a área ocupada pela espécie.",
+      answer: true,
+      explanation: "Verdadeiro! Pág. 43: quanto mais distante da planta-mãe a semente germina, menos disputa por luz, água e minerais."
     },
     {
       id: "b-vf-12",
-      topic: "Polinização das Gimnospermas (Prova 3)",
-      statement: "Nas gimnospermas (como a araucária), o pólen é levado pelo vento (anemofilia) do cone masculino até o cone feminino.",
+      topic: "Órgãos Vegetais — Pé de Pimentão (Prova 5 — Q15)",
+      statement: "No pé de pimentão (pág. 39), a raiz fixa e absorve água/sais, o caule sustenta, a folha faz fotossíntese, a flor reproduz e o fruto protege a semente.",
       answer: true,
-      explanation: "Verdadeiro! Como não têm flores vistosas nem néctar, as gimnospermas contam principalmente com o vento (anemofilia)."
+      explanation: "Verdadeiro! Cada órgão da angiosperma cumpre uma função integrada para sobrevivência e reprodução."
     },
     {
       id: "b-vf-13",
-      topic: "Polinização da Araucária (Prova 3)",
-      statement: "Na araucária, a polinização é feita por abelhas e beija-flores atraídos pelo néctar de suas flores coloridas.",
+      topic: "Tomate e Pimentão são Frutos (Prova 5)",
+      statement: "Do ponto de vista botânico (científico), tomate, pimentão, pepino e abobrinha são legumes, e não frutos.",
       answer: false,
-      explanation: "Falso! Araucária é gimnosperma (não tem flores coloridas nem néctar): sua polinização ocorre pelo VENTO (anemofilia)."
+      explanation: "Falso! Toda estrutura vegetal originada do ovário da flor que guarda sementes é botanicamente um FRUTO."
     },
     {
       id: "b-vf-14",
-      topic: "Androceu vs. Gineceu (Reforço)",
-      statement: "O androceu é a parte MASCULINA da flor (estames: antera com pólen + filete); o gineceu é a FEMININA.",
-      answer: true,
-      explanation: "Verdadeiro! ANDRO = masculino (produz pólen na antera); GINE = feminino (estigma, estilete e ovário)."
+      topic: "Gineceu vs. Androceu (Reforço)",
+      statement: "Em uma flor, o androceu é a parte feminina e o gineceu é a parte masculina.",
+      answer: false,
+      explanation: "Falso! ANDROceu = masculino (estames que produzem pólen); GINEceu (de ginecologista) = feminino (estigma, estilete e ovário)."
     },
     {
       id: "b-vf-15",
-      topic: "Tubo Polínico nas Gimnospermas (Prova 3)",
-      statement: "Ao chegar ao estróbilo feminino, o grão de pólen forma o tubo polínico, que leva o gameta masculino até a oosfera sem precisar de água.",
+      topic: "Bipartição / Cissiparidade — Cap. 07 Pt. 1 (Pág. 10)",
+      statement: "Bactérias e protozoários unicelulares reproduzem-se assexuadamente por bipartição (divisão binária), duplicando o DNA e gerando duas células idênticas.",
       answer: true,
-      explanation: "Verdadeiro! O pólen + tubo polínico tornaram a fecundação das gimnospermas e angiospermas independente da água."
+      explanation: "Verdadeiro! Pág. 10 (e Q2 da pág. 14): a bipartição (cissiparidade) permite multiplicação muito rápida de bactérias."
     },
     {
       id: "b-vf-16",
-      topic: "Pinhão é Semente Nua (Reforço Prova 3)",
-      statement: "O pinhão da araucária é um fruto seco e a pinha é uma flor.",
-      answer: false,
-      explanation: "Falso! Araucária é gimnosperma (NÃO tem flor nem fruto!): o pinhão é uma SEMENTE nua, e a pinha é o estróbilo (cone) feminino maduro."
+      topic: "Gimnosperma = Semente Nua (Reforço Prova 3)",
+      statement: "Gimnospermas (gymnos = nu, sperma = semente) têm sementes 'nuas' porque não ficam encerradas dentro de um fruto.",
+      answer: true,
+      explanation: "Verdadeiro! Questão 13 da apostila: gimnospermas possuem sementes, mas não têm flores nem frutos (ovário) para envolvê-las."
     },
     {
       id: "b-vf-17",
-      topic: "Exina do Grão de Pólen (Prova 3)",
-      statement: "A parede externa do grão de pólen chama-se exina e é dura como diamante, protegendo o gameta masculino da desidratação no ar.",
+      topic: "Exina do Grão de Pólen (Reforço Prova 3)",
+      statement: "A parede externa do grão de pólen chama-se exina e é muito resistente, protegendo o gameta masculino da desidratação no ar.",
       answer: true,
-      explanation: "Verdadeiro! A exina resistente protege o material genético durante o voo pelo ar até encontrar enzimas no órgão feminino."
+      explanation: "Verdadeiro! A exina protege o material genético durante o transporte pelo vento ou animais até encontrar o órgão feminino."
     },
     {
       id: "b-vf-18",
-      topic: "Sequoias Gigantes e Fogo (Prova 3)",
-      statement: "A casca grossa da sequoia gigante (até 46 cm) a protege do fogo, e o calor do incêndio abre os cones velhos para liberar sementes.",
+      topic: "Brotamento, Fragmentação e Partenogênese — Págs. 11–12",
+      statement: "Brotamento (hidras), fragmentação/regeneração (estrelas-do-mar), esporulação (fungos) e partenogênese (abelhas) são reproduções assexuadas.",
       answer: true,
-      explanation: "Verdadeiro! Além de abrir os cones, o fogo queima a vegetação rasteira que competiria por luz solar com as mudas."
+      explanation: "Verdadeiro! Págs. 11–12: todas geram descendentes sem fecundação (na partenogênese, o óvulo desenvolve-se sem ser fecundado)."
     },
     {
       id: "b-vf-19",
-      topic: "Dispersão da Mamona (Reforço)",
-      statement: "A mamona precisa de aves para comer seus frutos e dispersar suas sementes.",
+      topic: "Dispersão da Mamona (Prova 5 — Reforço)",
+      statement: "A mamona precisa de aves para comer seus frutos suculentos e dispersar suas sementes.",
       answer: false,
-      explanation: "Falso! A mamona lança suas sementes por MECANISMO PRÓPRIO explosivo. Aves dispersam frutos carnosos suculentos."
+      explanation: "Falso! Pág. 44: a mamona dispersa por MECANISMO PRÓPRIO (o fruto seca, estoura e arremessa as sementes longe)."
     },
     {
       id: "b-vf-20",
-      topic: "Flores e Frutos Só nas Angiospermas (Reforço 8x)",
-      statement: "Tanto as gimnospermas quanto as angiospermas produzem flores e frutos.",
-      answer: false,
-      explanation: "Falso! SÓ as ANGIOSPERMAS têm flores e frutos! Gimnospermas têm sementes nuas em cones/estróbilos."
+      topic: "Classificação do Jardim — Q12 (Reforço Prova 4)",
+      statement: "No jardim da Q12: grama, coqueiro, acerola, jabuticaba, laranja, limão e graviola são ANGIOSPERMAS (7); samambaias e avencas são PTERIDÓFITAS (2); cicas e pinheiros são GIMNOSPERMAS (2).",
+      answer: true,
+      explanation: "Verdadeiro! Grama e coqueiro também dão flores e sementes protegidas (angiospermas)! Cicas e pinheiros são gimnospermas."
     },
     {
       id: "b-vf-21",
-      topic: "Gineceu vs. Androceu (Reforço)",
-      statement: "Em uma flor, o androceu é feminino e o gineceu é masculino.",
-      answer: false,
-      explanation: "Falso! GINEceu (de ginecologista) = FEMININO; ANDROceu = MASCULINO (antera + filete)."
+      topic: "Fecundação Externa vs. Interna — Págs. 16–17",
+      statement: "Na fecundação externa (peixes e anfíbios na água), os ovos ficam expostos a predadores; já a fecundação interna protege o embrião e independe da água.",
+      answer: true,
+      explanation: "Verdadeiro! Testando Q1 e Q6 (pág. 19): peixes soltam muitos gametas na água; em terra seca, a fecundação interna e o ovo com casca protegem o embrião."
     },
     {
       id: "b-vf-22",
-      topic: "Dispersão do Pinhão — Gralha-Azul (Prova 3)",
-      statement: "A gralha-azul é uma ave do Sul do Brasil famosa por enterrar e dispersar os pinhões da araucária.",
+      topic: "Gralha-Azul e Pinhão (Reforço Prova 3)",
+      statement: "A gralha-azul é a ave brasileira famosa por enterrar e dispersar os pinhões (sementes da araucária) no Sul do Brasil.",
       answer: true,
-      explanation: "Verdadeiro! Ao esconder pinhões no solo para comer depois, a gralha-azul ajuda a plantar novas araucárias (árvore ameaçada de extinção)."
+      explanation: "Verdadeiro! Pág. 42: ao estocar pinhões no solo para comer depois, a gralha-azul ajuda a plantar novas araucárias."
     },
     {
       id: "b-vf-23",
-      topic: "Flores com Cheiro Fétido (Reforço)",
-      statement: "Flores com cheiro fétido de carne podre afastam todos os insetos e não são polinizadas.",
+      topic: "Ovovivíparos — Jararaca — Pág. 16 / Q2 Aprimorando",
+      statement: "Animais ovovivíparos (como a jararaca) nutrem o embrião pela placenta da mãe, igual aos mamíferos vivíparos.",
       answer: false,
-      explanation: "Falso! O odor de carne podre atrai polinizadores específicos como moscas e besouros necrófagos."
+      explanation: "Falso! Na OVOVIVIPARIDADE o ovo fica alojado dentro da fêmea, mas o embrião nutre-se apenas das reservas do próprio ovo, sem troca com a mãe."
     },
     {
       id: "b-vf-24",
-      topic: "Óvulo e Ovário da Flor (Reforço)",
-      statement: "Nas angiospermas, o óvulo fecundado vira a SEMENTE e o ovário vira o FRUTO verdadeiro.",
-      answer: true,
-      explanation: "Verdadeiro! Óvulo → Semente; Ovário → Fruto verdadeiro (epicarpo, mesocarpo e endocarpo)."
+      topic: "Ovíparos vs. Vivíparos — Pág. 16",
+      statement: "Animais vivíparos põem ovos no ambiente externo, onde o embrião cresce fora do corpo da mãe.",
+      answer: false,
+      explanation: "Falso! Quem põe ovos no ambiente externo são os OVÍPAROS (aves, maioria dos répteis); VIVÍPAROS desenvolvem o embrião dentro da mãe com nutrição materna."
     },
     {
       id: "b-vf-25",
-      topic: "Colheita do Pinhão Verde (Prova 3)",
-      statement: "Colher pinhão antes da época permitida (antes de abril) é proibido porque prejudica a reprodução da araucária ameaçada e o pinhão verde faz mal à saúde.",
-      answer: true,
-      explanation: "Verdadeiro! Esperar a pinha amadurecer protege a fauna, permite a germinação da araucária e evita problemas digestivos."
+      topic: "Minhocas — Hermafroditas — Cap. 07 Pt. 1",
+      statement: "Por serem monoicas (hermafroditas), as minhocas sempre se autofecundam sozinhas e passam por fase larval.",
+      answer: false,
+      explanation: "Falso! Q1 de Aprimorando: minhocas fazem fecundação CRUZADA (duas minhocas trocam espermatozoides) e têm desenvolvimento DIRETO (sem larva)."
     },
     {
       id: "b-vf-26",
-      topic: "Baga vs. Drupa (Reforço)",
+      topic: "Baga vs. Drupa (Prova 5 — Reforço)",
       statement: "Abacate e manga (1 caroço) são bagas; melancia e tomate (várias sementes) são drupas.",
       answer: false,
-      explanation: "Falso! Drupa = caroço DURO único (abacate, manga, pêssego); Baga = BASTANTE sementes (melancia, tomate, uva)."
+      explanation: "Falso! Pág. 43: DRUPA = 1 caroço duro/semente (abacate, manga, ameixa); BAGA = BASTANTE sementes (melancia, tomate, uva)."
     },
     {
       id: "b-vf-27",
-      topic: "Dispersão por Vento e Água (Reforço)",
-      statement: "Sementes aladas e dente-de-leão são levadas pelo vento; o coco-da-baía flutua na água.",
+      topic: "Desenvolvimento Direto vs. Indireto — Págs. 17–18",
+      statement: "No desenvolvimento direto (gato, sapo-pipa), não há larva; no indireto há metamorfose incompleta (gafanhoto: ninfa → adulto) ou completa (borboleta: lagarta → pupa → adulto).",
       answer: true,
-      explanation: "Verdadeiro! Aladas/plumosas planeiam no vento; a casca fibrosa do coco retém ar para flutuar nas correntes de água."
+      explanation: "Verdadeiro! Págs. 17–18 e Q7 (sapo-pipa): metamorfose incompleta tem ninfa sem pupa; completa passa por larva/lagarta e pupa."
     },
     {
       id: "b-vf-28",
       topic: "Propagação Vegetativa (Reforço)",
       statement: "Enxertia (cavalo + cavaleiro), estaquia, mergulhia e alporquia são formas de reprodução sexuada.",
       answer: false,
-      explanation: "Falso! Não há encontro de gametas: todas são propagação vegetativa ASSEXUADA (produzem clones idênticos mais rápido, com baixa variabilidade genética)."
+      explanation: "Falso! Pág. 46: todas são propagação vegetativa ASSEXUADA (sem gametas; geram clones mais rápido, mas vulneráveis às mesmas doenças)."
     },
     {
       id: "b-vf-29",
-      topic: "Partes Comestíveis (Revisão)",
-      statement: "Batata-inglesa e cebola são CAULES; brócolis e couve-flor são FLORES; tomate é FRUTO; cenoura e mandioca são RAÍZES.",
+      topic: "Utilidades: Etanol vs. Biodiesel (Prévia Prova 6 — Pág. 48)",
+      statement: "O etanol vem da fermentação dos açúcares da cana ou milho e o biodiesel vem de óleos vegetais de grãos; o CO₂ da queima é reabsorvido na fotossíntese.",
       answer: true,
-      explanation: "Verdadeiro! Lembrança clássica de prova: batata-inglesa e cebola = caules; brócolis/couve-flor = flores; tomate = fruto!"
+      explanation: "Verdadeiro! Pág. 48 e Q22: por fechar o ciclo de carbono via fotossíntese, biocombustíveis renováveis ajudam contra o aquecimento global."
     },
     {
       id: "b-vf-30",
-      topic: "Pseudofrutos (Revisão)",
-      statement: "Maçã, abacaxi e caju são frutos verdadeiros porque sua polpa nasce apenas do ovário da flor.",
+      topic: "Pseudofrutos (Prova 5 — Reforço)",
+      statement: "Maçã, abacaxi e caju são frutos verdadeiros porque sua polpa suculenta nasce apenas do ovário da flor.",
       answer: false,
-      explanation: "Falso! Maçã, abacaxi e caju são PSEUDOFRUTOS: a parte carnosa que comemos vem do receptáculo ou do pedúnculo floral."
+      explanation: "Falso! Pág. 43: maçã, abacaxi e caju são PSEUDOFRUTOS, pois a parte comestível vem do receptáculo floral ou do pedúnculo."
     }
   ],
   exams: [

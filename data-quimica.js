@@ -1,217 +1,217 @@
 window.DATA_QUIMICA = {
   id: "quimica",
   title: "Química",
-  subtitle: "Cap. 08 Bernoulli (Dia 3) — Reforço de GEE/Massas + Fatores Climáticos (Prova 3)",
+  subtitle: "Cap. 08 Bernoulli (Dia 4) — Reforço Instrumentos/Massas/Altitude + Efeito Estufa e PhET (Prova 4)",
   cards: [
     {
       id: "q-vf-1",
-      topic: "Biruta Aeronáutica (Reforço)",
-      statement: "Na biruta aeronáutica, o cone amarelo esticado na horizontal significa que não há vento.",
-      answer: false,
-      explanation: "Falso! Cone esticado na horizontal = vento FORTE. Cone inclinado = vento fraco; cone caído na vertical = sem vento."
+      topic: "Balanço Energético 30% / 70% (Prova 4)",
+      statement: "Quando a radiação solar atinge a Terra, cerca de 30% é refletida de volta ao espaço e 70% é absorvida pela atmosfera e superfície.",
+      answer: true,
+      explanation: "Verdadeiro! Página 99 da apostila: 30% da energia solar volta direto por reflexão e 70% é absorvida e depois reemitida como calor."
     },
     {
       id: "q-vf-2",
       topic: "Pluviômetro vs. Higrômetro (Reforço)",
-      statement: "O higrômetro mede a chuva em milímetros (mm) e o pluviômetro mede a umidade do ar em %.",
+      statement: "O higrômetro mede a chuva em milímetros (mm) e o pluviômetro mede a umidade relativa do ar em %.",
       answer: false,
-      explanation: "Falso! Está invertido: PLUVIÔMETRO (pluvial = chuva) mede chuva em mm (1 mm = 1 L/m²); HIGRÔMETRO mede umidade relativa do ar em %."
+      explanation: "Falso! Está invertido: PLUVIÔMETRO (de pluvial = chuva) mede chuva em mm (1 mm = 1 L/m²); HIGRÔMETRO mede umidade relativa do ar em %."
     },
     {
       id: "q-vf-3",
-      topic: "Latitude e Temperatura (Prova 3)",
-      statement: "Quanto mais perto do Equador (baixa latitude), mais verticais são os raios solares e maior é a temperatura.",
+      topic: "Aerossóis na Atmosfera (Prova 4)",
+      statement: "Além dos gases, a atmosfera contém pequenas partículas em suspensão chamadas aerossóis, que também ajudam no equilíbrio energético Terra-Sol.",
       answer: true,
-      explanation: "Verdadeiro! Baixa latitude (perto do Equador) recebe maior intensidade de radiação solar; alta latitude (perto dos polos) recebe raios oblíquos e é mais fria."
+      explanation: "Verdadeiro! Seção 4.1 (pág. 99): a atmosfera reúne gases e aerossóis (pequenas partículas em suspensão) essenciais para o balanço térmico."
     },
     {
       id: "q-vf-4",
-      topic: "Tempo vs. Clima (Reforço)",
-      statement: "A frase 'O clima está agradável hoje!' usa corretamente o termo clima.",
-      answer: false,
-      explanation: "Falso! Se é de 'hoje' ou 'ontem' (estado momentâneo do ar), é TEMPO meteorológico. Clima exige a média de 30 anos ou mais."
+      topic: "Gráfico do Efeito Estufa — H₂O 50% (Prova 4)",
+      statement: "No gráfico do efeito estufa (pág. 99), os quatro principais atores são vapor de água/H₂O (50%), nuvens (25%), CO₂ (20%) e outros GEE (5%).",
+      answer: true,
+      explanation: "Verdadeiro! Exatamente as porcentagens do gráfico de setores da pág. 99: H₂O = 50%, nuvens = 25%, CO₂ = 20% e CH₄/N₂O/O₃/HFCs = 5%."
     },
     {
       id: "q-vf-5",
-      topic: "Balanço Energético Terra-Sol (Reforço)",
-      statement: "A Terra absorve 100% da radiação solar sem refletir nada de volta para o espaço.",
+      topic: "Gráfico do Efeito Estufa — Pegadinha CO₂ (Prova 4)",
+      statement: "O gás carbônico (CO₂) responde por 75% do efeito estufa natural da Terra, enquanto o vapor de água responde por apenas 5%.",
       answer: false,
-      explanation: "Falso! Cerca de 30% da radiação solar é refletida direto para o espaço e os 70% restantes são absorvidos pela atmosfera e superfície terrestre."
+      explanation: "Falso! O maior responsável pelo efeito estufa natural é o vapor de água H₂O (50%) + nuvens (25%); o CO₂ responde por 20% e outros gases por 5%."
     },
     {
       id: "q-vf-6",
-      topic: "Barômetro (Reforço)",
-      statement: "O barômetro mede a pressão atmosférica (mbar, mmHg ou MPa), que diminui quando subimos em altitude.",
+      topic: "Por que o CO₂ Preocupa Tanto (Prova 4)",
+      statement: "Mesmo respondendo por 20% do efeito estufa (menos que os 50% do H₂O), o aumento humano de CO₂ desequilibra o sistema e retém calor em excesso.",
       answer: true,
-      explanation: "Verdadeiro! Dica: BARômetro = pressão (mBAR!). Quanto maior a altitude, menor a coluna de ar acima e menor a pressão atmosférica."
+      explanation: "Verdadeiro! Queima de combustíveis fósseis e queimadas adicionam CO₂ extra rapidamente, aprisionando cada vez mais calor na baixa atmosfera."
     },
     {
       id: "q-vf-7",
-      topic: "Barômetro vs. Anemômetro (Reforço)",
+      topic: "Barômetro vs. Anemômetro (Reforço 8x)",
       statement: "O barômetro mede a velocidade do vento e o anemômetro mede a pressão atmosférica.",
       answer: false,
-      explanation: "Falso! Dica rápida: BARômetro = pressão; ANEMômetro (anemo = vento) = velocidade e direção do vento."
+      explanation: "Falso! Macete infalível: BARômetro = pressão (mBAR / mmHg); ANEMômetro (anemo = vento) = velocidade e direção do vento (km/h ou m/s)."
     },
     {
       id: "q-vf-8",
-      topic: "Altitude — Monte Kilimanjaro (Prova 3)",
-      statement: "Mesmo perto do Equador, o topo do Monte Kilimanjaro tem neve por causa da alta altitude (queda de ~6,5 °C por km).",
+      topic: "Altitude — Monte Kilimanjaro (Reforço Prova 3)",
+      statement: "Mesmo perto do Equador (baixa latitude), o topo do Monte Kilimanjaro tem neve eterna por causa da elevada ALTITUDE (queda de ~6,5 °C por km).",
       answer: true,
-      explanation: "Verdadeiro! O Sol esquenta primeiro o chão, que irradia calor para o ar próximo; por isso a cada 1 km que subimos a temperatura cai ~6,5 °C."
+      explanation: "Verdadeiro! A temperatura cai cerca de 6,5 °C a cada 1 km de altitude — o mesmo motivo que provoca neve nas serras do Sul do Brasil."
     },
     {
       id: "q-vf-9",
-      topic: "Correntes Marítimas (Prova 3)",
-      statement: "Correntes marítimas que nascem perto do Equador são quentes, e as que nascem perto dos polos são frias.",
+      topic: "Somente GEE — Testando Q4 (Prova 4)",
+      statement: "Dióxido de carbono (CO₂), vapor de água (H₂O) e metano (CH₄) são todos Gases de Efeito Estufa (GEE).",
       answer: true,
-      explanation: "Verdadeiro! As correntes marítimas carregam as características térmicas de onde nascem, influenciando o clima das regiões litorâneas."
+      explanation: "Verdadeiro! Questão 04 de Testando: CO₂, H₂O e CH₄ absorvem e reemitem radiação infravermelha, atuando como GEE."
     },
     {
       id: "q-vf-10",
-      topic: "Circulação Termohalina (Prova 3)",
-      statement: "A diferença de temperatura e salinidade nos oceanos gera uma circulação global de correntes chamada circulação termohalina.",
-      answer: true,
-      explanation: "Verdadeiro! Termo = temperatura/calor; halina = salinidade. Essa diferença movimenta as águas oceânicas pelo globo inteiro."
+      topic: "Origem do Efeito Estufa — Q4 Pág. 105 (Prova 4)",
+      statement: "O efeito estufa tem origem antropogênica (criado pelo ser humano) e não é importante para manter a vida na Terra.",
+      answer: false,
+      explanation: "Falso! Na Q4 (pág. 105), o efeito estufa é um fenômeno NATURAL e fundamental para a vida; ele só vira problema quando agravado pelo ser humano."
     },
     {
       id: "q-vf-11",
-      topic: "Sombra de Chuva (Prova 3)",
-      statement: "Na chuva orográfica, a área de 'sombra de chuva' atrás da montanha é a mais úmida e chuvosa.",
+      topic: "Sombra de Chuva (Reforço)",
+      statement: "Na chuva orográfica, a região de 'sombra de chuva' atrás da montanha é a mais úmida e chuvosa.",
       answer: false,
-      explanation: "Falso! A chuva cai antes/no topo da montanha; ao descer para o outro lado, o ar chega muito SECO, formando a 'sombra de chuva'."
+      explanation: "Falso! A chuva cai antes de cruzar o topo; ao descer para o outro lado, o ar chega muito SECO, formando a 'sombra de chuva'."
     },
     {
       id: "q-vf-12",
-      topic: "Altitude e Temperatura (Reforço)",
-      statement: "Quanto maior a altitude de uma montanha, mais alta é a temperatura do ar.",
-      answer: false,
-      explanation: "Falso! Quanto MAIOR a altitude, MENOR é a temperatura (cai cerca de 6,5 °C a cada 1 km de subida)."
+      topic: "Agravamento do Efeito Estufa — Q4 Pág. 105 (Prova 4)",
+      statement: "O efeito estufa é um fenômeno natural, mas se torna um problema para o planeta quando é agravado por emissões antropogênicas de GEE.",
+      answer: true,
+      explanation: "Verdadeiro! O equilíbrio natural garante ~15 °C; o excesso de emissões humanas intensifica a retenção de calor e gera aquecimento global."
     },
     {
       id: "q-vf-13",
-      topic: "Massa Equatorial Continental (Prova 3)",
-      statement: "A Massa Equatorial Continental (que nasce na Amazônia) é SECA por nascer sobre o continente.",
+      topic: "Massa Equatorial Continental (Reforço Prova 3)",
+      statement: "A Massa Equatorial Continental, por nascer sobre o continente na Amazônia, chega ao Brasil quente e SECA.",
       answer: false,
-      explanation: "Falso! Exceção famosa: massas continentais costumam ser secas, EXCETO na Amazônia, onde a intensa evapotranspiração da floresta deixa a massa QUENTE e ÚMIDA."
+      explanation: "Falso! Exceção clássica da Q6 (pág. 105): por nascer sobre a Floresta Amazônica (evapotranspiração intensa), ela é QUENTE e ÚMIDA!"
     },
     {
       id: "q-vf-14",
-      topic: "Massa Polar Atlântica (Reforço)",
-      statement: "A Massa Polar Atlântica nasce no Oceano Atlântico Sul e é FRIA e ÚMIDA (causa quedas de temperatura e até neve nas serras do Sul).",
+      topic: "Massa Polar Atlântica (Reforço Prova 3)",
+      statement: "A Massa Polar Atlântica origina-se no Oceano Atlântico Sul e é FRIA e ÚMIDA (causa quedas bruscas de temperatura e neve nas serras de SC).",
       answer: true,
-      explanation: "Verdadeiro! Polar = fria; Atlântica (oceano) = úmida. É a massa fria e úmida que derruba as temperaturas no Brasil."
+      explanation: "Verdadeiro! Polar = fria; Atlântica (oceano) = úmida. É a responsável pelas frentes frias e geadas/neve no Sul."
     },
     {
       id: "q-vf-15",
-      topic: "Maritimidade vs. Continentalidade (Prova 3)",
-      statement: "Cidades litorâneas (maritimidade, ar mais úmido) têm MENOR amplitude térmica que cidades no interior seco (continentalidade).",
+      topic: "Maritimidade e Amplitude Térmica (Reforço)",
+      statement: "Cidades litorâneas (maritimidade) têm MENOR variação entre máxima e mínima (menor amplitude térmica) porque a água e o vapor d'água retêm calor.",
       answer: true,
-      explanation: "Verdadeiro! Mais vapor d'água no ar = maior umidade = menor variação entre a temperatura máxima e a mínima (menor amplitude térmica)."
+      explanation: "Verdadeiro! Mais umidade no ar suaviza os extremos de calor de dia e frio à noite."
     },
     {
       id: "q-vf-16",
-      topic: "Chuva Orográfica (Prova 3)",
-      statement: "Na chuva orográfica, o ar úmido sobe a montanha, esfria (~6 °C/km), condensa e chove antes de passar seco para o outro lado.",
+      topic: "PhET — Ondas Amarelas vs. Vermelhas (Prova 4)",
+      statement: "No simulador PhET (pág. 101), as ondas amarelas representam a luz solar chegando à Terra e as vermelhas representam o calor (infravermelho) reemitido.",
       answer: true,
-      explanation: "Verdadeiro! Relevo elevado força o ar quente e úmido a subir e resfriar, gerando chuva de relevo na encosta frontal e ar seco atrás."
+      explanation: "Verdadeiro! A luz solar (ondas amarelas) aquece o solo; a superfície emite calor infravermelho (ondas vermelhas), retido em parte pelos GEE."
     },
     {
       id: "q-vf-17",
-      topic: "Veranico (Reforço)",
-      statement: "Veranico é uma temporada de chuvas fortes e frio extremo no auge do verão.",
+      topic: "Veranico e INMET (Reforço)",
+      statement: "Veranico é uma frente fria com chuvas intensas e alagamentos no auge do verão.",
       answer: false,
-      explanation: "Falso! Veranico é um período de vários dias seguidos de calor, estiagem (sem chuva) e ar seco em pleno outono ou inverno."
+      explanation: "Falso! Veranico é uma sequência de dias quentes, sem chuva e com baixa umidade do ar (alerta amarelo no mapa do INMET) durante outono ou inverno."
     },
     {
       id: "q-vf-18",
-      topic: "Exemplos de GEE (Reforço)",
-      statement: "Vapor de água (H₂O), gás carbônico (CO₂) e metano (CH₄) são exemplos de Gases de Efeito Estufa (GEE).",
-      answer: true,
-      explanation: "Verdadeiro! Junto com N₂O, O₃ e HFCs, esses gases retêm parte do calor (infravermelho) emitido pela Terra."
+      topic: "PhET — Pegadinha das Ondas (Prova 4)",
+      statement: "No Laboratório PhET, os gases de efeito estufa bloqueiam as ondas amarelas vindas do Sol, impedindo que a luz solar chegue à superfície.",
+      answer: false,
+      explanation: "Falso! Os GEE deixam passar a luz solar (ondas amarelas) e absorvem/reemitem de volta para baixo parte das ondas vermelhas (calor infravermelho)."
     },
     {
       id: "q-vf-19",
-      topic: "Efeito Estufa Natural: 15 °C vs. –18 °C (Reforço)",
-      statement: "O efeito estufa natural mantém a Terra a cerca de 15 °C; sem ele, o planeta congelaria em cerca de –18 °C.",
+      topic: "Efeito Estufa: 15 °C vs. –18 °C (Prova 4)",
+      statement: "O efeito estufa natural mantém a temperatura média da Terra em torno de 15 °C; sem ele, ela cairia para cerca de –18 °C e os oceanos congelariam.",
       answer: true,
-      explanation: "Verdadeiro! O efeito estufa natural é essencial para a vida na Terra; só se torna nocivo quando agravado pelo excesso humano de GEE."
+      explanation: "Verdadeiro! Dados da pág. 99 e Q4 (pág. 105): ~15 °C com efeito estufa natural; ~–18 °C sem ele."
     },
     {
       id: "q-vf-20",
-      topic: "Massa Tropical Atlântica (Prova 3)",
+      topic: "Massa Tropical Atlântica (Reforço Prova 3)",
       statement: "A Massa Tropical Atlântica nasce no Oceano Atlântico na zona tropical leste e chega ao Brasil QUENTE e ÚMIDA.",
       answer: true,
-      explanation: "Verdadeiro! Resumo das 3 massas do Brasil: Equatorial Continental (quente e úmida), Tropical Atlântica (quente e úmida) e Polar Atlântica (fria e úmida)."
+      explanation: "Verdadeiro! Resumo Q6 (pág. 105): Equatorial Continental (quente e úmida), Tropical Atlântica (quente e úmida) e Polar Atlântica (fria e úmida)."
     },
     {
       id: "q-vf-21",
-      topic: "Nitrogênio NÃO é GEE (Reforço)",
-      statement: "O gás nitrogênio (N₂), por formar a maior parte do ar, é o principal responsável pelo efeito estufa.",
-      answer: false,
-      explanation: "Falso! N₂ e O₂ NÃO são Gases de Efeito Estufa! O maior responsável pelo efeito estufa natural é o vapor d'água H₂O (50%), seguido por nuvens (25%) e CO₂ (20%)."
+      topic: "PhET — Era do Gelo até 2020 (Prova 4)",
+      statement: "Comparando Era do Gelo, 1750, 1950 e 2020 no PhET (pág. 101), o aumento dos GEE eleva a retenção de ondas vermelhas e a temperatura superficial.",
+      answer: true,
+      explanation: "Verdadeiro! Na Era do Gelo havia poucos GEE; em 1750 havia equilíbrio pré-industrial (~15 °C); em 1950 e 2020 os GEE cresceram muito."
     },
     {
       id: "q-vf-22",
-      topic: "O₂ e N₂ NÃO são GEE (Reforço 17x)",
-      statement: "O gás oxigênio (O₂) e o nitrogênio (N₂) são os principais Gases de Efeito Estufa.",
+      topic: "O₂ e N₂ NÃO são GEE (Prova 4 — Testando Q4)",
+      statement: "Oxigênio (O₂) e nitrogênio (N₂) são os principais Gases de Efeito Estufa da atmosfera.",
       answer: false,
-      explanation: "Falso! Guarde bem: O₂ (oxigênio) e N₂ (nitrogênio) NÃO seguram calor e NÃO são Gases de Efeito Estufa! Os GEE são H₂O, CO₂, CH₄, N₂O, O₃ e HFCs."
+      explanation: "Falso! O₂ e N₂ formam ~99% do ar, mas NÃO retêm calor e NÃO são GEE! Os GEE são H₂O, CO₂, CH₄, N₂O, O₃ e HFCs."
     },
     {
       id: "q-vf-23",
-      topic: "Vegetação e Evapotranspiração (Prova 3)",
-      statement: "A vegetação umidifica o ar pela evapotranspiração (transpiração das plantas + evaporação do solo); desmatar deixa o local mais seco e quente.",
+      topic: "Equilíbrio Térmico da Terra (Prova 4)",
+      statement: "Em equilíbrio térmico, a energia devolvida pela Terra ao espaço iguala a absorvida do Sol; excesso de GEE eleva essa temperatura de equilíbrio.",
       answer: true,
-      explanation: "Verdadeiro! Sem vegetação cai a umidade do ar, diminuem as chuvas e aumenta o calor local."
+      explanation: "Verdadeiro! Págs. 99 e 101: com mais GEE, parte do calor fica retida na baixa atmosfera até o planeta estabilizar em uma média mais alta."
     },
     {
       id: "q-vf-24",
-      topic: "Clima Próximo ao Equador (Prova 3)",
-      statement: "Cidades próximas ao Equador (como Manaus e Belém) fazem calor o ano inteiro e têm pouca variação de temperatura entre as estações.",
-      answer: true,
-      explanation: "Verdadeiro! Na faixa equatorial de baixa latitude, os raios solares incidem com alta intensidade o ano todo."
+      topic: "Altitude vs. Latitude (Reforço Prova 3)",
+      statement: "Duas cidades na mesma latitude perto do Equador têm sempre a mesma temperatura, mesmo se uma estiver no topo de uma montanha alta.",
+      answer: false,
+      explanation: "Falso! Mesmo na baixa latitude do Equador, subir em altitude derruba a temperatura ~6,5 °C por km (como no Monte Kilimanjaro)."
     },
     {
       id: "q-vf-25",
-      topic: "Mapa do INMET — Veranico (Prova 3)",
-      statement: "No mapa do INMET durante um veranico, o alerta amarelo indica perigo potencial de baixa umidade relativa do ar.",
+      topic: "Cadeia: Estufa → Aquecimento → Mudanças (Prévia Prova 5)",
+      statement: "O agravamento do efeito estufa causa o aquecimento global (alta da temperatura média), que desencadeia as mudanças climáticas (secas e enchentes).",
       answer: true,
-      explanation: "Verdadeiro! Na manchete de 11 de junho, a mancha amarela cobrindo Centro-Oeste, SP e PR indicava baixa umidade do ar e estiagem."
+      explanation: "Verdadeiro! Essa sequência lógica aparece na Questão 19 (pág. 100) e na Questão 05 (pág. 105)."
     },
     {
       id: "q-vf-26",
-      topic: "Continentalidade e Amplitude Térmica (Prova 3)",
-      statement: "Na continentalidade (longe do oceano, pouco vapor d'água), a variação entre a temperatura do dia e da noite é quase zero.",
+      topic: "Continentalidade e Amplitude Térmica (Reforço)",
+      statement: "No interior dos continentes (continentalidade, ar seco), a variação de temperatura entre o dia e a noite é menor do que no litoral.",
       answer: false,
-      explanation: "Falso! Quanto MENOS vapor d'água no ar (continentalidade), MAIOR é a variação de temperatura entre o dia e a noite (maior amplitude térmica)!"
+      explanation: "Falso! Sem a umidade do mar, o ar seco esquenta rápido de dia e esfria rápido à noite: continentalidade = MAIOR amplitude térmica!"
     },
     {
       id: "q-vf-27",
-      topic: "Mitigação vs. Aumento de GEE (Reforço)",
-      statement: "Reflorestamento e energia solar são ações humanas que aumentam o efeito estufa.",
+      topic: "Ações Antropogênicas vs. Naturais (Prova 4/5)",
+      statement: "Erupções vulcânicas, terremotos e reflorestamento são as principais causas antropogênicas do aumento exagerado de GEE.",
       answer: false,
-      explanation: "Falso! Reflorestamento e energia limpa REDUZEM o CO₂. Quem aumenta os GEE são queima de combustíveis fósseis, desmatamento e indústrias."
+      explanation: "Falso! Vulcões e terremotos são naturais e reflorestamento retira CO₂. Causas antropogênicas são combustíveis fósseis, desmatamento e indústrias."
     },
     {
       id: "q-vf-28",
-      topic: "Impacto do Desmatamento (Prova 3)",
-      statement: "Remover florestas e vegetação aumenta a evapotranspiração e faz chover mais na região.",
+      topic: "Aedes aegypti e Altitude — Q3 Pág. 105 (Prévia Prova 5)",
+      statement: "Com o aquecimento global, o mosquito Aedes aegypti está se expandindo de regiões de MAIOR altitude para regiões de MENOR altitude.",
       answer: false,
-      explanation: "Falso! Desmatar REDUZ a evapotranspiração da vegetação e torna o entorno mais seco e mais quente."
+      explanation: "Falso! Regiões de maior altitude antes eram frias demais; agora, ficando mais quentes, o mosquito sobe das MENORES para as MAIORES altitudes!"
     },
     {
       id: "q-vf-29",
       topic: "Gráfico Copernicus — Oceanos (Reforço)",
-      statement: "O gráfico Copernicus (1979–2024) mostra os oceanos ficando mais frios em 2023 e 2024.",
+      statement: "O gráfico do programa Copernicus (1979–2024, pág. 107) mostra a temperatura superficial dos oceanos batendo recordes de frio em 2023 e 2024.",
       answer: false,
-      explanation: "Falso! Em 2023 e 2024 a temperatura da superfície dos oceanos bateu recordes de CALOR (superando 21 °C em 2024)."
+      explanation: "Falso! Em 2023 (~20,9 °C) e 2024 (~21,1 °C), as linhas no topo do gráfico mostram recordes históricos de AQUECIMENTO dos oceanos."
     },
     {
       id: "q-vf-30",
-      topic: "Evidências do IPCC (Reforço)",
-      statement: "As 5 evidências comprovadas pelo IPCC incluem aquecimento do ar e dos oceanos, menos gelo no Ártico, elevação do mar e mais eventos extremos.",
+      topic: "IPCC e Revolução Industrial (Prévia Prova 5)",
+      statement: "Desde a Revolução Industrial (1760), a ação humana acelerou as mudanças climáticas, comprovadas por 5 evidências do IPCC (incluindo oceanos e Ártico).",
       answer: true,
-      explanation: "Verdadeiro! Todas essas cinco mudanças já são comprovadas por medições de satélites, estações e oceanos."
+      explanation: "Verdadeiro! Questão 20 (pág. 102): aquecimento do ar e dos oceanos, menos gelo no Ártico, elevação do mar e mais eventos extremos."
     }
   ],
   exams: [
