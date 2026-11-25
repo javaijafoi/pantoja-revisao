@@ -186,9 +186,10 @@
       for (const c of subjData.cards) {
         const hadErrorYesterday = (st.cardErrorsToday[c.id] || 0) > 0;
         const totalErr = st.cardErrorsTotal[c.id] || 0;
-        st.cardBoxes[c.id] = 0;
+        const isEasyMastered = Boolean(c.fastTrack) && !hadErrorYesterday;
+        st.cardBoxes[c.id] = isEasyMastered ? 1 : 0;
         st.cardErrorsToday[c.id] = 0;
-        c._weight = (hadErrorYesterday ? 10 : 0) + totalErr * 3 + Math.random();
+        c._weight = (isEasyMastered ? -50 : 0) + (hadErrorYesterday ? 20 : 0) + totalErr * 3 + Math.random();
       }
 
       const sortedQueue = [...subjData.cards]
@@ -599,7 +600,7 @@
       doneLi.innerHTML = `
         <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
           <h2>🎉 Parabéns, Pantoja!</h2>
-          <p>Você dominou todos os <strong>30 cartões V/F de ${subj.title}</strong> (2 acertos seguidos em cada)!</p>
+          <p>Você dominou todos os <strong>30 cartões V/F de ${subj.title}</strong> (revisão completa concluída)!</p>
           <p class="muted-text" style="margin-bottom: 1.25rem;">Agora as provas de ${subj.title} estão liberadas.</p>
           <div class="grid">
             <button type="button" class="primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>
@@ -733,7 +734,7 @@
 
     if (isCorrect) {
       if (nextBox >= 2) {
-        titleEl.textContent = '🌟 Dominado! Acertou 2x seguidas!';
+        titleEl.textContent = '🌟 Dominado! Cartão concluído!';
         badgeEl.textContent = 'Caixa 2 • Dominado ✅';
       } else {
         titleEl.textContent = '✅ Acertou! Mandou bem!';
