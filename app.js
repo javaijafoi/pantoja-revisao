@@ -160,6 +160,7 @@
         examDraftFlags: {},
         examDraftTimers: {},
         examDraftOrders: {},
+        examDraftOptionOrders: {},
         examDraftEliminated: {},
         starredItems: { cards: {}, questions: {} },
         subjects: {},
@@ -190,6 +191,9 @@
     }
     if (!saved.examDraftOrders || typeof saved.examDraftOrders !== 'object') {
       saved.examDraftOrders = {};
+    }
+    if (!saved.examDraftOptionOrders || typeof saved.examDraftOptionOrders !== 'object') {
+      saved.examDraftOptionOrders = {};
     }
     if (!saved.examDraftEliminated || typeof saved.examDraftEliminated !== 'object') {
       saved.examDraftEliminated = {};
@@ -328,6 +332,7 @@
     appState.examDraftFlags = {};
     appState.examDraftTimers = {};
     appState.examDraftOrders = {};
+    appState.examDraftOptionOrders = {};
     appState.examDraftEliminated = {};
     lastVfUndoSnapshot = null;
     saveState();
@@ -426,6 +431,11 @@
           if (card) card.dataset.starred = isStarred ? 'true' : 'false';
         }
       }
+      for (const btn of document.querySelectorAll('#exam-questions-container .btn-star-exam-q')) {
+        if (btn.dataset.starKey === key) {
+          applyStarButtonVisual(btn, isStarred, true);
+        }
+      }
       updateResultStarredFilterCount();
     }
   }
@@ -448,6 +458,35 @@
     if (appState.examDraftTimers?.[draftKey]) delete appState.examDraftTimers[draftKey];
     if (appState.examDraftEliminated?.[draftKey]) delete appState.examDraftEliminated[draftKey];
     if (clearOrder && appState.examDraftOrders?.[draftKey]) delete appState.examDraftOrders[draftKey];
+    if (clearOrder && appState.examDraftOptionOrders?.[draftKey]) delete appState.examDraftOptionOrders[draftKey];
+  }
+
+  function isValidOptionOrder(order, optionCount) {
+    if (!Array.isArray(order) || order.length !== optionCount || optionCount <= 0) return false;
+    const seen = new Set();
+    for (const idx of order) {
+      if (!Number.isInteger(idx) || idx < 0 || idx >= optionCount || seen.has(idx)) return false;
+      seen.add(idx);
+    }
+    return seen.size === optionCount;
+  }
+
+  function applyQuestionOptionOrder(q, order) {
+    if (!q || !Array.isArray(q.options) || !isValidOptionOrder(order, q.options.length)) {
+      return q;
+    }
+    return {
+      ...q,
+      options: order.map((idx) => q.options[idx]),
+      correct: order.indexOf(q.correct),
+      _optOrder: [...order],
+    };
+  }
+
+  function getExamQuestionStarKey(q, subjKey, baseExamId, idx) {
+    const qSubjKey = q?._subjKey || subjKey;
+    const qRawKey = q?._rawErrorKey || q?._errorKey || getExamQuestionKey(q, baseExamId, idx + 1);
+    return `${qSubjKey}:${qRawKey}`;
   }
 
   function getElapsedExamSeconds() {
@@ -1024,6 +1063,12 @@
         : { hasDraft: false };
       const pendingVfErrorsCount = getPendingVfErrorCards(subj, st).length;
       const totalCardErrors = Object.values(st.cardErrorsTotal || {}).reduce((acc, n) => acc + (n || 0), 0);
+      const validScores = (st.examHistory || [])
+        .map((h) => h.score)
+        .filter((s) => typeof s === 'number' && !Number.isNaN(s));
+      const subjAvgScore = validScores.length > 0
+        ? validScores.reduce((acc, s) => acc + s, 0) / validScores.length
+        : null;
       const topAttentionCards = subj.cards
         .filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0)
         .sort((a, b) => {
@@ -1143,7 +1188,9 @@
                         <ul class="history-wrong-list">
                           ${wrongList
                             .map((w) => {
-                              const fullQ = findExamQuestion(subj, h.examId, w);
+                              const rawQ = findExamQuestion(subj, h.examId, w);
+                              const qOrder = Array.isArray(h.optionOrders) ? h.optionOrders[Number(w.number) - 1] : null;
+                              const fullQ = rawQ ? applyQuestionOptionOrder(rawQ, qOrder) : null;
                               const markedIdx = Array.isArray(h.userAnswers) ? h.userAnswers[Number(w.number) - 1] : null;
                               const userAnsLine = fullQ && typeof markedIdx === 'number' && fullQ.options[markedIdx] !== undefined
                                 ? `<p><strong>Sua resposta:</strong> ${letters[markedIdx]}) ${escapeHtml(fullQ.options[markedIdx])}</p>`
@@ -1228,6 +1275,11 @@
               <span>Melhor nota de hoje:</span>
               <strong>${st.bestScoreToday !== null ? `${st.bestScoreToday} / 10` : '—'}</strong>
             </div>
+            ${
+              subjAvgScore !== null
+                ? `<div class="step-row"><span>Média geral na frente:</span><strong>📈 ${subjAvgScore.toFixed(1).replace('.', ',')}/10 (${validScores.length} prova${validScores.length > 1 ? 's' : ''})</strong></div>`
+                : ''
+            }
             ${
               totalCardErrors > 0
                 ? `<div class="step-row"><span>Erros acumulados V/F:</span><strong>${totalCardErrors}</strong></div>`
@@ -2332,14 +2384,46 @@
     examPausedByDialog = false;
     activeSubjectKey = subjKey;
     examSessionMode = mode;
-    activeExamObj = examObj;
     examFocusMode = Boolean(appState.examFocusMode);
     examAutoAdvance = Boolean(appState.examAutoAdvance);
-    const draftKey = `${subjKey}:${activeExamObj.id}`;
+    const draftKey = `${subjKey}:${examObj.id}`;
     const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
     const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
     const savedEliminated = (appState.examDraftEliminated && appState.examDraftEliminated[draftKey]) || {};
+    const savedOptOrders = (appState.examDraftOptionOrders && appState.examDraftOptionOrders[draftKey]) || {};
     const savedTimer = (appState.examDraftTimers && appState.examDraftTimers[draftKey]) || 0;
+
+    let optionOrdersChanged = false;
+    const baseExamId = examObj._sourceExamId || examObj.id;
+    const orderedQuestions = (examObj.questions || []).map((q, idx) => {
+      const dKey = getExamQuestionDraftKey(q, idx);
+      const optLen = Array.isArray(q.options) ? q.options.length : 0;
+      if (optLen <= 1) return q;
+      const existingOrder = savedOptOrders[dKey];
+      if (isValidOptionOrder(existingOrder, optLen)) {
+        return applyQuestionOptionOrder(q, existingOrder);
+      }
+      const hasLegacyAnswer = savedDraft[dKey] !== undefined && savedDraft[dKey] !== null && savedDraft[dKey] !== '';
+      const hasLegacyElim = Array.isArray(savedEliminated[dKey]) && savedEliminated[dKey].length > 0;
+      if (hasLegacyAnswer || hasLegacyElim) {
+        return q;
+      }
+      const freshOrder = shuffleArrayInPlace(Array.from({ length: optLen }, (_, i) => i));
+      if (!appState.examDraftOptionOrders || typeof appState.examDraftOptionOrders !== 'object') {
+        appState.examDraftOptionOrders = {};
+      }
+      if (!appState.examDraftOptionOrders[draftKey] || typeof appState.examDraftOptionOrders[draftKey] !== 'object') {
+        appState.examDraftOptionOrders[draftKey] = {};
+      }
+      appState.examDraftOptionOrders[draftKey][dKey] = freshOrder;
+      optionOrdersChanged = true;
+      return applyQuestionOptionOrder(q, freshOrder);
+    });
+    if (optionOrdersChanged) {
+      saveState();
+    }
+
+    activeExamObj = { ...examObj, questions: orderedQuestions };
     const totalQ = activeExamObj.questions.length;
     const firstUnansweredIdx = activeExamObj.questions.findIndex((q, idx) => {
       const val = savedDraft[getExamQuestionDraftKey(q, idx)];
@@ -2396,10 +2480,16 @@
         })
         .join('');
 
+      const qStarKey = getExamQuestionStarKey(q, subjKey, baseExamId, idx);
+      const isQStarred = isStarredItem('questions', qStarKey);
+
       article.innerHTML = `
         <div class="question-card-top">
           <span class="question-num">Questão ${idx + 1} de ${totalQ}${q._sourceExamTitle ? ` • ${escapeHtml(q._sourceExamTitle)}` : ''}</span>
           <div class="question-card-actions">
+            <button type="button" class="outline secondary btn-xs btn-star-toggle btn-star-exam-q${isQStarred ? ' is-starred' : ''}" data-q-index="${idx}" data-star-key="${escapeHtml(qStarKey)}" aria-pressed="${isQStarred ? 'true' : 'false'}" title="Marcar ou desmarcar como favorita/dúvida (atalho F)">
+              ${isQStarred ? '⭐' : '☆'}
+            </button>
             <button type="button" class="btn-clear-question outline secondary btn-xs" data-q-index="${idx}" ${hasSavedChoice ? '' : 'hidden'} title="Desmarcar resposta desta questão">
               ↺ Limpar
             </button>
@@ -2648,7 +2738,7 @@
     }
     const baseExamId = examObj._sourceExamId || examObj.id;
     const practiceId = `specific-errors-${baseExamId}`;
-    clearExamDraftState(`${subjKey}:${practiceId}`, false);
+    clearExamDraftState(`${subjKey}:${practiceId}`, true);
 
     renderExamView({
       subjKey,
@@ -2831,6 +2921,18 @@
   });
 
   document.getElementById('exam-questions-container').addEventListener('click', (e) => {
+    const starBtn = e.target.closest('.btn-star-exam-q');
+    if (starBtn && activeExamObj && activeSubjectKey) {
+      const starKey = starBtn.dataset.starKey;
+      const qIdx = Number(starBtn.dataset.qIndex);
+      const isStarred = toggleStarItem('questions', starKey);
+      syncVisibleStarButtons('questions', starKey, isStarred);
+      applyStarButtonVisual(starBtn, isStarred, true);
+      if (!Number.isNaN(qIdx)) setCurrentExamPill(qIdx);
+      showToast(isStarred ? '⭐ Questão adicionada às favoritas!' : '☆ Questão removida das favoritas.');
+      return;
+    }
+
     const elimBtn = e.target.closest('.btn-eliminate-opt');
     if (elimBtn && activeExamObj && activeSubjectKey) {
       const qIdx = Number(elimBtn.dataset.qIndex);
@@ -3025,6 +3127,15 @@
       if (flagBtn) {
         e.preventDefault();
         flagBtn.click();
+      }
+      return;
+    }
+
+    if (key === 'f') {
+      const starBtn = document.querySelector(`.question-card[data-q-index="${examCurrentIndex}"] .btn-star-exam-q`);
+      if (starBtn) {
+        e.preventDefault();
+        starBtn.click();
       }
       return;
     }
@@ -3481,9 +3592,7 @@
       const legacyChoiceLine = !hasUserAnswers
         ? `<p class="review-ans-line muted-text"><strong>Sua resposta:</strong> ${isRight ? 'Acertou (alternativa não registrada no histórico antigo)' : 'Errou (alternativa não registrada no histórico antigo)'}</p>`
         : '';
-      const qSubjKey = q._subjKey || subjKey;
-      const qRawKey = q._rawErrorKey || q._errorKey || getExamQuestionKey(q, baseExamId, idx + 1);
-      const qStarKey = `${qSubjKey}:${qRawKey}`;
+      const qStarKey = getExamQuestionStarKey(q, subjKey, baseExamId, idx);
       const isQStarred = isStarredItem('questions', qStarKey);
       card.dataset.starred = isQStarred ? 'true' : 'false';
 
@@ -3571,11 +3680,18 @@
     const examObj = subj.exams.find((ex) => ex.id === entry.examId) || subj.exams.find((ex) => ex.title === entry.examTitle);
     if (!examObj) return;
 
+    const displayExamObj = Array.isArray(entry.optionOrders) && entry.optionOrders.length === examObj.questions.length
+      ? {
+          ...examObj,
+          questions: examObj.questions.map((q, idx) => applyQuestionOptionOrder(q, entry.optionOrders[idx])),
+        }
+      : examObj;
+
     renderExamResultView({
       subjKey,
       subj,
       st,
-      examObj,
+      examObj: displayExamObj,
       score: entry.score,
       passed: Boolean(entry.passed),
       userAnswers: entry.userAnswers,
@@ -3591,7 +3707,7 @@
     const subj = getSubjectsMap()[activeSubjectKey];
     const st = appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
-    clearExamDraftState(draftKey, false);
+    clearExamDraftState(draftKey, true);
 
     let score = 0;
     const wrongQuestions = [];
@@ -3626,6 +3742,9 @@
       st.passedToday = true;
     }
 
+    const optionOrders = activeExamObj.questions.map((q) => (Array.isArray(q._optOrder) ? [...q._optOrder] : null));
+    const hasOptionOrders = optionOrders.some((o) => Array.isArray(o));
+
     st.examHistory.push({
       date: appState.currentDay,
       dayNumber: appState.dayNumber || 1,
@@ -3635,6 +3754,7 @@
       passed,
       durationSeconds,
       userAnswers: [...userAnswers],
+      ...(hasOptionOrders ? { optionOrders } : {}),
       wrongQuestions,
     });
 
@@ -3660,7 +3780,7 @@
     const subj = isMixedDrill ? { title: 'Revisão Mista' } : getSubjectsMap()[activeSubjectKey];
     const st = isMixedDrill ? null : appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
-    clearExamDraftState(draftKey, false);
+    clearExamDraftState(draftKey, true);
 
     let score = 0;
     const wrongQuestions = [];
@@ -3895,6 +4015,64 @@
     return lines.join('\n');
   }
 
+  function buildStudyGuideText() {
+    const subjects = getSubjectsMap();
+    const letters = ['A', 'B', 'C', 'D'];
+    const sections = [];
+
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st) continue;
+      const pendingVf = getPendingVfErrorCards(subj, st);
+      const pendingExam = getPendingExamErrorQuestions(subj, st);
+      if (pendingVf.length === 0 && pendingExam.length === 0) continue;
+
+      const block = [`🔹 *${subj.title.toUpperCase()}*`];
+      if (pendingVf.length > 0) {
+        block.push(`_Flashcards V/F pendentes (${pendingVf.length}):_`);
+        pendingVf.forEach((c) => {
+          block.push(`• [${c.topic}] (${c.answer ? 'V' : 'F'}) ${c.statement}\n  💡 ${c.explanation}`);
+        });
+      }
+      if (pendingExam.length > 0) {
+        block.push(`_Questões de Prova pendentes (${pendingExam.length}):_`);
+        pendingExam.forEach((q) => {
+          const ansLetter = letters[q.correct] || '?';
+          const ansText = q.options?.[q.correct] || '';
+          block.push(`• (${q._sourceExamTitle || 'Prova'}) ${q.text}\n  ✅ Gabarito: ${ansLetter}) ${ansText}\n  💡 ${q.explanation}`);
+        });
+      }
+      sections.push(block.join('\n'));
+    }
+
+    const starredCards = collectStarredCards();
+    const starredQuestions = collectStarredQuestions();
+    if (starredCards.length > 0 || starredQuestions.length > 0) {
+      const starBlock = [`⭐ *FAVORITAS / DÚVIDAS (${starredCards.length + starredQuestions.length})*`];
+      starredCards.forEach((c) => {
+        starBlock.push(`• [${c._subjTitle} • ${c.topic}] (${c.answer ? 'V' : 'F'}) ${c.statement}\n  💡 ${c.explanation}`);
+      });
+      starredQuestions.forEach((q) => {
+        const ansLetter = letters[q.correct] || '?';
+        const ansText = q.options?.[q.correct] || '';
+        starBlock.push(`• (${q._sourceExamTitle || q._subjTitle}) ${q.text}\n  ✅ Gabarito: ${ansLetter}) ${ansText}\n  💡 ${q.explanation}`);
+      });
+      sections.push(starBlock.join('\n'));
+    }
+
+    if (sections.length === 0) {
+      return `📖 *GUIA DE REVISÃO — PANTOJA (8º ANO)*\n📅 Dia ${appState.dayNumber || 1} (${formatDateBR(appState.currentDay)})\n\n🎉 Nenhum erro pendente nem item favoritado no momento! Tudo revisado.`;
+    }
+
+    return [
+      `📖 *GUIA DE REVISÃO — PANTOJA (8º ANO)*`,
+      `📅 Dia ${appState.dayNumber || 1} (${formatDateBR(appState.currentDay)})`,
+      '',
+      ...sections.flatMap((s) => [s, '']),
+    ].join('\n').trim();
+  }
+
   function updateReportTextarea() {
     const ta = document.getElementById('report-textarea');
     if (ta) {
@@ -3982,6 +4160,14 @@
       ta.select();
       showToast('⚠️ Selecione e copie o texto manualmente.');
     }
+  });
+
+  document.getElementById('btn-copy-study-guide')?.addEventListener('click', async () => {
+    const guideText = buildStudyGuideText();
+    const copied = await copyTextToClipboard(guideText);
+    showToast(copied
+      ? '📖 Guia de Revisão (sem JSON) copiado! Pronto para estudar ou imprimir.'
+      : '⚠️ Não foi possível copiar automaticamente.');
   });
 
   document.getElementById('btn-download-json').addEventListener('click', () => {
@@ -4199,6 +4385,13 @@
             const qObj = findExamQuestion(subj, examObj.id, w);
             if (qObj) wrongSet.add(getExamQuestionKey(qObj, examObj.id, w.number));
           }
+        }
+        for (const [qKey, pItem] of Object.entries(st.practiceWrongErrors || {})) {
+          if (!pItem || st.resolvedExamErrors?.[qKey]) continue;
+          wrongSet.add(qKey);
+          const matchedExam = subj.exams.find((ex) => ex.id === pItem.examId)
+            || subj.exams.find((ex) => ex.questions.some((q, idx) => getExamQuestionKey(q, ex.id, idx + 1) === qKey));
+          if (matchedExam) seenExams.add(matchedExam.id);
         }
 
         for (const examObj of subj.exams) {

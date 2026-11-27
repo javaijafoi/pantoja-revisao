@@ -4,6 +4,23 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 13)] — Embaralhamento real das alternativas, favorita durante o simulado e Guia de Revisão limpo
+
+### Melhorias implementadas
+1. **Embaralhamento real e persistido das alternativas (`A`–`D`) nos simulados e treinos (`app.js`)**
+   - Eliminado o viés posicional das questões (onde cerca de 90% dos gabaritos originais estavam na letra `B`), embaralhando as opções via `applyQuestionOptionOrder()` e persistindo a ordem em `appState.examDraftOptionOrders` (normalizado em `loadState()` e limpo em `clearExamDraftState(draftKey, true)` / `advanceToNextDay()`).
+   - Salvo `optionOrders` em cada registro de `st.examHistory` dentro de `gradeAndShowExamResult()`, garantindo reprodução fiel das letras e alternativas no **Gabarito Comentado** (`openHistoryExamResult()`), no resumo de erros de **📜 Histórico de provas** (`renderDashboard()`), na eliminação de alternativas (`✂️`), no **🧹 Limpar marcações** e na cópia de dúvidas (`💬 Copiar dúvida`), com retrocompatibilidade total para históricos e rascunhos legados.
+
+2. **Favoritar questões direto durante o Simulado (`☆ / ⭐`) e sincronização de erros no Glossário (`index.html`, `app.js`)**
+   - Adicionado o botão **☆ / ⭐** (`.btn-star-exam-q`) no cabeçalho de cada questão em `renderExamView()` (com suporte ao atalho de teclado **`F`** e legenda `.exam-keyboard-hint` atualizada), compartilhando a chave unificada `getExamQuestionStarKey()` e sincronizando em tempo real via `syncVisibleStarButtons()` com o Gabarito, Glossário, Painel e Relatório.
+   - Atualizada a aba **📝 Provas já feitas** de `renderGlossaryResults()` para considerar também `st.practiceWrongErrors`, exibindo corretamente questões erradas em treinos livres como `⚠️ Erro pendente` nos filtros *Só com erros* e *Erro pendente*.
+
+3. **Guia de Revisão limpo (sem JSON) no Relatório e média geral por frente no Painel (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o botão **📖 Copiar Guia de Revisão (Erros + ⭐, sem JSON)** (`#btn-copy-study-guide` / `buildStudyGuideText()`) no modal `#dialog-report`, gerando um caderno de estudos organizado com erros V/F pendentes, questões de prova pendentes e itens favoritados (com gabarito e macetes, sem o bloco técnico de save).
+   - Adicionada a linha **Média geral na frente** (`📈 X,X/10`) no `.step-box` de cada matéria em `renderDashboard()` sempre que houver provas realizadas na respectiva frente.
+
+---
+
 ## [2026-11-27 (Atualização 12)] — Atalhos de Favoritas no painel, reforço imediato da sessão V/F e precisão no simulado
 
 ### Melhorias implementadas
