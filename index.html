@@ -22,6 +22,11 @@
       </ul>
       <ul>
         <li>
+          <button type="button" class="outline secondary btn-sm" id="btn-open-glossary" command="show-modal" commandfor="dialog-glossary">
+            🔍 Glossário V/F
+          </button>
+        </li>
+        <li>
           <button type="button" class="outline secondary btn-sm" id="btn-open-report" command="show-modal" commandfor="dialog-report">
             📊 Relatório / Save
           </button>
@@ -160,7 +165,12 @@
         <div class="exam-sticky-top">
           <div class="exam-sticky-meta">
             <small id="exam-sticky-status" class="muted-text"><strong>0 / 10</strong> respondidas</small>
-            <small id="exam-flagged-status" class="exam-flagged-counter" hidden>🚩 0 para revisar</small>
+            <button type="button" id="exam-jump-unanswered" class="outline secondary btn-xs exam-jump-btn" hidden>
+              ⏭️ Próxima em branco
+            </button>
+            <button type="button" id="exam-flagged-status" class="exam-flagged-btn" hidden>
+              🚩 0 para revisar ↻
+            </button>
           </div>
           <button type="button" class="outline secondary btn-sm" id="btn-clear-exam-draft" disabled>
             🧹 Limpar marcações
@@ -171,7 +181,7 @@
       </div>
 
       <article class="simulado-notice">
-        <small>📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.</small>
+        <small id="exam-simulado-notice-text">📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.</small>
       </article>
 
       <form id="exam-form">
@@ -272,6 +282,38 @@
       <p id="report-feedback-toast" role="status" class="toast-msg" hidden></p>
     </article>
   </dialog>
+
+  <!-- NATIVE MODAL DIALOG FOR QUICK GLOSSARY & CONCEPT SEARCH -->
+  <dialog id="dialog-glossary" closedby="any" aria-labelledby="dialog-glossary-title">
+    <article class="dialog-box glossary-dialog-box">
+      <header class="dialog-header">
+        <h1 id="dialog-glossary-title">🔍 Glossário & Busca Rápida (V/F)</h1>
+        <form method="dialog">
+          <button value="close" aria-label="Fechar glossário" class="outline secondary btn-sm">✕</button>
+        </form>
+      </header>
+
+      <input type="search" id="glossary-search-input" placeholder="Buscar tema, palavra ou macete (ex: xilema, Kepler, barômetro)..." aria-label="Buscar conceitos nos cartões V/F">
+
+      <div class="glossary-controls">
+        <div class="result-filter-group" id="glossary-subject-filters" role="group" aria-label="Filtrar por frente">
+          <button type="button" class="btn-xs primary" data-subj="all">Todas</button>
+          <button type="button" class="btn-xs outline secondary" data-subj="quimica">Química</button>
+          <button type="button" class="btn-xs outline secondary" data-subj="biologia">Biologia</button>
+          <button type="button" class="btn-xs outline secondary" data-subj="fisica">Física</button>
+        </div>
+        <label class="glossary-error-toggle">
+          <input type="checkbox" id="glossary-only-errors">
+          <span>Só com erros</span>
+        </label>
+      </div>
+
+      <small id="glossary-count-label" class="muted-text glossary-count-label"></small>
+      <div id="glossary-results-list" class="glossary-results-list"></div>
+    </article>
+  </dialog>
+
+  <p id="global-toast" role="status" aria-live="polite" class="global-toast" hidden></p>
 
   <script src="data-quimica.js"></script>
   <script src="data-biologia.js"></script>

@@ -530,13 +530,28 @@ body {
   flex-wrap: wrap;
 }
 
-.exam-flagged-counter {
+.exam-flagged-btn {
   font-size: 0.76rem;
   font-weight: 700;
   color: var(--vf-box1-color);
   background: rgba(245, 158, 11, 0.16);
-  padding: 0.12rem 0.45rem;
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  padding: 0.14rem 0.5rem;
   border-radius: 999px;
+  margin-bottom: 0;
+  line-height: 1.25;
+  cursor: pointer;
+}
+
+.exam-flagged-btn:hover,
+.exam-flagged-btn:focus-visible {
+  background: rgba(245, 158, 11, 0.28);
+  border-color: var(--vf-box1-color);
+}
+
+.exam-jump-btn {
+  border-radius: 999px;
+  font-weight: 700;
 }
 
 .exam-sticky-bar progress {
@@ -1077,6 +1092,44 @@ button.is-confirming {
   margin-bottom: 0.35rem;
 }
 
+.review-options-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.45rem 0 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.review-opt-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 0.65rem;
+  font-size: 0.88rem;
+  background: var(--pico-card-background-color);
+}
+
+.review-opt-item.is-correct-opt {
+  border-color: var(--vf-true-color);
+  background: var(--vf-true-bg);
+}
+
+.review-opt-item.is-user-wrong-opt {
+  border-color: var(--vf-false-color);
+  background: var(--vf-false-bg);
+}
+
+.review-opt-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 /* ==========================================================================
    Modal Dialog (modern-web-guidance: dialog)
    ========================================================================== */
@@ -1171,6 +1224,120 @@ dialog::backdrop {
   color: var(--vf-true-color);
   font-weight: 600;
   text-align: center;
+}
+
+.global-toast {
+  position: fixed;
+  bottom: 1.1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: min(92vw, 520px);
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-background-color);
+  border: 2px solid var(--vf-true-color);
+  color: var(--vf-true-color);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16);
+  font-weight: 700;
+  text-align: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.glossary-dialog-box {
+  max-width: 720px;
+}
+
+.glossary-dialog-box input[type="search"] {
+  margin-bottom: 0.65rem;
+}
+
+.glossary-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.55rem;
+}
+
+.glossary-error-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0;
+  font-size: 0.84rem;
+  cursor: pointer;
+}
+
+.glossary-error-toggle input {
+  margin: 0;
+}
+
+.glossary-count-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.glossary-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.glossary-item {
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.7rem 0.85rem;
+  background: var(--pico-card-sectioning-background-color);
+}
+
+.glossary-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.glossary-item-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.glossary-ans-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.12rem 0.48rem;
+  border-radius: 999px;
+}
+
+.glossary-ans-pill.is-true {
+  background: var(--vf-true-bg);
+  color: var(--vf-true-color);
+}
+
+.glossary-ans-pill.is-false {
+  background: var(--vf-false-bg);
+  color: var(--vf-false-color);
+}
+
+.glossary-item-stmt {
+  font-size: 0.92rem;
+  margin-bottom: 0.35rem;
+}
+
+.glossary-item-exp {
+  font-size: 0.82rem;
+  line-height: 1.4;
 }
 
 @keyframes fadeIn {

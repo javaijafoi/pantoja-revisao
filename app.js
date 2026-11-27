@@ -33,6 +33,18 @@
     });
   }
 
+  const btnOpenGlossary = document.getElementById('btn-open-glossary');
+  const dialogGlossary = document.getElementById('dialog-glossary');
+  if (btnOpenGlossary && dialogGlossary) {
+    btnOpenGlossary.addEventListener('click', () => {
+      renderGlossaryResults();
+      if (!dialogGlossary.open) {
+        dialogGlossary.showModal();
+      }
+      document.getElementById('glossary-search-input')?.focus();
+    });
+  }
+
   // Gather the 3 Science subjects
   function getSubjectsMap() {
     return {
@@ -89,6 +101,7 @@
       bestScoreToday: null,
       nextExamIndex: 0, // 0 to 8
       examHistory: [], // { date, examId, examTitle, score, wrongQuestionIds }
+      resolvedExamErrors: {}, // { [questionId]: true }
     };
   }
 
@@ -134,6 +147,7 @@
         if (!st.cardBoxes || typeof st.cardBoxes !== 'object') st.cardBoxes = {};
         if (!st.cardErrorsToday || typeof st.cardErrorsToday !== 'object') st.cardErrorsToday = {};
         if (!st.cardErrorsTotal || typeof st.cardErrorsTotal !== 'object') st.cardErrorsTotal = {};
+        if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') st.resolvedExamErrors = {};
         if (!Array.isArray(st.examHistory)) st.examHistory = [];
         if (typeof st.examsTodayCount !== 'number' || Number.isNaN(st.examsTodayCount) || st.examsTodayCount < 0) st.examsTodayCount = 0;
         if (typeof st.nextExamIndex !== 'number' || Number.isNaN(st.nextExamIndex) || st.nextExamIndex < 0) {
@@ -269,6 +283,7 @@
   checkDailyRollover();
   let activeSubjectKey = null;
   let activeExamObj = null;
+  let examSessionMode = 'official'; // 'official' | 'errors'
   let vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
 
   document.addEventListener('visibilitychange', () => {
@@ -317,6 +332,34 @@
     }
     const idx = Number(wrongItem.number) - 1;
     return Number.isInteger(idx) && idx >= 0 && idx < exam.questions.length ? exam.questions[idx] : null;
+  }
+
+  function getExamQuestionKey(question, fallbackExamId, fallbackNumber) {
+    return question?.id || `${fallbackExamId}#${fallbackNumber}`;
+  }
+
+  function getPendingExamErrorQuestions(subjData, st) {
+    if (!subjData || !st || !Array.isArray(st.examHistory)) return [];
+    const resolved = st.resolvedExamErrors || {};
+    const collected = new Map();
+
+    for (const h of st.examHistory) {
+      const wrongList = Array.isArray(h.wrongQuestions) ? h.wrongQuestions : [];
+      for (const w of wrongList) {
+        const q = findExamQuestion(subjData, h.examId, w);
+        if (!q) continue;
+        const qKey = getExamQuestionKey(q, h.examId, w.number);
+        if (resolved[qKey]) continue;
+        if (!collected.has(qKey)) {
+          collected.set(qKey, {
+            ...q,
+            _errorKey: qKey,
+            _sourceExamTitle: h.examTitle,
+          });
+        }
+      }
+    }
+    return Array.from(collected.values());
   }
 
   function renderDashboard() {
@@ -415,6 +458,7 @@
 
       const nextExamNum = (st.nextExamIndex % subj.exams.length) + 1;
       const canTakeExam = vfUnlocked && !st.passedToday && st.examsTodayCount < 3;
+      const pendingExamErrorsCount = getPendingExamErrorQuestions(subj, st).length;
       const totalCardErrors = Object.values(st.cardErrorsTotal || {}).reduce((acc, n) => acc + (n || 0), 0);
       const errorCardsCount = subj.cards.filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0).length;
       const topAttentionCards = subj.cards
@@ -571,6 +615,13 @@
                 : `📝 Fazer Prova ${nextExamNum} (Tentativa ${st.examsTodayCount + 1}/3)`
             }
           </button>
+          ${
+            pendingExamErrorsCount > 0
+              ? `<button type="button" class="outline secondary" data-action="start-exam-errors" data-subject="${key}">
+                  🧠 Treinar Erros de Prova (${pendingExamErrorsCount})
+                </button>`
+              : ''
+          }
         </div>
       `;
 
@@ -590,6 +641,8 @@
       openFlashcards(subjKey, 'errors');
     } else if (action === 'start-exam') {
       openExam(subjKey);
+    } else if (action === 'start-exam-errors') {
+      openExamErrorDrill(subjKey);
     } else if (action === 'review-history-exam') {
       openHistoryExamResult(subjKey, Number(btn.dataset.historyIndex));
     }
@@ -1161,7 +1214,13 @@
     const qNav = document.getElementById('exam-question-nav');
     if (!qNav) return;
     for (const pill of qNav.querySelectorAll('.exam-nav-pill')) {
-      pill.classList.toggle('is-current', pill.dataset.qIndex === String(qIndex));
+      const isCurrent = pill.dataset.qIndex === String(qIndex);
+      pill.classList.toggle('is-current', isCurrent);
+      if (isCurrent) {
+        pill.setAttribute('aria-current', 'location');
+      } else {
+        pill.removeAttribute('aria-current');
+      }
     }
   }
 
@@ -1193,38 +1252,46 @@
     }
   }
 
-  function openExam(subjKey) {
+  let submitConfirmTimer = null;
+  const DEFAULT_SUBMIT_LABEL = '✅ Entregar Prova e Ver Nota';
+
+  function resetSubmitExamConfirm() {
+    const btnSubmit = document.getElementById('btn-submit-exam');
+    if (!btnSubmit) return;
+    btnSubmit.dataset.confirmPending = 'false';
+    btnSubmit.textContent = examSessionMode === 'errors' ? '✅ Finalizar Treino de Erros' : DEFAULT_SUBMIT_LABEL;
+    btnSubmit.classList.remove('is-confirming');
+    if (submitConfirmTimer) {
+      clearTimeout(submitConfirmTimer);
+      submitConfirmTimer = null;
+    }
+  }
+
+  function renderExamView({ subjKey, subj, examObj, attemptLabel, noticeHtml, mode }) {
     activeSubjectKey = subjKey;
-    const subj = getSubjectsMap()[subjKey];
-    const st = appState.subjects[subjKey];
-
-    if (!st.vfCompletedToday) {
-      openFlashcards(subjKey);
-      return;
-    }
-
-    if (st.passedToday || st.examsTodayCount >= 3) {
-      renderDashboard();
-      showView('view-dashboard');
-      return;
-    }
-
-    const examIdx = st.nextExamIndex % subj.exams.length;
-    activeExamObj = subj.exams[examIdx];
+    examSessionMode = mode;
+    activeExamObj = examObj;
     const draftKey = `${subjKey}:${activeExamObj.id}`;
     const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
     const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
+    const totalQ = activeExamObj.questions.length;
 
     document.getElementById('exam-subject-title').textContent = `${subj.title} — ${activeExamObj.title}`;
-    document.getElementById('exam-attempt-label').textContent = `Tentativa ${st.examsTodayCount + 1} de 3 hoje • Meta: 8/10`;
+    document.getElementById('exam-attempt-label').textContent = attemptLabel;
     document.getElementById('exam-incomplete-msg').hidden = true;
+    const noticeEl = document.getElementById('exam-simulado-notice-text');
+    if (noticeEl) noticeEl.innerHTML = noticeHtml;
 
     resetClearDraftConfirm?.();
+    resetSubmitExamConfirm();
 
     const qContainer = document.getElementById('exam-questions-container');
     const qNav = document.getElementById('exam-question-nav');
     qContainer.innerHTML = '';
-    if (qNav) qNav.innerHTML = '';
+    if (qNav) {
+      qNav.innerHTML = '';
+      qNav.style.gridTemplateColumns = totalQ < 10 ? `repeat(${Math.max(1, totalQ)}, minmax(0, 1fr))` : '';
+    }
 
     const letters = ['A', 'B', 'C', 'D'];
 
@@ -1249,7 +1316,7 @@
 
       article.innerHTML = `
         <div class="question-card-top">
-          <span class="question-num">Questão ${idx + 1} de 10</span>
+          <span class="question-num">Questão ${idx + 1} de ${totalQ}${q._sourceExamTitle ? ` • ${escapeHtml(q._sourceExamTitle)}` : ''}</span>
           <button type="button" class="btn-flag-question outline secondary btn-xs${isFlagged ? ' is-flagged' : ''}" data-q-index="${idx}" aria-pressed="${isFlagged ? 'true' : 'false'}">
             ${isFlagged ? '🚩 Marcada p/ revisar' : '🏳️ Revisar depois'}
           </button>
@@ -1277,6 +1344,58 @@
     setCurrentExamPill(0);
     setupExamVisibilityObserver();
     showView('view-exam');
+  }
+
+  function openExam(subjKey) {
+    const subj = getSubjectsMap()[subjKey];
+    const st = appState.subjects[subjKey];
+
+    if (!st.vfCompletedToday) {
+      openFlashcards(subjKey);
+      return;
+    }
+
+    if (st.passedToday || st.examsTodayCount >= 3) {
+      renderDashboard();
+      showView('view-dashboard');
+      return;
+    }
+
+    const examIdx = st.nextExamIndex % subj.exams.length;
+    const examObj = subj.exams[examIdx];
+    renderExamView({
+      subjKey,
+      subj,
+      examObj,
+      attemptLabel: `Tentativa ${st.examsTodayCount + 1} de 3 hoje • Meta: 8/10`,
+      noticeHtml: '📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.',
+      mode: 'official',
+    });
+  }
+
+  function openExamErrorDrill(subjKey) {
+    const subj = getSubjectsMap()[subjKey];
+    const st = appState.subjects[subjKey];
+    const errorQuestions = getPendingExamErrorQuestions(subj, st);
+    if (errorQuestions.length === 0) {
+      showToast('🎉 Não há erros de prova pendentes nesta frente!');
+      renderDashboard();
+      showView('view-dashboard');
+      return;
+    }
+
+    renderExamView({
+      subjKey,
+      subj,
+      examObj: {
+        id: 'error-drill',
+        title: 'Treino de Erros de Prova',
+        questions: errorQuestions,
+      },
+      attemptLabel: `🧠 ${errorQuestions.length} questão(ões) errada(s) anteriormente • Não consome tentativas`,
+      noticeHtml: '🧠 <strong>Treino Focado de Erros:</strong> Questões que você acertar aqui saem da lista de pendências sem gastar suas 3 provas do dia.',
+      mode: 'errors',
+    });
   }
 
   function updateExamNavAndProgress() {
@@ -1307,10 +1426,15 @@
     if (badge) badge.textContent = `${answered} / ${total} respondidas`;
     const stickyStatus = document.getElementById('exam-sticky-status');
     if (stickyStatus) stickyStatus.innerHTML = `<strong>${answered} / ${total}</strong> respondidas`;
+    const jumpUnanswered = document.getElementById('exam-jump-unanswered');
+    if (jumpUnanswered) jumpUnanswered.hidden = answered >= total;
     const flaggedStatus = document.getElementById('exam-flagged-status');
     if (flaggedStatus) {
       flaggedStatus.hidden = flaggedCount === 0;
-      flaggedStatus.textContent = `🚩 ${flaggedCount} para revisar`;
+      flaggedStatus.textContent = `🚩 ${flaggedCount} para revisar ↻`;
+    }
+    if (flaggedCount === 0) {
+      resetSubmitExamConfirm();
     }
     const btnClearDraft = document.getElementById('btn-clear-exam-draft');
     if (btnClearDraft) btnClearDraft.disabled = answered === 0 && flaggedCount === 0;
@@ -1323,6 +1447,36 @@
       if (incMsg) incMsg.hidden = true;
     }
   }
+
+  function jumpToExamQuestionByPredicate(predicate) {
+    if (!activeExamObj) return;
+    const total = activeExamObj.questions.length;
+    const qNav = document.getElementById('exam-question-nav');
+    const currentPill = qNav?.querySelector('.exam-nav-pill.is-current');
+    const startIdx = currentPill ? (Number(currentPill.dataset.qIndex) + 1) % total : 0;
+
+    for (let offset = 0; offset < total; offset++) {
+      const idx = (startIdx + offset) % total;
+      if (predicate(idx)) {
+        setCurrentExamPill(idx);
+        const card = document.querySelector(`.question-card[data-q-index="${idx}"]`);
+        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+    }
+  }
+
+  document.getElementById('exam-flagged-status')?.addEventListener('click', () => {
+    if (!activeExamObj || !activeSubjectKey) return;
+    const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+    const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
+    jumpToExamQuestionByPredicate((idx) => Boolean(savedFlags[idx]));
+  });
+
+  document.getElementById('exam-jump-unanswered')?.addEventListener('click', () => {
+    const form = document.getElementById('exam-form');
+    jumpToExamQuestionByPredicate((idx) => !form?.querySelector(`input[name="q_${idx}"]:checked`));
+  });
 
   document.getElementById('exam-question-nav')?.addEventListener('click', (e) => {
     const btn = e.target.closest('.exam-nav-pill');
@@ -1360,6 +1514,7 @@
     flagBtn.classList.toggle('is-flagged', willFlag);
     flagBtn.setAttribute('aria-pressed', willFlag ? 'true' : 'false');
     flagBtn.textContent = willFlag ? '🚩 Marcada p/ revisar' : '🏳️ Revisar depois';
+    resetSubmitExamConfirm();
     setCurrentExamPill(qIdx);
     updateExamNavAndProgress();
   });
@@ -1425,7 +1580,25 @@
       return;
     }
 
-    gradeAndShowExamResult(userAnswers);
+    const draftKey = activeSubjectKey ? `${activeSubjectKey}:${activeExamObj.id}` : '';
+    const savedFlags = (draftKey && appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
+    const flaggedCount = activeExamObj.questions.filter((_, idx) => Boolean(savedFlags[idx])).length;
+    const btnSubmit = document.getElementById('btn-submit-exam');
+    if (flaggedCount > 0 && btnSubmit && btnSubmit.dataset.confirmPending !== 'true') {
+      btnSubmit.dataset.confirmPending = 'true';
+      btnSubmit.textContent = `⚠️ Há ${flaggedCount} marcada(s) p/ revisar — Clique de novo para entregar`;
+      btnSubmit.classList.add('is-confirming');
+      if (submitConfirmTimer) clearTimeout(submitConfirmTimer);
+      submitConfirmTimer = setTimeout(resetSubmitExamConfirm, 5000);
+      return;
+    }
+
+    resetSubmitExamConfirm();
+    if (examSessionMode === 'errors') {
+      gradeAndShowErrorDrillResult(userAnswers);
+    } else {
+      gradeAndShowExamResult(userAnswers);
+    }
   });
 
   function applyResultReviewFilter(filterMode) {
@@ -1449,7 +1622,7 @@
     applyResultReviewFilter(btn.dataset.filter);
   });
 
-  function renderExamResultView({ subjKey, subj, st, examObj, score, passed, userAnswers, wrongQuestions, isHistoryReview = false, dayNumber = 1 }) {
+  function renderExamResultView({ subjKey, subj, st, examObj, score, passed, userAnswers, wrongQuestions, isHistoryReview = false, isErrorDrill = false, dayNumber = 1 }) {
     const letters = ['A', 'B', 'C', 'D'];
     const totalQ = examObj.questions.length;
 
@@ -1460,11 +1633,26 @@
     const ctaContainer = document.getElementById('result-cta-container');
 
     heroCard.className = `result-hero-card ${passed ? 'passed' : 'retry'}`;
-    scoreHeading.textContent = `Nota: ${score} / ${totalQ} ${passed ? '🎉' : '💪'}`;
+    scoreHeading.textContent = isErrorDrill
+      ? `Acertos no treino: ${score} / ${totalQ} ${score === totalQ ? '🎉' : '💪'}`
+      : `Nota: ${score} / ${totalQ} ${passed ? '🎉' : '💪'}`;
 
     ctaContainer.innerHTML = '';
 
-    if (isHistoryReview) {
+    if (isErrorDrill) {
+      const remainingErrors = getPendingExamErrorQuestions(subj, st).length;
+      statusMsg.innerHTML = remainingErrors === 0
+        ? `<strong>Mandou muito bem, Pantoja!</strong> Você acertou todas as <strong>${totalQ}</strong> questões que tinha errado antes em <strong>${escapeHtml(subj.title)}</strong>!`
+        : `Você resolveu <strong>${score}/${totalQ}</strong> questão(ões) neste treino. Ainda restam <strong>${remainingErrors}</strong> pendente(s) para revisar sem gastar tentativas do dia.`;
+      if (remainingErrors > 0) {
+        const btnRetryErrors = document.createElement('button');
+        btnRetryErrors.type = 'button';
+        btnRetryErrors.className = 'primary';
+        btnRetryErrors.textContent = `🧠 Treinar Erros Restantes (${remainingErrors})`;
+        btnRetryErrors.addEventListener('click', () => openExamErrorDrill(subjKey));
+        ctaContainer.appendChild(btnRetryErrors);
+      }
+    } else if (isHistoryReview) {
       statusMsg.innerHTML = `📜 <strong>Revisão do Histórico (Dia ${escapeHtml(dayNumber)}):</strong> você tirou <strong>${score}/${totalQ}</strong> nesta tentativa. Confira abaixo todas as questões e comentários.`;
     } else if (passed) {
       statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/${totalQ}</strong> (meta era ≥ 8) e concluiu <strong>${escapeHtml(subj.title)}</strong> por hoje!`;
@@ -1519,21 +1707,37 @@
       const card = document.createElement('article');
       card.className = `review-q-card ${isRight ? 'is-correct' : 'is-wrong'}`;
 
-      const userChoiceLine = hasUserAnswers && typeof userAns === 'number' && q.options[userAns] !== undefined
-        ? `<p class="review-ans-line"><strong>Sua resposta:</strong> ${letters[userAns]}) ${escapeHtml(q.options[userAns])}</p>`
-        : `<p class="review-ans-line muted-text"><strong>Sua resposta:</strong> ${isRight ? 'Acertou (alternativa não registrada no histórico antigo)' : 'Errou (alternativa não registrada no histórico antigo)'}</p>`;
+      const optionsReviewHtml = Array.isArray(q.options)
+        ? `<ul class="review-options-list">
+            ${q.options
+              .map((optText, optIdx) => {
+                const isCorrectOpt = optIdx === q.correct;
+                const isUserOpt = hasUserAnswers && userAns === optIdx;
+                const itemCls = isCorrectOpt
+                  ? 'is-correct-opt'
+                  : isUserOpt
+                  ? 'is-user-wrong-opt'
+                  : '';
+                const tag = isCorrectOpt
+                  ? '<span class="review-opt-tag">✅ Correta</span>'
+                  : isUserOpt
+                  ? '<span class="review-opt-tag">❌ Sua resposta</span>'
+                  : '';
+                return `<li class="review-opt-item ${itemCls}"><span><strong>${letters[optIdx]})</strong> ${escapeHtml(optText)}</span>${tag}</li>`;
+              })
+              .join('')}
+          </ul>`
+        : '';
+
+      const legacyChoiceLine = !hasUserAnswers
+        ? `<p class="review-ans-line muted-text"><strong>Sua resposta:</strong> ${isRight ? 'Acertou (alternativa não registrada no histórico antigo)' : 'Errou (alternativa não registrada no histórico antigo)'}</p>`
+        : '';
 
       card.innerHTML = `
         <span class="question-num">Questão ${idx + 1} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
         <p class="question-text">${escapeHtml(q.text)}</p>
-        ${userChoiceLine}
-        ${
-          !isRight || !hasUserAnswers
-            ? `<p class="review-ans-line" style="color: var(--vf-true-color);">
-                <strong>Gabarito correto:</strong> ${letters[q.correct]}) ${escapeHtml(q.options[q.correct])}
-              </p>`
-            : ''
-        }
+        ${legacyChoiceLine}
+        ${optionsReviewHtml}
         <details ${!isRight ? 'open' : ''}>
           <summary><small><strong>💡 Comentário da questão</strong></small></summary>
           <p class="muted-text" style="margin-top:0.4rem;">${escapeHtml(q.explanation)}</p>
@@ -1584,9 +1788,13 @@
     const wrongQuestions = [];
 
     activeExamObj.questions.forEach((q, idx) => {
+      const qKey = getExamQuestionKey(q, activeExamObj.id, idx + 1);
       if (userAnswers[idx] === q.correct) {
         score++;
       } else {
+        if (st.resolvedExamErrors && st.resolvedExamErrors[qKey]) {
+          delete st.resolvedExamErrors[qKey];
+        }
         wrongQuestions.push({
           id: q.id,
           number: idx + 1,
@@ -1633,6 +1841,53 @@
     });
   }
 
+  function gradeAndShowErrorDrillResult(userAnswers) {
+    const subj = getSubjectsMap()[activeSubjectKey];
+    const st = appState.subjects[activeSubjectKey];
+    const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+    if (appState.examDrafts && appState.examDrafts[draftKey]) {
+      delete appState.examDrafts[draftKey];
+    }
+    if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
+      delete appState.examDraftFlags[draftKey];
+    }
+    if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') {
+      st.resolvedExamErrors = {};
+    }
+
+    let score = 0;
+    const wrongQuestions = [];
+
+    activeExamObj.questions.forEach((q, idx) => {
+      const qKey = q._errorKey || getExamQuestionKey(q, activeExamObj.id, idx + 1);
+      if (userAnswers[idx] === q.correct) {
+        score++;
+        st.resolvedExamErrors[qKey] = true;
+      } else {
+        wrongQuestions.push({
+          id: q.id,
+          number: idx + 1,
+          text: q.text,
+        });
+      }
+    });
+
+    saveState();
+
+    renderExamResultView({
+      subjKey: activeSubjectKey,
+      subj,
+      st,
+      examObj: activeExamObj,
+      score,
+      passed: wrongQuestions.length === 0,
+      userAnswers,
+      wrongQuestions,
+      isErrorDrill: true,
+      dayNumber: appState.dayNumber || 1,
+    });
+  }
+
   document.getElementById('btn-back-from-exam').addEventListener('click', () => {
     renderDashboard();
     showView('view-dashboard');
@@ -1671,7 +1926,8 @@
           .slice(0, 6)
           .map((c) => `${c.id} (${c.topic}: ${st.cardErrorsToday[c.id]}x)`)
           .join(', ');
-        lines.push(`• Cards V/F com erro hoje (${missedCards.length}): ${missedSummary}`);
+        const extraNote = missedCards.length > 6 ? ` (+ ${missedCards.length - 6} outro(s))` : '';
+        lines.push(`• Cards V/F com erro hoje (${missedCards.length}): ${missedSummary}${extraNote}`);
       } else {
         lines.push(`• Cards V/F com erro hoje: Nenhum! 🎯`);
       }
@@ -1707,19 +1963,32 @@
   }
 
   let toastTimer = null;
+  let globalToastTimer = null;
 
   function showToast(msg) {
-    const toast = document.getElementById('report-feedback-toast');
+    const isDialogOpen = Boolean(dialogReport && dialogReport.open);
+    const toast = isDialogOpen
+      ? document.getElementById('report-feedback-toast')
+      : document.getElementById('global-toast');
     if (!toast) return;
-    if (toastTimer) {
-      clearTimeout(toastTimer);
+
+    if (isDialogOpen) {
+      if (toastTimer) clearTimeout(toastTimer);
+      toast.textContent = msg;
+      toast.hidden = false;
+      toastTimer = setTimeout(() => {
+        toast.hidden = true;
+        toastTimer = null;
+      }, 3500);
+    } else {
+      if (globalToastTimer) clearTimeout(globalToastTimer);
+      toast.textContent = msg;
+      toast.hidden = false;
+      globalToastTimer = setTimeout(() => {
+        toast.hidden = true;
+        globalToastTimer = null;
+      }, 3500);
     }
-    toast.textContent = msg;
-    toast.hidden = false;
-    toastTimer = setTimeout(() => {
-      toast.hidden = true;
-      toastTimer = null;
-    }, 3500);
   }
 
   document.getElementById('btn-copy-report').addEventListener('click', async () => {
@@ -1831,6 +2100,99 @@
 
   document.getElementById('btn-dashboard-next-day')?.addEventListener('click', () => {
     advanceToNextDay();
+    showToast(`🌅 Dia ${appState.dayNumber} iniciado! Cartões com erros foram priorizados.`);
+  });
+
+  // ==========================================================================
+  // GLOSSARY / QUICK CONCEPT SEARCH MODAL
+  // ==========================================================================
+  let glossarySubjectFilter = 'all';
+
+  function normalizeSearchText(value) {
+    return String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  function renderGlossaryResults() {
+    const listEl = document.getElementById('glossary-results-list');
+    const countEl = document.getElementById('glossary-count-label');
+    if (!listEl || !countEl) return;
+
+    const query = normalizeSearchText(document.getElementById('glossary-search-input')?.value);
+    const onlyErrors = Boolean(document.getElementById('glossary-only-errors')?.checked);
+    const subjects = getSubjectsMap();
+    const keys = glossarySubjectFilter === 'all' ? ['quimica', 'biologia', 'fisica'] : [glossarySubjectFilter];
+
+    const matches = [];
+    let totalScope = 0;
+
+    for (const key of keys) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st) continue;
+
+      for (const c of subj.cards) {
+        totalScope++;
+        const errCount = st.cardErrorsTotal[c.id] || 0;
+        if (onlyErrors && errCount === 0) continue;
+
+        if (query) {
+          const haystack = normalizeSearchText(`${c.topic} ${c.statement} ${c.explanation} ${subj.title}`);
+          if (!haystack.includes(query)) continue;
+        }
+
+        matches.push({ key, subjTitle: subj.title, card: c, errCount });
+      }
+    }
+
+    matches.sort((a, b) => b.errCount - a.errCount);
+    countEl.textContent = `Exibindo ${matches.length} de ${totalScope} cartões V/F`;
+
+    if (matches.length === 0) {
+      listEl.innerHTML = '<p class="muted-text">Nenhum conceito encontrado para esse filtro.</p>';
+      return;
+    }
+
+    listEl.innerHTML = matches
+      .map(
+        ({ subjTitle, card, errCount }) => `
+        <article class="glossary-item">
+          <div class="glossary-item-head">
+            <span class="card-topic-tag">${escapeHtml(subjTitle)} • ${escapeHtml(card.topic)}</span>
+            <div class="glossary-item-badges">
+              ${errCount > 0 ? `<span class="card-flag-tag">⚠️ ${errCount}x erro</span>` : ''}
+              <span class="glossary-ans-pill ${card.answer ? 'is-true' : 'is-false'}">
+                ${card.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}
+              </span>
+            </div>
+          </div>
+          <p class="glossary-item-stmt">${escapeHtml(card.statement)}</p>
+          <p class="muted-text glossary-item-exp">${escapeHtml(card.explanation)}</p>
+        </article>
+      `
+      )
+      .join('');
+  }
+
+  document.getElementById('glossary-search-input')?.addEventListener('input', () => {
+    renderGlossaryResults();
+  });
+
+  document.getElementById('glossary-only-errors')?.addEventListener('change', () => {
+    renderGlossaryResults();
+  });
+
+  document.getElementById('glossary-subject-filters')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-subj]');
+    if (!btn) return;
+    glossarySubjectFilter = btn.dataset.subj;
+    for (const b of e.currentTarget.querySelectorAll('button[data-subj]')) {
+      b.className = b === btn ? 'btn-xs primary' : 'btn-xs outline secondary';
+    }
+    renderGlossaryResults();
   });
 
   const resetClearDraftConfirm = setupTwoStepConfirm(

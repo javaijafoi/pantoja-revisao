@@ -4,6 +4,23 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 4)] — Navegação inteligente no simulado, treino de erros de prova e glossário V/F
+
+### Melhorias implementadas
+1. **Navegação rápida no Simulado e proteção contra entrega com revisões pendentes (`index.html`, `app.js`, `style.css`)**
+   - Transformado o contador `#exam-flagged-status` em botão clicável (`🚩 X para revisar ↻`) e adicionado o atalho **⏭️ Próxima em branco** (`#exam-jump-unanswered`) na barra fixa `.exam-sticky-bar`, permitindo saltar ciclicamente entre questões marcadas ou não respondidas.
+   - Adicionada confirmação em dois cliques no envio do formulário (`#exam-form` / `#btn-submit-exam`) sempre que ainda houver questões marcadas com `🚩 Revisar depois`, além de `aria-current="location"` na pílula ativa do navegador e grade adaptativa de pílulas para treinos curtos.
+
+2. **Gabarito Comentado completo (A/B/C/D) e Modo "🧠 Treinar Erros de Prova" (`app.js`, `style.css`)**
+   - Atualizado `renderExamResultView()` para listar todas as 4 alternativas (`A`, `B`, `C`, `D`) de cada questão, destacando visualmente a resposta correta e a marcada pela aluna.
+   - Adicionado o modo focado **🧠 Treinar Erros de Prova** (`openExamErrorDrill()` + `getPendingExamErrorQuestions()`), que reúne as questões erradas do `examHistory` ainda não resolvidas (`st.resolvedExamErrors`) para praticar no `#view-exam` sem consumir as 3 tentativas diárias e reintroduz automaticamente qualquer questão errada novamente em prova oficial.
+
+3. **Glossário / Busca Rápida de Conceitos V/F, Toast Global e ajustes no Relatório (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o botão **🔍 Glossário V/F** no cabeçalho abrindo o modal `#dialog-glossary`, com busca instantânea sem acento (`normalizeSearchText`), filtro por frente e toggle *"Só com erros"* para consultar rapidamente os 90 cartões V/F e suas explicações.
+   - Adicionado `#global-toast` para exibir notificações fora do modal de relatório (como ao iniciar o próximo dia pelo banner principal), além de exibir `(+ N outro(s))` no relatório de WhatsApp quando houver mais de 6 cartões com erro no dia.
+
+---
+
 ## [2026-11-27 (Atualização 3)] — Treino focado de erros V/F, gabarito pelo histórico e marcador de revisão no simulado
 
 ### Melhorias implementadas
