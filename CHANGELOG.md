@@ -4,6 +4,24 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 6)] — Resolução real nos erros V/F, mapa das 9 provas e cronômetro/foco persistentes
+
+### Melhorias implementadas
+1. **Resolução real no Treino de Erros V/F e atalho para Desfazer (`index.html`, `app.js`, `style.css`)**
+   - Adicionado `resolvedVfErrors` por frente no estado salvo (`loadState()` com retrocompatibilidade total): ao dominar um cartão até a Caixa 2 no modo **🎯 Treinar Erros V/F**, ele sai da fila de pendências (e retorna automaticamente se houver novo erro no futuro).
+   - Atualizados o botão **🎯 Treinar Erros V/F**, os **Pontos de atenção V/F** e o **Glossário** para diferenciar erros ainda pendentes (`⚠️`) de erros já revisados (`✅ Revisado`), preservando **↩️ Desfazer** e adicionando os atalhos `U`/`Z` na tela de feedback V/F.
+
+2. **Mapa das 9 Provas por frente e progresso do edital no Dashboard (`app.js`, `style.css`)**
+   - Adicionado em cada card do painel o resumo recolhível **📚 Mapa das 9 Provas** (`P1` a `P9`) com a melhor nota obtida em cada prova já realizada (clique direto para abrir o gabarito comentado) e bloqueio visual (`🔒` / `Próx.`) para provas ainda não feitas, mantendo zero spoiler.
+   - Adicionado ao `#global-day-summary` o total de provas únicas concluídas no edital (`X/27 provas do edital`).
+
+3. **Persistência do Modo Foco, pausa/retomada do cronômetro de rascunho e header responsivo (`index.html`, `app.js`, `style.css`)**
+   - Persistida a preferência `appState.examFocusMode` (`🎯 1 por vez / 📄 Ver todas`) entre sessões e exibido o status da questão atual (`✅ Respondida` / `⏳ Em branco`) no paginador `#exam-focus-pos`.
+   - Persistido o tempo decorrido dos rascunhos em `appState.examDraftTimers` (preservado ao voltar ao painel ou recarregar via `pagehide`, e zerado ao entregar ou limpar marcações), adicionado o botão **⏸️ / ▶️** (`#btn-toggle-exam-timer`, atalho `P`) e pausa automática ao ocultar a aba (`visibilitychange`).
+   - Ajustado o rótulo do cabeçalho para **🔍 Glossário** e adicionada quebra responsiva em `.app-header nav` para telas estreitas.
+
+---
+
 ## [2026-11-27 (Atualização 5)] — Modo foco no simulado, desfazer/embaralhar V/F, refazer prova e glossário unificado
 
 ### Melhorias implementadas

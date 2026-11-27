@@ -23,7 +23,7 @@
       <ul>
         <li>
           <button type="button" class="outline secondary btn-sm" id="btn-open-glossary" command="show-modal" commandfor="dialog-glossary">
-            🔍 Glossário V/F
+            🔍 Glossário
           </button>
         </li>
         <li>
@@ -117,7 +117,7 @@
         <span><strong>VERDADEIRO</strong> = Arraste p/ Direita 👉</span>
       </p>
       <p class="keyboard-hint" id="vf-keyboard-hint">
-        ⌨️ Atalhos: <kbd>←</kbd> ou <kbd>F</kbd> = Falso • <kbd>→</kbd> ou <kbd>V</kbd> = Verdadeiro • <kbd>E</kbd> = Explicação • <kbd>Enter</kbd> = Próximo
+        ⌨️ Atalhos: <kbd>←</kbd> ou <kbd>F</kbd> = Falso • <kbd>→</kbd> ou <kbd>V</kbd> = Verdadeiro • <kbd>E</kbd> = Explicação • <kbd>U</kbd> = Desfazer • <kbd>Enter</kbd> = Próximo
       </p>
 
       <!-- Native CSS Scroll-Snap Swipe Deck (modern-web-guidance swipe-to-remove pattern) -->
@@ -163,7 +163,10 @@
           <small id="exam-attempt-label" class="block-sub">Tentativa 1 de 3 hoje</small>
         </div>
         <div class="vf-header-badges">
-          <span class="badge-pill" id="exam-timer-badge" aria-live="off">⏱️ 00:00</span>
+          <button type="button" class="badge-pill exam-timer-btn" id="btn-toggle-exam-timer" title="Pausar ou retomar cronômetro (atalho P)">
+            <span id="exam-timer-badge">⏱️ 00:00</span>
+            <span id="exam-timer-state" class="timer-state-icon">⏸️</span>
+          </button>
           <span class="badge-pill" id="exam-answered-badge">0 / 10 respondidas</span>
         </div>
       </div>
@@ -195,7 +198,7 @@
       <article class="simulado-notice">
         <small id="exam-simulado-notice-text">📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.</small>
         <small class="keyboard-hint exam-keyboard-hint">
-          ⌨️ Atalhos: <kbd>A</kbd>-<kbd>D</kbd> (ou <kbd>1</kbd>-<kbd>4</kbd>) = Marcar • <kbd>R</kbd> = Revisar depois • <kbd>[</kbd> <kbd>]</kbd> = Questão anterior/próxima
+          ⌨️ Atalhos: <kbd>A</kbd>-<kbd>D</kbd> (ou <kbd>1</kbd>-<kbd>4</kbd>) = Marcar • <kbd>R</kbd> = Revisar depois • <kbd>P</kbd> = Pausar tempo • <kbd>[</kbd> <kbd>]</kbd> = Questão anterior/próxima
         </small>
       </article>
 

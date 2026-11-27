@@ -102,6 +102,7 @@
       nextExamIndex: 0, // 0 to 8
       examHistory: [], // { date, examId, examTitle, score, wrongQuestionIds }
       resolvedExamErrors: {}, // { [questionId]: true }
+      resolvedVfErrors: {}, // { [cardId]: true }
     };
   }
 
@@ -124,16 +125,24 @@
         currentDay: today,
         dayNumber: 1,
         theme: 'light',
+        examFocusMode: false,
         examDrafts: {},
         examDraftFlags: {},
+        examDraftTimers: {},
         subjects: {},
       };
+    }
+    if (typeof saved.examFocusMode !== 'boolean') {
+      saved.examFocusMode = false;
     }
     if (!saved.examDrafts || typeof saved.examDrafts !== 'object') {
       saved.examDrafts = {};
     }
     if (!saved.examDraftFlags || typeof saved.examDraftFlags !== 'object') {
       saved.examDraftFlags = {};
+    }
+    if (!saved.examDraftTimers || typeof saved.examDraftTimers !== 'object') {
+      saved.examDraftTimers = {};
     }
 
     for (const key of Object.keys(subjects)) {
@@ -148,6 +157,7 @@
         if (!st.cardErrorsToday || typeof st.cardErrorsToday !== 'object') st.cardErrorsToday = {};
         if (!st.cardErrorsTotal || typeof st.cardErrorsTotal !== 'object') st.cardErrorsTotal = {};
         if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') st.resolvedExamErrors = {};
+        if (!st.resolvedVfErrors || typeof st.resolvedVfErrors !== 'object') st.resolvedVfErrors = {};
         if (!Array.isArray(st.examHistory)) st.examHistory = [];
         if (typeof st.examsTodayCount !== 'number' || Number.isNaN(st.examsTodayCount) || st.examsTodayCount < 0) st.examsTodayCount = 0;
         if (typeof st.nextExamIndex !== 'number' || Number.isNaN(st.nextExamIndex) || st.nextExamIndex < 0) {
@@ -259,6 +269,7 @@
 
     appState.examDrafts = {};
     appState.examDraftFlags = {};
+    appState.examDraftTimers = {};
     lastVfUndoSnapshot = null;
     saveState();
     if (shouldRender) {
@@ -285,9 +296,11 @@
   let activeSubjectKey = null;
   let activeExamObj = null;
   let examSessionMode = 'official'; // 'official' | 'errors' | 'practice'
-  let examFocusMode = false;
+  let examFocusMode = Boolean(appState.examFocusMode);
   let examCurrentIndex = 0;
+  let examAccumulatedSeconds = 0;
   let examStartedAt = null;
+  let examTimerPaused = false;
   let examTimerInterval = null;
   let lastVfUndoSnapshot = null;
   let vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
@@ -299,18 +312,72 @@
     return `${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
   }
 
-  function updateExamTimerBadge() {
-    const badge = document.getElementById('exam-timer-badge');
-    if (!badge) return;
-    const elapsed = examStartedAt ? Math.floor((Date.now() - examStartedAt) / 1000) : 0;
-    badge.textContent = `⏱️ ${formatDuration(elapsed)}`;
+  function getCurrentExamDraftKey() {
+    return activeSubjectKey && activeExamObj ? `${activeSubjectKey}:${activeExamObj.id}` : '';
   }
 
-  function startExamTimer() {
+  function getElapsedExamSeconds() {
+    if (examTimerPaused || !examStartedAt) return examAccumulatedSeconds;
+    return examAccumulatedSeconds + Math.max(0, Math.floor((Date.now() - examStartedAt) / 1000));
+  }
+
+  function updateExamTimerBadge() {
+    const badge = document.getElementById('exam-timer-badge');
+    const stateIcon = document.getElementById('exam-timer-state');
+    const btn = document.getElementById('btn-toggle-exam-timer');
+    const elapsed = getElapsedExamSeconds();
+    if (badge) {
+      badge.textContent = `⏱️ ${formatDuration(elapsed)}`;
+    }
+    if (stateIcon) {
+      stateIcon.textContent = examTimerPaused ? '▶️' : '⏸️';
+    }
+    if (btn) {
+      btn.classList.toggle('is-paused', examTimerPaused);
+      btn.setAttribute('aria-pressed', examTimerPaused ? 'true' : 'false');
+      btn.title = examTimerPaused
+        ? 'Cronômetro pausado — clique ou aperte P para retomar'
+        : 'Pausar cronômetro (atalho P)';
+    }
+  }
+
+  function persistExamDraftTimer() {
+    const draftKey = getCurrentExamDraftKey();
+    if (!draftKey) return;
+    if (!appState.examDraftTimers || typeof appState.examDraftTimers !== 'object') {
+      appState.examDraftTimers = {};
+    }
+    appState.examDraftTimers[draftKey] = getElapsedExamSeconds();
+    saveState();
+  }
+
+  function startExamTimer(initialSeconds = 0) {
     stopExamTimer();
+    examAccumulatedSeconds = Math.max(0, Math.floor(Number(initialSeconds) || 0));
+    examTimerPaused = false;
     examStartedAt = Date.now();
     updateExamTimerBadge();
     examTimerInterval = setInterval(updateExamTimerBadge, 1000);
+  }
+
+  function pauseExamTimer() {
+    if (examTimerPaused) return;
+    examAccumulatedSeconds = getElapsedExamSeconds();
+    examStartedAt = null;
+    examTimerPaused = true;
+    stopExamTimer();
+    persistExamDraftTimer();
+    updateExamTimerBadge();
+  }
+
+  function resumeExamTimer() {
+    if (!examTimerPaused && examTimerInterval) return;
+    examTimerPaused = false;
+    examStartedAt = Date.now();
+    updateExamTimerBadge();
+    if (!examTimerInterval) {
+      examTimerInterval = setInterval(updateExamTimerBadge, 1000);
+    }
   }
 
   function stopExamTimer() {
@@ -320,17 +387,26 @@
     }
   }
 
-  function getElapsedExamSeconds() {
-    if (!examStartedAt) return null;
-    return Math.max(1, Math.floor((Date.now() - examStartedAt) / 1000));
-  }
-
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && checkDailyRollover()) {
+    const examView = document.getElementById('view-exam');
+    if (document.hidden) {
+      if (examView && !examView.hidden && activeExamObj && !examTimerPaused) {
+        pauseExamTimer();
+      }
+      return;
+    }
+    if (checkDailyRollover()) {
       const dashView = document.getElementById('view-dashboard');
       if (dashView && !dashView.hidden) {
         renderDashboard();
       }
+    }
+  });
+
+  window.addEventListener('pagehide', () => {
+    const examView = document.getElementById('view-exam');
+    if (examView && !examView.hidden && activeExamObj) {
+      persistExamDraftTimer();
     }
   });
 
@@ -350,7 +426,13 @@
 
   // Views switcher
   function showView(viewId) {
+    const examView = document.getElementById('view-exam');
     if (viewId !== 'view-exam') {
+      if (examView && !examView.hidden && activeExamObj) {
+        examAccumulatedSeconds = getElapsedExamSeconds();
+        examStartedAt = null;
+        persistExamDraftTimer();
+      }
       stopExamTimer();
     }
     const views = ['view-dashboard', 'view-flashcards', 'view-exam', 'view-exam-result'];
@@ -404,6 +486,14 @@
     return Array.from(collected.values());
   }
 
+  function getPendingVfErrorCards(subjData, st) {
+    if (!subjData || !st) return [];
+    const resolved = st.resolvedVfErrors || {};
+    return subjData.cards
+      .filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0 && !resolved[c.id])
+      .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0));
+  }
+
   function renderDashboard() {
     const subjects = getSubjectsMap();
     const container = document.getElementById('subject-cards-container');
@@ -420,6 +510,8 @@
       let totalHitsAll = 0;
       let passedSubjects = 0;
       let totalExamsToday = 0;
+      let totalUniqueExams = 0;
+      let doneUniqueExams = 0;
 
       for (const k of subjectKeys) {
         const subj = subjects[k];
@@ -433,6 +525,10 @@
         }
         if (st.passedToday) passedSubjects++;
         totalExamsToday += st.examsTodayCount || 0;
+        totalUniqueExams += subj.exams.length;
+        doneUniqueExams += subj.exams.filter((ex) =>
+          (st.examHistory || []).some((h) => h.examId === ex.id || h.examTitle === ex.title)
+        ).length;
       }
 
       const maxSteps = totalCardsAll * 2 + subjectKeys.length * 2;
@@ -440,7 +536,7 @@
       globalSummaryEl.innerHTML = `
         <div class="global-progress-row">
           <span>🎯 <strong>Meta geral do dia:</strong> ${passedSubjects}/${subjectKeys.length} frentes aprovadas</span>
-          <span>🃏 <strong>${totalMasteredAll}/${totalCardsAll}</strong> V/F dominados • 📝 <strong>${totalExamsToday}</strong> prova(s) hoje</span>
+          <span>🃏 <strong>${totalMasteredAll}/${totalCardsAll}</strong> V/F • 📝 <strong>${totalExamsToday}</strong> hoje • 📚 <strong>${doneUniqueExams}/${totalUniqueExams}</strong> provas do edital</span>
         </div>
         <progress value="${doneSteps}" max="${maxSteps}"></progress>
       `;
@@ -501,11 +597,16 @@
       const nextExamNum = (st.nextExamIndex % subj.exams.length) + 1;
       const canTakeExam = vfUnlocked && !st.passedToday && st.examsTodayCount < 3;
       const pendingExamErrorsCount = getPendingExamErrorQuestions(subj, st).length;
+      const pendingVfErrorsCount = getPendingVfErrorCards(subj, st).length;
       const totalCardErrors = Object.values(st.cardErrorsTotal || {}).reduce((acc, n) => acc + (n || 0), 0);
-      const errorCardsCount = subj.cards.filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0).length;
       const topAttentionCards = subj.cards
         .filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0)
-        .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0))
+        .sort((a, b) => {
+          const aPending = !(st.resolvedVfErrors && st.resolvedVfErrors[a.id]);
+          const bPending = !(st.resolvedVfErrors && st.resolvedVfErrors[b.id]);
+          if (aPending !== bPending) return Number(bPending) - Number(aPending);
+          return (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0);
+        })
         .slice(0, 5);
       const attentionHtml = topAttentionCards.length > 0
         ? `
@@ -513,13 +614,14 @@
             <summary>🎯 Pontos de atenção V/F (${topAttentionCards.length})</summary>
             <ul class="exam-history-list">
               ${topAttentionCards
-                .map(
-                  (c) => `
+                .map((c) => {
+                  const isVfResolved = Boolean(st.resolvedVfErrors && st.resolvedVfErrors[c.id]);
+                  return `
                   <li>
                     <details class="attention-card-details">
                       <summary>
                         <span>${escapeHtml(c.topic)}</span>
-                        <span class="attention-count-tag">${escapeHtml(st.cardErrorsTotal[c.id])}x erro(s) ▾</span>
+                        <span class="attention-count-tag${isVfResolved ? ' is-resolved' : ''}">${isVfResolved ? '✅ Revisado' : `${escapeHtml(st.cardErrorsTotal[c.id])}x erro(s)`} ▾</span>
                       </summary>
                       <div class="attention-card-body">
                         <p><strong>Afirmação (${c.answer ? 'V' : 'F'}):</strong> ${escapeHtml(c.statement)}</p>
@@ -527,13 +629,42 @@
                       </div>
                     </details>
                   </li>
-                `
-                )
+                `;
+                })
                 .join('')}
             </ul>
           </details>
         `
         : '';
+
+      const bestByExamId = new Map();
+      (st.examHistory || []).forEach((h, idx) => {
+        const matchedExam = subj.exams.find((ex) => ex.id === h.examId) || subj.exams.find((ex) => ex.title === h.examTitle);
+        if (!matchedExam) return;
+        const prev = bestByExamId.get(matchedExam.id);
+        if (!prev || h.score > prev.score || (h.score === prev.score && idx > prev._idx)) {
+          bestByExamId.set(matchedExam.id, { ...h, _idx: idx });
+        }
+      });
+      const completedExamsCount = subj.exams.filter((ex) => bestByExamId.has(ex.id)).length;
+      const examMapHtml = `
+        <details class="exam-history-details">
+          <summary>📚 Mapa das ${subj.exams.length} Provas (${completedExamsCount}/${subj.exams.length} feitas)</summary>
+          <div class="exam-map-grid">
+            ${subj.exams
+              .map((ex, idx) => {
+                const best = bestByExamId.get(ex.id);
+                if (best) {
+                  const pillCls = best.score >= 8 ? 'is-passed' : 'is-tried';
+                  return `<button type="button" class="exam-map-pill ${pillCls}" data-action="review-history-exam" data-subject="${key}" data-history-index="${best._idx}" title="${escapeHtml(ex.title)}: melhor nota ${best.score}/10 (clique para abrir gabarito)"><span>P${idx + 1}</span><small>${best.score}/10</small></button>`;
+                }
+                const isNext = idx === (st.nextExamIndex % subj.exams.length);
+                return `<button type="button" class="exam-map-pill${isNext ? ' is-next' : ''}" disabled title="${escapeHtml(ex.title)}: aguardando realização (sem spoiler)"><span>P${idx + 1}</span><small>${isNext ? 'Próx.' : '🔒'}</small></button>`;
+              })
+              .join('')}
+          </div>
+        </details>
+      `;
 
       const letters = ['A', 'B', 'C', 'D'];
       const historyList = (st.examHistory || [])
@@ -639,6 +770,7 @@
                 : ''
             }
           </div>
+          ${examMapHtml}
           ${attentionHtml}
           ${historyHtml}
         </div>
@@ -648,9 +780,9 @@
             ${vfDone ? '🔄 Revisar 30 V/F Novamente' : `🃏 Revisar Cartões V/F (${masteredCount}/30)`}
           </button>
           ${
-            errorCardsCount > 0
+            pendingVfErrorsCount > 0
               ? `<button type="button" class="outline secondary" data-action="start-vf-errors" data-subject="${key}">
-                  🎯 Treinar Erros V/F (${errorCardsCount})
+                  🎯 Treinar Erros V/F (${pendingVfErrorsCount})
                 </button>`
               : ''
           }
@@ -869,9 +1001,7 @@
     const modeLabel = document.getElementById('vf-mode-label');
 
     if (mode === 'errors') {
-      const errorCards = subj.cards
-        .filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0)
-        .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0));
+      const errorCards = getPendingVfErrorCards(subj, st);
 
       if (errorCards.length > 0) {
         vfSession = {
@@ -882,7 +1012,7 @@
         };
         document.getElementById('vf-subject-title').textContent = `${subj.title} — Treino de Erros`;
         if (modeLabel) {
-          modeLabel.textContent = `🎯 Foco em ${errorCards.length} card(s) com erro • Progresso diário preservado`;
+          modeLabel.textContent = `🎯 Foco em ${errorCards.length} card(s) pendente(s) • Progresso diário preservado`;
           modeLabel.hidden = false;
         }
         document.getElementById('vf-feedback-box').hidden = true;
@@ -890,6 +1020,8 @@
         renderCurrentFlashcard();
         return;
       }
+      showToast('🎉 Não há erros V/F pendentes nesta frente!');
+      return;
     }
 
     vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
@@ -996,20 +1128,19 @@
       }
 
       const canTakeExamNow = st.vfCompletedToday && !st.passedToday && st.examsTodayCount < 3;
-      const errorCardsCount = subj.cards.filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0).length;
+      const pendingVfErrorsCount = getPendingVfErrorCards(subj, st).length;
 
       const doneLi = document.createElement('li');
       if (isErrorMode) {
         doneLi.innerHTML = `
           <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
             <h2>🎯 Treino de erros concluído!</h2>
-            <p>Você dominou todos os <strong>${cards.length} cartões de atenção de ${escapeHtml(subj.title)}</strong> nesta sessão.</p>
-            <p class="muted-text" style="margin-bottom: 1.25rem;">Seu progresso principal no painel foi mantido intacto.</p>
+            <p>Você dominou e deu baixa em todos os <strong>${cards.length} cartões pendentes de ${escapeHtml(subj.title)}</strong>.</p>
+            <p class="muted-text" style="margin-bottom: 1.25rem;">Seu progresso principal no painel foi mantido intacto e esses erros saíram da lista de pendências.</p>
             <div class="grid">
-              <button type="button" class="primary" id="btn-retry-errors-now">🔄 Treinar Erros Novamente</button>
               ${
                 canTakeExamNow
-                  ? '<button type="button" class="outline primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>'
+                  ? '<button type="button" class="primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>'
                   : ''
               }
               <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
@@ -1029,8 +1160,8 @@
                   : ''
               }
               ${
-                errorCardsCount > 0
-                  ? `<button type="button" class="outline secondary" id="btn-go-to-errors-now">🎯 Treinar Erros V/F (${errorCardsCount})</button>`
+                pendingVfErrorsCount > 0
+                  ? `<button type="button" class="outline secondary" id="btn-go-to-errors-now">🎯 Treinar Erros V/F (${pendingVfErrorsCount})</button>`
                   : ''
               }
               <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
@@ -1120,6 +1251,7 @@
       errToday: st.cardErrorsToday[currentCardId] || 0,
       errTotal: st.cardErrorsTotal[currentCardId] || 0,
       vfCompletedToday: Boolean(st.vfCompletedToday),
+      wasResolvedVf: Boolean(st.resolvedVfErrors && st.resolvedVfErrors[currentCardId]),
     };
 
     const isCorrect = Boolean(userAnswerBoolean) === Boolean(cardObj.answer);
@@ -1134,6 +1266,11 @@
         // Still needs 1 more hit: place it in the second half of the queue so it doesn't repeat immediately
         const insertAt = Math.max(1, Math.floor(queue.length * 0.6));
         queue.splice(insertAt, 0, currentCardId);
+      } else if (isErrorMode) {
+        if (!st.resolvedVfErrors || typeof st.resolvedVfErrors !== 'object') {
+          st.resolvedVfErrors = {};
+        }
+        st.resolvedVfErrors[currentCardId] = true;
       }
 
       const remaining = queue.filter((id) => (boxes[id] || 0) < 2);
@@ -1148,7 +1285,7 @@
           : 'Acertou! Cartão subiu para a Caixa 1.';
       }
 
-      if (!isErrorMode) {
+      if (!isErrorMode || nextBox >= 2) {
         saveState();
       }
       updateLeitnerCounters();
@@ -1159,6 +1296,9 @@
       boxes[currentCardId] = 0;
       st.cardErrorsToday[currentCardId] = (st.cardErrorsToday[currentCardId] || 0) + 1;
       st.cardErrorsTotal[currentCardId] = (st.cardErrorsTotal[currentCardId] || 0) + 1;
+      if (st.resolvedVfErrors && st.resolvedVfErrors[currentCardId]) {
+        delete st.resolvedVfErrors[currentCardId];
+      }
 
       const insertAt = Math.max(1, Math.min(4, queue.length));
       queue.splice(insertAt, 0, currentCardId);
@@ -1235,6 +1375,14 @@
     setQueue([...snap.queue]);
     st.cardErrorsToday[snap.cardId] = snap.errToday;
     st.cardErrorsTotal[snap.cardId] = snap.errTotal;
+    if (!st.resolvedVfErrors || typeof st.resolvedVfErrors !== 'object') {
+      st.resolvedVfErrors = {};
+    }
+    if (snap.wasResolvedVf) {
+      st.resolvedVfErrors[snap.cardId] = true;
+    } else {
+      delete st.resolvedVfErrors[snap.cardId];
+    }
     if (!isErrorMode) {
       st.vfCompletedToday = snap.vfCompletedToday;
     }
@@ -1308,6 +1456,9 @@
       } else if (key === 'e') {
         e.preventDefault();
         document.getElementById('btn-toggle-explanation')?.click();
+      } else if ((key === 'u' || key === 'z') && lastVfUndoSnapshot) {
+        e.preventDefault();
+        document.getElementById('btn-undo-vf')?.click();
       }
       return;
     }
@@ -1376,8 +1527,13 @@
     const posEl = document.getElementById('exam-focus-pos');
     const prevBtn = document.getElementById('btn-exam-prev-q');
     const nextBtn = document.getElementById('btn-exam-next-q');
+    const isCurrentAnswered = Boolean(
+      document.getElementById('exam-form')?.querySelector(`input[name="q_${examCurrentIndex}"]:checked`)
+    );
     if (pager) pager.hidden = !examFocusMode || totalQ <= 1;
-    if (posEl) posEl.textContent = `Questão ${examCurrentIndex + 1} de ${totalQ}`;
+    if (posEl) {
+      posEl.textContent = `Questão ${examCurrentIndex + 1} de ${totalQ} • ${isCurrentAnswered ? '✅ Respondida' : '⏳ Em branco'}`;
+    }
     if (prevBtn) prevBtn.disabled = examCurrentIndex <= 0;
     if (nextBtn) nextBtn.disabled = examCurrentIndex >= totalQ - 1;
 
@@ -1451,10 +1607,12 @@
     activeSubjectKey = subjKey;
     examSessionMode = mode;
     activeExamObj = examObj;
+    examFocusMode = Boolean(appState.examFocusMode);
     examCurrentIndex = 0;
     const draftKey = `${subjKey}:${activeExamObj.id}`;
     const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
     const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
+    const savedTimer = (appState.examDraftTimers && appState.examDraftTimers[draftKey]) || 0;
     const totalQ = activeExamObj.questions.length;
 
     document.getElementById('exam-subject-title').textContent = `${subj.title} — ${activeExamObj.title}`;
@@ -1526,7 +1684,7 @@
     updateExamNavAndProgress();
     applyExamFocusLayout();
     setupExamVisibilityObserver();
-    startExamTimer();
+    startExamTimer(savedTimer);
     showView('view-exam');
   }
 
@@ -1656,6 +1814,13 @@
       const incMsg = document.getElementById('exam-incomplete-msg');
       if (incMsg) incMsg.hidden = true;
     }
+    if (examFocusMode) {
+      const posEl = document.getElementById('exam-focus-pos');
+      const isCurrentAnswered = Boolean(form?.querySelector(`input[name="q_${examCurrentIndex}"]:checked`));
+      if (posEl) {
+        posEl.textContent = `Questão ${examCurrentIndex + 1} de ${total} • ${isCurrentAnswered ? '✅ Respondida' : '⏳ Em branco'}`;
+      }
+    }
   }
 
   function jumpToExamQuestionByPredicate(predicate) {
@@ -1676,8 +1841,21 @@
 
   document.getElementById('btn-toggle-exam-focus')?.addEventListener('click', () => {
     examFocusMode = !examFocusMode;
+    appState.examFocusMode = examFocusMode;
+    saveState();
     applyExamFocusLayout();
     setupExamVisibilityObserver();
+  });
+
+  document.getElementById('btn-toggle-exam-timer')?.addEventListener('click', () => {
+    if (!activeExamObj) return;
+    if (examTimerPaused) {
+      resumeExamTimer();
+      showToast('▶️ Cronômetro retomado!');
+    } else {
+      pauseExamTimer();
+      showToast('⏸️ Cronômetro pausado.');
+    }
   });
 
   document.getElementById('btn-exam-prev-q')?.addEventListener('click', () => {
@@ -1796,6 +1974,12 @@
       return;
     }
 
+    if (key === 'p') {
+      e.preventDefault();
+      document.getElementById('btn-toggle-exam-timer')?.click();
+      return;
+    }
+
     if (e.key === '[' || (e.key === 'ArrowLeft' && activeEl?.type !== 'radio')) {
       e.preventDefault();
       navigateExamToIndex(examCurrentIndex - 1, true);
@@ -1851,8 +2035,10 @@
     }
 
     resetSubmitExamConfirm();
-    const durationSeconds = getElapsedExamSeconds();
+    const durationSeconds = Math.max(1, getElapsedExamSeconds());
     stopExamTimer();
+    examStartedAt = null;
+    examTimerPaused = false;
     if (examSessionMode === 'errors') {
       gradeAndShowErrorDrillResult(userAnswers, durationSeconds);
     } else if (examSessionMode === 'practice') {
@@ -2112,6 +2298,9 @@
     if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
       delete appState.examDraftFlags[draftKey];
     }
+    if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
+      delete appState.examDraftTimers[draftKey];
+    }
 
     let score = 0;
     const wrongQuestions = [];
@@ -2182,6 +2371,9 @@
     if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
       delete appState.examDraftFlags[draftKey];
     }
+    if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
+      delete appState.examDraftTimers[draftKey];
+    }
     if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') {
       st.resolvedExamErrors = {};
     }
@@ -2229,6 +2421,9 @@
     }
     if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
       delete appState.examDraftFlags[draftKey];
+    }
+    if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
+      delete appState.examDraftTimers[draftKey];
     }
     if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') {
       st.resolvedExamErrors = {};
@@ -2436,6 +2631,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
       appState = loadState();
       checkDailyRollover();
+      examFocusMode = Boolean(appState.examFocusMode);
       lastVfUndoSnapshot = null;
       saveState();
       applyTheme(appState.theme || 'light');
@@ -2685,6 +2881,7 @@
       for (const c of subj.cards) {
         totalScope++;
         const errCount = st.cardErrorsTotal[c.id] || 0;
+        const isResolvedErr = errCount > 0 && Boolean(st.resolvedVfErrors && st.resolvedVfErrors[c.id]);
         const boxVal = st.cardBoxes[c.id] || 0;
         if (onlyErrors && errCount === 0) continue;
         if (onlyPending && boxVal >= 2) continue;
@@ -2694,11 +2891,11 @@
           if (!haystack.includes(query)) continue;
         }
 
-        matches.push({ key, subjTitle: subj.title, card: c, errCount, boxVal });
+        matches.push({ key, subjTitle: subj.title, card: c, errCount, isResolvedErr, boxVal });
       }
     }
 
-    matches.sort((a, b) => b.errCount - a.errCount);
+    matches.sort((a, b) => Number(b.errCount > 0 && !b.isResolvedErr) - Number(a.errCount > 0 && !a.isResolvedErr) || b.errCount - a.errCount);
     countEl.textContent = `Exibindo ${matches.length} de ${totalScope} cartões V/F`;
     if (copyBtn) copyBtn.disabled = matches.length === 0;
 
@@ -2713,13 +2910,19 @@
 
     listEl.innerHTML = matches
       .map(
-        ({ subjTitle, card, errCount, boxVal }) => `
+        ({ subjTitle, card, errCount, isResolvedErr, boxVal }) => `
         <article class="glossary-item">
           <div class="glossary-item-head">
             <span class="card-topic-tag">${highlightSearchMatch(`${subjTitle} • ${card.topic}`, query)}</span>
             <div class="glossary-item-badges">
               <span class="card-box-tag">Caixa ${boxVal}/2</span>
-              ${errCount > 0 ? `<span class="card-flag-tag">⚠️ ${errCount}x erro</span>` : ''}
+              ${
+                errCount > 0
+                  ? isResolvedErr
+                    ? `<span class="glossary-ans-pill is-true">✅ Revisado (${errCount}x)</span>`
+                    : `<span class="card-flag-tag">⚠️ ${errCount}x erro</span>`
+                  : ''
+              }
               <span class="glossary-ans-pill ${card.answer ? 'is-true' : 'is-false'}">
                 ${card.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}
               </span>
@@ -2787,6 +2990,10 @@
       if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
         delete appState.examDraftFlags[draftKey];
       }
+      if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
+        delete appState.examDraftTimers[draftKey];
+      }
+      startExamTimer(0);
       saveState();
       const form = document.getElementById('exam-form');
       if (form) {
@@ -2827,7 +3034,9 @@
     () => {
       localStorage.removeItem(STORAGE_KEY);
       lastVfUndoSnapshot = null;
+      stopExamTimer();
       appState = loadState();
+      examFocusMode = Boolean(appState.examFocusMode);
       renderDashboard();
       updateReportTextarea();
       showView('view-dashboard');

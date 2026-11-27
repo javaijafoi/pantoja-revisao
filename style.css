@@ -69,6 +69,16 @@ body {
   margin-bottom: 1.25rem;
 }
 
+.app-header nav {
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+}
+
+.app-header nav ul {
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .brand-title {
   font-size: 1.15rem;
   display: block;
@@ -440,6 +450,86 @@ body {
   color: var(--vf-false-color);
   font-weight: 700;
   white-space: nowrap;
+}
+
+.attention-count-tag.is-resolved {
+  color: var(--vf-true-color);
+}
+
+.exam-map-grid {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 0.3rem;
+  margin-top: 0.45rem;
+}
+
+@media (max-width: 480px) {
+  .exam-map-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.exam-map-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.28rem 0.15rem;
+  margin-bottom: 0;
+  border-radius: 0.5rem;
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-card-sectioning-background-color);
+  color: var(--pico-muted-color);
+  font-size: 0.7rem;
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+.exam-map-pill small {
+  font-size: 0.64rem;
+  font-weight: 600;
+}
+
+.exam-map-pill.is-passed {
+  background: var(--vf-true-bg);
+  border-color: var(--vf-true-color);
+  color: var(--vf-true-color);
+}
+
+.exam-map-pill.is-tried {
+  background: rgba(245, 158, 11, 0.14);
+  border-color: var(--vf-box1-color);
+  color: var(--vf-box1-color);
+}
+
+.exam-map-pill.is-next {
+  border-style: dashed;
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.exam-map-pill:disabled {
+  opacity: 0.72;
+  cursor: default;
+}
+
+.exam-timer-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.exam-timer-btn.is-paused {
+  border-color: var(--vf-box1-color);
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--vf-box1-color);
+}
+
+.timer-state-icon {
+  font-size: 0.74rem;
 }
 
 .attention-card-details {
