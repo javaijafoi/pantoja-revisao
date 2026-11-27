@@ -51,6 +51,9 @@
             <strong id="today-date-label">--/--</strong>
           </div>
         </div>
+        <div id="global-day-summary" class="global-progress-box">
+          <!-- Populated by app.js -->
+        </div>
       </article>
 
       <article id="next-day-banner" class="next-day-banner" hidden>
@@ -75,7 +78,10 @@
       <div class="top-bar-nav">
         <button type="button" class="outline secondary btn-sm" id="btn-back-from-vf">← Voltar ao Início</button>
         <strong id="vf-subject-title">Química</strong>
-        <span class="badge-pill" id="vf-counter-badge">0 / 30</span>
+        <div class="vf-header-badges">
+          <span class="badge-pill" id="vf-queue-badge">Fila: 30</span>
+          <span class="badge-pill" id="vf-counter-badge">0 / 30</span>
+        </div>
       </div>
 
       <!-- Leitner Boxes Summary -->
@@ -147,8 +153,16 @@
         <span class="badge-pill" id="exam-answered-badge">0 / 10 respondidas</span>
       </div>
 
-      <progress id="exam-progress-bar" value="0" max="10"></progress>
-      <nav class="exam-question-nav" id="exam-question-nav" aria-label="Navegação rápida das questões"></nav>
+      <div class="exam-sticky-bar">
+        <div class="exam-sticky-top">
+          <small id="exam-sticky-status" class="muted-text"><strong>0 / 10</strong> respondidas</small>
+          <button type="button" class="outline secondary btn-sm" id="btn-clear-exam-draft" disabled>
+            🧹 Limpar marcações
+          </button>
+        </div>
+        <progress id="exam-progress-bar" value="0" max="10"></progress>
+        <nav class="exam-question-nav" id="exam-question-nav" aria-label="Navegação rápida das questões"></nav>
+      </div>
 
       <article class="simulado-notice">
         <small>📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.</small>

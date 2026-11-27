@@ -131,16 +131,25 @@
         if (!st.cardErrorsToday || typeof st.cardErrorsToday !== 'object') st.cardErrorsToday = {};
         if (!st.cardErrorsTotal || typeof st.cardErrorsTotal !== 'object') st.cardErrorsTotal = {};
         if (!Array.isArray(st.examHistory)) st.examHistory = [];
-        if (typeof st.examsTodayCount !== 'number' || Number.isNaN(st.examsTodayCount)) st.examsTodayCount = 0;
-        if (typeof st.nextExamIndex !== 'number' || Number.isNaN(st.nextExamIndex)) st.nextExamIndex = 0;
+        if (typeof st.examsTodayCount !== 'number' || Number.isNaN(st.examsTodayCount) || st.examsTodayCount < 0) st.examsTodayCount = 0;
+        if (typeof st.nextExamIndex !== 'number' || Number.isNaN(st.nextExamIndex) || st.nextExamIndex < 0) {
+          st.nextExamIndex = 0;
+        } else {
+          st.nextExamIndex = Math.floor(st.nextExamIndex);
+        }
         if (typeof st.passedToday !== 'boolean') st.passedToday = false;
         if (typeof st.bestScoreToday !== 'number') st.bestScoreToday = null;
         if (typeof st.vfCompletedToday !== 'boolean') st.vfCompletedToday = false;
 
         for (const c of subjData.cards) {
-          if (typeof st.cardBoxes[c.id] !== 'number') st.cardBoxes[c.id] = 0;
-          if (typeof st.cardErrorsToday[c.id] !== 'number') st.cardErrorsToday[c.id] = 0;
-          if (typeof st.cardErrorsTotal[c.id] !== 'number') st.cardErrorsTotal[c.id] = 0;
+          const rawBox = st.cardBoxes[c.id];
+          st.cardBoxes[c.id] = typeof rawBox === 'number' && !Number.isNaN(rawBox)
+            ? Math.min(2, Math.max(0, Math.floor(rawBox)))
+            : 0;
+          const rawTodayErr = st.cardErrorsToday[c.id];
+          st.cardErrorsToday[c.id] = typeof rawTodayErr === 'number' && rawTodayErr > 0 ? Math.floor(rawTodayErr) : 0;
+          const rawTotalErr = st.cardErrorsTotal[c.id];
+          st.cardErrorsTotal[c.id] = typeof rawTotalErr === 'number' && rawTotalErr > 0 ? Math.floor(rawTotalErr) : 0;
         }
         if (!Array.isArray(st.vfQueue)) {
           rebuildQueueFromBoxes(st, subjData);
@@ -292,12 +301,58 @@
   // ==========================================================================
   // DASHBOARD RENDERING
   // ==========================================================================
+  function findExamQuestion(subjData, examId, wrongItem) {
+    if (!subjData || !Array.isArray(subjData.exams)) return null;
+    const exam = subjData.exams.find((ex) => ex.id === examId);
+    if (!exam || !Array.isArray(exam.questions)) return null;
+    if (wrongItem.id) {
+      const byId = exam.questions.find((q) => q.id === wrongItem.id);
+      if (byId) return byId;
+    }
+    const idx = Number(wrongItem.number) - 1;
+    return Number.isInteger(idx) && idx >= 0 && idx < exam.questions.length ? exam.questions[idx] : null;
+  }
+
   function renderDashboard() {
     const subjects = getSubjectsMap();
     const container = document.getElementById('subject-cards-container');
     const dateLabel = document.getElementById('today-date-label');
     if (dateLabel) {
       dateLabel.textContent = `Dia ${appState.dayNumber || 1} (${formatDateBR(appState.currentDay)})`;
+    }
+
+    const globalSummaryEl = document.getElementById('global-day-summary');
+    if (globalSummaryEl) {
+      const subjectKeys = ['quimica', 'biologia', 'fisica'];
+      let totalCardsAll = 0;
+      let totalMasteredAll = 0;
+      let totalHitsAll = 0;
+      let passedSubjects = 0;
+      let totalExamsToday = 0;
+
+      for (const k of subjectKeys) {
+        const subj = subjects[k];
+        const st = appState.subjects[k];
+        if (!subj || !st) continue;
+        totalCardsAll += subj.cards.length;
+        for (const c of subj.cards) {
+          const b = st.cardBoxes[c.id] || 0;
+          if (b >= 2) totalMasteredAll++;
+          totalHitsAll += Math.min(2, b);
+        }
+        if (st.passedToday) passedSubjects++;
+        totalExamsToday += st.examsTodayCount || 0;
+      }
+
+      const maxSteps = totalCardsAll * 2 + subjectKeys.length * 2;
+      const doneSteps = totalHitsAll + passedSubjects * 2;
+      globalSummaryEl.innerHTML = `
+        <div class="global-progress-row">
+          <span>🎯 <strong>Meta geral do dia:</strong> ${passedSubjects}/${subjectKeys.length} frentes aprovadas</span>
+          <span>🃏 <strong>${totalMasteredAll}/${totalCardsAll}</strong> V/F dominados • 📝 <strong>${totalExamsToday}</strong> prova(s) hoje</span>
+        </div>
+        <progress value="${doneSteps}" max="${maxSteps}"></progress>
+      `;
     }
 
     const nextDayBanner = document.getElementById('next-day-banner');
@@ -364,8 +419,16 @@
                 .map(
                   (c) => `
                   <li>
-                    <span>${escapeHtml(c.topic)}</span>
-                    <span class="attention-count-tag">${escapeHtml(st.cardErrorsTotal[c.id])}x erro(s)</span>
+                    <details class="attention-card-details">
+                      <summary>
+                        <span>${escapeHtml(c.topic)}</span>
+                        <span class="attention-count-tag">${escapeHtml(st.cardErrorsTotal[c.id])}x erro(s) ▾</span>
+                      </summary>
+                      <div class="attention-card-body">
+                        <p><strong>Afirmação (${c.answer ? 'V' : 'F'}):</strong> ${escapeHtml(c.statement)}</p>
+                        <p class="muted-text">${escapeHtml(c.explanation)}</p>
+                      </div>
+                    </details>
                   </li>
                 `
                 )
@@ -375,6 +438,7 @@
         `
         : '';
 
+      const letters = ['A', 'B', 'C', 'D'];
       const historyList = [...(st.examHistory || [])].reverse();
       const historyHtml = historyList.length > 0
         ? `
@@ -384,14 +448,36 @@
               ${historyList
                 .slice(0, 6)
                 .map((h) => {
-                  const wrongNums = Array.isArray(h.wrongQuestions)
-                    ? h.wrongQuestions.map((w) => `Q${escapeHtml(w.number)}`).join(', ')
+                  const wrongList = Array.isArray(h.wrongQuestions) ? h.wrongQuestions : [];
+                  const wrongNums = wrongList.map((w) => `Q${escapeHtml(w.number)}`).join(', ');
+                  const wrongDetailsHtml = wrongList.length > 0
+                    ? `
+                      <details class="history-wrong-details">
+                        <summary>Erros: ${wrongNums} (ver revisão)</summary>
+                        <ul class="history-wrong-list">
+                          ${wrongList
+                            .map((w) => {
+                              const fullQ = findExamQuestion(subj, h.examId, w);
+                              const ansLine = fullQ
+                                ? `<p><strong>Gabarito:</strong> ${letters[fullQ.correct]}) ${escapeHtml(fullQ.options[fullQ.correct])}</p><p class="muted-text">${escapeHtml(fullQ.explanation)}</p>`
+                                : '';
+                              return `
+                                <li>
+                                  <strong>Q${escapeHtml(w.number)}:</strong> ${escapeHtml(w.text)}
+                                  ${ansLine}
+                                </li>
+                              `;
+                            })
+                            .join('')}
+                        </ul>
+                      </details>
+                    `
                     : '';
                   return `
                   <li>
                     <div class="history-item-main">
                       <span>Dia ${escapeHtml(h.dayNumber || 1)} • ${escapeHtml(h.examTitle)}</span>
-                      ${wrongNums ? `<span class="history-wrong-tag">Erros: ${wrongNums}</span>` : ''}
+                      ${wrongDetailsHtml}
                     </div>
                     <strong>${escapeHtml(h.score)}/10 ${h.passed ? '✅' : '⚠️'}</strong>
                   </li>
@@ -656,6 +742,11 @@
     document.getElementById('count-box-1').textContent = b1;
     document.getElementById('count-box-2').textContent = b2;
     document.getElementById('vf-counter-badge').textContent = `${b2} / ${subj.cards.length} dominados`;
+    const queueBadge = document.getElementById('vf-queue-badge');
+    if (queueBadge) {
+      const qLen = (st.vfQueue || []).filter((id) => (st.cardBoxes[id] || 0) < 2).length;
+      queueBadge.textContent = `Fila: ${qLen}`;
+    }
 
     const prog = document.getElementById('vf-progress-bar');
     prog.max = subj.cards.length * 2;
@@ -721,6 +812,12 @@
     const currentCardId = st.vfQueue[0];
     const cardObj = subj.cards.find((c) => c.id === currentCardId);
     const currentBox = st.cardBoxes[currentCardId] || 0;
+    const totalErrs = st.cardErrorsTotal[currentCardId] || 0;
+    const flagBadge = totalErrs > 0
+      ? `<span class="card-flag-tag">⚠️ Reforço (${totalErrs}x)</span>`
+      : cardObj.fastTrack
+      ? '<span class="card-flag-tag is-fast">⚡ Fast-track</span>'
+      : '';
 
     const li = document.createElement('li');
     li.className = 'SwipeableList-item';
@@ -732,7 +829,10 @@
           <div>
             <div class="card-meta-top">
               <span class="card-topic-tag">${escapeHtml(cardObj.topic)}</span>
-              <span class="card-box-tag">Caixa ${currentBox} (${currentBox}/2 acertos)</span>
+              <div class="card-badge-group">
+                ${flagBadge}
+                <span class="card-box-tag">Caixa ${currentBox} (${currentBox}/2 acertos)</span>
+              </div>
             </div>
             <p class="card-statement-text SwipeableList-label">${escapeHtml(cardObj.statement)}</p>
           </div>
@@ -890,6 +990,10 @@
 
     if (feedbackOpen) {
       if (e.key === 'Enter' || e.key === ' ') {
+        const activeBtn = document.activeElement?.closest('button');
+        if (activeBtn && activeBtn.id !== 'btn-next-card') {
+          return;
+        }
         e.preventDefault();
         renderCurrentFlashcard();
       } else if (key === 'e') {
@@ -914,6 +1018,44 @@
   // ==========================================================================
   // EXAM SIMULADO (10 Multiple-Choice Questions, No Immediate Spoiler)
   // ==========================================================================
+  let examVisibleObserver = null;
+
+  function setCurrentExamPill(qIndex) {
+    const qNav = document.getElementById('exam-question-nav');
+    if (!qNav) return;
+    for (const pill of qNav.querySelectorAll('.exam-nav-pill')) {
+      pill.classList.toggle('is-current', pill.dataset.qIndex === String(qIndex));
+    }
+  }
+
+  function setupExamVisibilityObserver() {
+    if (examVisibleObserver) {
+      examVisibleObserver.disconnect();
+      examVisibleObserver = null;
+    }
+    const qContainer = document.getElementById('exam-questions-container');
+    if (!qContainer || typeof IntersectionObserver === 'undefined') return;
+
+    examVisibleObserver = new IntersectionObserver(
+      (entries) => {
+        let bestEntry = null;
+        for (const entry of entries) {
+          if (entry.isIntersecting && (!bestEntry || entry.intersectionRatio > bestEntry.intersectionRatio)) {
+            bestEntry = entry;
+          }
+        }
+        if (bestEntry) {
+          setCurrentExamPill(bestEntry.target.dataset.qIndex);
+        }
+      },
+      { rootMargin: '-30% 0px -45% 0px', threshold: [0.1, 0.4, 0.7] }
+    );
+
+    for (const card of qContainer.querySelectorAll('.question-card')) {
+      examVisibleObserver.observe(card);
+    }
+  }
+
   function openExam(subjKey) {
     activeSubjectKey = subjKey;
     const subj = getSubjectsMap()[subjKey];
@@ -938,6 +1080,13 @@
     document.getElementById('exam-subject-title').textContent = `${subj.title} — ${activeExamObj.title}`;
     document.getElementById('exam-attempt-label').textContent = `Tentativa ${st.examsTodayCount + 1} de 3 hoje • Meta: 8/10`;
     document.getElementById('exam-incomplete-msg').hidden = true;
+
+    const btnClearDraft = document.getElementById('btn-clear-exam-draft');
+    if (btnClearDraft) {
+      btnClearDraft.dataset.confirmPending = 'false';
+      btnClearDraft.classList.remove('is-confirming');
+      btnClearDraft.textContent = '🧹 Limpar marcações';
+    }
 
     const qContainer = document.getElementById('exam-questions-container');
     const qNav = document.getElementById('exam-question-nav');
@@ -985,6 +1134,8 @@
     });
 
     updateExamNavAndProgress();
+    setCurrentExamPill(0);
+    setupExamVisibilityObserver();
     showView('view-exam');
   }
 
@@ -1008,6 +1159,10 @@
 
     const badge = document.getElementById('exam-answered-badge');
     if (badge) badge.textContent = `${answered} / ${total} respondidas`;
+    const stickyStatus = document.getElementById('exam-sticky-status');
+    if (stickyStatus) stickyStatus.innerHTML = `<strong>${answered} / ${total}</strong> respondidas`;
+    const btnClearDraft = document.getElementById('btn-clear-exam-draft');
+    if (btnClearDraft) btnClearDraft.disabled = answered === 0;
     if (progBar) {
       progBar.max = total;
       progBar.value = answered;
@@ -1021,6 +1176,7 @@
   document.getElementById('exam-question-nav')?.addEventListener('click', (e) => {
     const btn = e.target.closest('.exam-nav-pill');
     if (!btn) return;
+    setCurrentExamPill(btn.dataset.qIndex);
     const card = document.querySelector(`.question-card[data-q-index="${btn.dataset.qIndex}"]`);
     if (card) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1044,6 +1200,7 @@
 
       const card = radio.closest('.question-card');
       if (card) card.classList.remove('is-missing');
+      setCurrentExamPill(qIdx);
     }
 
     updateExamNavAndProgress();
@@ -1372,6 +1529,8 @@
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
       appState = loadState();
+      checkDailyRollover();
+      saveState();
       applyTheme(appState.theme || 'light');
       renderDashboard();
       updateReportTextarea();
@@ -1431,6 +1590,31 @@
   document.getElementById('btn-dashboard-next-day')?.addEventListener('click', () => {
     advanceToNextDay();
   });
+
+  setupTwoStepConfirm(
+    document.getElementById('btn-clear-exam-draft'),
+    '⚠️ Clique de novo para limpar',
+    () => {
+      if (!activeExamObj || !activeSubjectKey) return;
+      const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+      if (appState.examDrafts && appState.examDrafts[draftKey]) {
+        delete appState.examDrafts[draftKey];
+        saveState();
+      }
+      const form = document.getElementById('exam-form');
+      if (form) {
+        for (const input of form.querySelectorAll('input[type="radio"]:checked')) {
+          input.checked = false;
+        }
+        for (const card of form.querySelectorAll('.question-card.is-missing')) {
+          card.classList.remove('is-missing');
+        }
+      }
+      const incMsg = document.getElementById('exam-incomplete-msg');
+      if (incMsg) incMsg.hidden = true;
+      updateExamNavAndProgress();
+    }
+  );
 
   setupTwoStepConfirm(
     document.getElementById('btn-advance-day'),

@@ -4,6 +4,26 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 2)] — Painel global do dia, navegador fixo no simulado e revisão rápida de erros
+
+### Melhorias implementadas
+1. **Painel geral do dia e revisão rápida de erros no Dashboard (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o resumo `#global-day-summary` dentro do banner principal com barra de progresso unificada das 3 frentes, total de flashcards V/F dominados (`X/90`) e provas realizadas no dia.
+   - Transformados os itens de **Pontos de atenção V/F** em acordeões expansíveis que mostram a afirmação, o gabarito e o macete/explicação diretamente no painel.
+   - Adicionada a resolução automática (`findExamQuestion`) das questões erradas no **Histórico de provas**, permitindo revisar enunciado, alternativa correta e comentário sem precisar refazer a prova.
+
+2. **Barra fixa de navegação do Simulado e limpeza segura de rascunho (`index.html`, `app.js`, `style.css`)**
+   - Agrupados `#exam-progress-bar`, `#exam-sticky-status` e `#exam-question-nav` em `.exam-sticky-bar` (`position: sticky`) para acompanhar o progresso e saltar entre questões durante toda a rolagem.
+   - Adicionado `IntersectionObserver` (`setupExamVisibilityObserver`) para destacar a questão atualmente visível (`.exam-nav-pill.is-current`).
+   - Adicionado o botão **Limpar marcações** (`#btn-clear-exam-draft`) com confirmação em dois cliques via `setupTwoStepConfirm()` para reiniciar um rascunho de simulado com segurança.
+
+3. **Acessibilidade por teclado nos Flashcards V/F, indicadores de fila e normalização de saves (`index.html`, `app.js`, `style.css`)**
+   - Corrigido o atalho de teclado na tela de feedback dos flashcards para que `Enter`/`Espaço` respeitem outros botões focados (como `#btn-toggle-explanation`) em vez de pular o card.
+   - Adicionados o indicador `#vf-queue-badge` (quantidade restante na fila) e badges de contexto no cartão (`⚠️ Reforço` para cards com erros acumulados e `⚡ Fast-track` para cards de revisão rápida).
+   - Endurecido `loadState()` (limitação de `cardBoxes` entre `0` e `2` e índices não negativos), atualizado `importSaveFromText()` para executar `checkDailyRollover()` e persistir o save normalizado, e alinhado o botão de upload `.file-upload-btn` no modal.
+
+---
+
 ## [2026-11-27] — Proteção contra perda de dados, navegador de questões e pontos de atenção
 
 ### Melhorias implementadas

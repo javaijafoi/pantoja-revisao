@@ -148,6 +148,27 @@ body {
   color: var(--pico-muted-color);
 }
 
+.global-progress-box {
+  margin-top: 0.9rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--pico-muted-border-color);
+}
+
+.global-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  margin-bottom: 0.45rem;
+}
+
+.global-progress-box progress {
+  margin-bottom: 0;
+  height: 0.55rem;
+}
+
 /* Subject Cards */
 .subject-grid {
   grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
@@ -396,6 +417,103 @@ body {
   white-space: nowrap;
 }
 
+.attention-card-details {
+  width: 100%;
+}
+
+.attention-card-details summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  list-style: none;
+  color: inherit;
+}
+
+.attention-card-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.attention-card-body {
+  margin-top: 0.45rem;
+  padding-top: 0.45rem;
+  border-top: 1px dashed var(--pico-muted-border-color);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.attention-card-body p {
+  margin-bottom: 0.3rem;
+}
+
+.attention-card-body p:last-child {
+  margin-bottom: 0;
+}
+
+.history-wrong-details {
+  margin-top: 0.2rem;
+}
+
+.history-wrong-details summary {
+  font-size: 0.74rem;
+  color: var(--vf-false-color);
+  font-weight: 700;
+}
+
+.history-wrong-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.35rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.history-wrong-list li {
+  display: block;
+  padding: 0.35rem 0.5rem;
+  border-left: 3px solid var(--vf-false-color);
+  background: var(--pico-card-background-color);
+  font-size: 0.75rem;
+}
+
+.vf-header-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.exam-sticky-bar {
+  position: sticky;
+  top: 0.35rem;
+  z-index: 20;
+  background: color-mix(in srgb, var(--pico-background-color) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.6rem 0.75rem 0.45rem;
+  margin-bottom: 0.9rem;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+}
+
+.exam-sticky-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.exam-sticky-bar progress {
+  margin-bottom: 0.5rem;
+  height: 0.5rem;
+}
+
+.exam-sticky-bar .exam-question-nav {
+  margin-bottom: 0;
+}
+
 .exam-question-nav {
   display: grid;
   grid-template-columns: repeat(10, minmax(0, 1fr));
@@ -425,6 +543,11 @@ body {
 .exam-nav-pill:focus-visible {
   border-color: var(--pico-primary);
   color: var(--pico-primary);
+}
+
+.exam-nav-pill.is-current {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 1px;
 }
 
 .exam-nav-pill.is-answered {
@@ -621,6 +744,27 @@ button.is-confirming {
   background: var(--pico-card-sectioning-background-color);
   padding: 0.2rem 0.6rem;
   border-radius: 999px;
+}
+
+.card-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.card-flag-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--vf-box1-color);
+}
+
+.card-flag-tag.is-fast {
+  background: var(--vf-true-bg);
+  color: var(--vf-true-color);
 }
 
 .card-box-tag {
@@ -915,7 +1059,17 @@ dialog::backdrop {
   cursor: pointer;
   text-align: center;
   font-weight: 600;
+  margin-bottom: 0;
+  height: 100%;
+}
+
+.dialog-box details .grid {
+  align-items: stretch;
   margin-bottom: var(--pico-spacing);
+}
+
+.dialog-box details .grid button {
+  margin-bottom: 0;
 }
 
 .admin-actions {
