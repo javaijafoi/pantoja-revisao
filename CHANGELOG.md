@@ -4,6 +4,22 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27] — Proteção contra perda de dados, navegador de questões e pontos de atenção
+
+### Melhorias implementadas
+1. **Confirmação em dois cliques para ações críticas e blindagem de saves (`app.js`, `style.css`)**
+   - Adicionado `setupTwoStepConfirm()` para exigir confirmação em dois cliques (janela de 4 segundos) em **Zerar Todo o Progresso** (`#btn-reset-all`) e em **Virar o Dia** (`#btn-advance-day`) quando o dia ainda estiver incompleto, evitando perda acidental de progresso.
+   - Endurecido `loadState()` para normalizar saves legados ou parciais (garantindo objetos e arrays padrão como `examHistory`, `cardErrorsTotal` e contadores) e limpo o campo de arquivo (`#input-import-file`) e texto após importação bem-sucedida.
+
+2. **Mapa navegável de questões e barra de progresso no Simulado (`index.html`, `app.js`, `style.css`)**
+   - Adicionados `<progress id="exam-progress-bar">` e o painel `#exam-question-nav` (botões `1` a `10`) no topo do simulado (`#view-exam`), permitindo acompanhar o avanço visualmente, saltar direto para qualquer questão e identificar facilmente questões respondidas ou em branco (`.is-answered`, `.is-missing`).
+
+3. **Pontos de atenção V/F, detalhes de erros no Histórico e Favicon SVG (`index.html`, `app.js`, `style.css`, `favicon.svg`)**
+   - Adicionada a seção recolhível **Pontos de atenção V/F** em cada card do Dashboard listando os 5 tópicos com mais erros acumulados (`st.cardErrorsTotal`), além de exibir os números das questões erradas dentro de **Histórico de provas**.
+   - Criado `favicon.svg` e vinculado via `<link rel="icon">` em `index.html` para exibir o ícone da aplicação na aba e eliminar erros 404 de ícone nos navegadores.
+
+---
+
 ## [2026-11-26] — Melhorias de usabilidade, resiliência e revisão de erros
 
 ### Melhorias implementadas

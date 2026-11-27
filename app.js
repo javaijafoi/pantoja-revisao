@@ -125,8 +125,18 @@
       if (!saved.subjects[key]) {
         saved.subjects[key] = createDefaultSubjectState(subjData);
       } else {
-        // Ensure all 30 cards exist in state
+        // Ensure all 30 cards and subject fields exist in state (handles legacy/partial saves)
         const st = saved.subjects[key];
+        if (!st.cardBoxes || typeof st.cardBoxes !== 'object') st.cardBoxes = {};
+        if (!st.cardErrorsToday || typeof st.cardErrorsToday !== 'object') st.cardErrorsToday = {};
+        if (!st.cardErrorsTotal || typeof st.cardErrorsTotal !== 'object') st.cardErrorsTotal = {};
+        if (!Array.isArray(st.examHistory)) st.examHistory = [];
+        if (typeof st.examsTodayCount !== 'number' || Number.isNaN(st.examsTodayCount)) st.examsTodayCount = 0;
+        if (typeof st.nextExamIndex !== 'number' || Number.isNaN(st.nextExamIndex)) st.nextExamIndex = 0;
+        if (typeof st.passedToday !== 'boolean') st.passedToday = false;
+        if (typeof st.bestScoreToday !== 'number') st.bestScoreToday = null;
+        if (typeof st.vfCompletedToday !== 'boolean') st.vfCompletedToday = false;
+
         for (const c of subjData.cards) {
           if (typeof st.cardBoxes[c.id] !== 'number') st.cardBoxes[c.id] = 0;
           if (typeof st.cardErrorsToday[c.id] !== 'number') st.cardErrorsToday[c.id] = 0;
@@ -341,6 +351,30 @@
       const nextExamNum = (st.nextExamIndex % subj.exams.length) + 1;
       const canTakeExam = vfDone && !st.passedToday && st.examsTodayCount < 3;
       const totalCardErrors = Object.values(st.cardErrorsTotal || {}).reduce((acc, n) => acc + (n || 0), 0);
+      const topAttentionCards = subj.cards
+        .filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0)
+        .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0))
+        .slice(0, 5);
+      const attentionHtml = topAttentionCards.length > 0
+        ? `
+          <details class="exam-history-details">
+            <summary>🎯 Pontos de atenção V/F (${topAttentionCards.length})</summary>
+            <ul class="exam-history-list">
+              ${topAttentionCards
+                .map(
+                  (c) => `
+                  <li>
+                    <span>${escapeHtml(c.topic)}</span>
+                    <span class="attention-count-tag">${escapeHtml(st.cardErrorsTotal[c.id])}x erro(s)</span>
+                  </li>
+                `
+                )
+                .join('')}
+            </ul>
+          </details>
+        `
+        : '';
+
       const historyList = [...(st.examHistory || [])].reverse();
       const historyHtml = historyList.length > 0
         ? `
@@ -349,14 +383,20 @@
             <ul class="exam-history-list">
               ${historyList
                 .slice(0, 6)
-                .map(
-                  (h) => `
+                .map((h) => {
+                  const wrongNums = Array.isArray(h.wrongQuestions)
+                    ? h.wrongQuestions.map((w) => `Q${escapeHtml(w.number)}`).join(', ')
+                    : '';
+                  return `
                   <li>
-                    <span>Dia ${escapeHtml(h.dayNumber || 1)} • ${escapeHtml(h.examTitle)}</span>
+                    <div class="history-item-main">
+                      <span>Dia ${escapeHtml(h.dayNumber || 1)} • ${escapeHtml(h.examTitle)}</span>
+                      ${wrongNums ? `<span class="history-wrong-tag">Erros: ${wrongNums}</span>` : ''}
+                    </div>
                     <strong>${escapeHtml(h.score)}/10 ${h.passed ? '✅' : '⚠️'}</strong>
                   </li>
-                `
-                )
+                `;
+                })
                 .join('')}
             </ul>
           </details>
@@ -397,6 +437,7 @@
                 : ''
             }
           </div>
+          ${attentionHtml}
           ${historyHtml}
         </div>
 
@@ -899,17 +940,17 @@
     document.getElementById('exam-incomplete-msg').hidden = true;
 
     const qContainer = document.getElementById('exam-questions-container');
+    const qNav = document.getElementById('exam-question-nav');
     qContainer.innerHTML = '';
+    if (qNav) qNav.innerHTML = '';
 
     const letters = ['A', 'B', 'C', 'D'];
-    let preAnswered = 0;
 
     activeExamObj.questions.forEach((q, idx) => {
       const article = document.createElement('article');
       article.className = 'question-card';
       article.dataset.qIndex = String(idx);
       const savedChoice = savedDraft[idx];
-      if (typeof savedChoice === 'number') preAnswered++;
 
       const optionsHtml = q.options
         .map(
@@ -931,11 +972,60 @@
       `;
 
       qContainer.appendChild(article);
+
+      if (qNav) {
+        const navBtn = document.createElement('button');
+        navBtn.type = 'button';
+        navBtn.className = 'exam-nav-pill';
+        navBtn.dataset.qIndex = String(idx);
+        navBtn.textContent = String(idx + 1);
+        navBtn.setAttribute('aria-label', `Ir para a questão ${idx + 1}`);
+        qNav.appendChild(navBtn);
+      }
     });
 
-    document.getElementById('exam-answered-badge').textContent = `${preAnswered} / 10 respondidas`;
+    updateExamNavAndProgress();
     showView('view-exam');
   }
+
+  function updateExamNavAndProgress() {
+    if (!activeExamObj) return;
+    const form = document.getElementById('exam-form');
+    const qNav = document.getElementById('exam-question-nav');
+    const progBar = document.getElementById('exam-progress-bar');
+    const total = activeExamObj.questions.length;
+    let answered = 0;
+
+    for (let i = 0; i < total; i++) {
+      const isChecked = Boolean(form?.querySelector(`input[name="q_${i}"]:checked`));
+      if (isChecked) answered++;
+      const pill = qNav?.querySelector(`.exam-nav-pill[data-q-index="${i}"]`);
+      if (pill) {
+        pill.classList.toggle('is-answered', isChecked);
+        if (isChecked) pill.classList.remove('is-missing');
+      }
+    }
+
+    const badge = document.getElementById('exam-answered-badge');
+    if (badge) badge.textContent = `${answered} / ${total} respondidas`;
+    if (progBar) {
+      progBar.max = total;
+      progBar.value = answered;
+    }
+    if (answered === total) {
+      const incMsg = document.getElementById('exam-incomplete-msg');
+      if (incMsg) incMsg.hidden = true;
+    }
+  }
+
+  document.getElementById('exam-question-nav')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.exam-nav-pill');
+    if (!btn) return;
+    const card = document.querySelector(`.question-card[data-q-index="${btn.dataset.qIndex}"]`);
+    if (card) {
+      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
 
   document.getElementById('exam-questions-container').addEventListener('change', (e) => {
     if (!activeExamObj || !activeSubjectKey) return;
@@ -956,17 +1046,7 @@
       if (card) card.classList.remove('is-missing');
     }
 
-    const form = document.getElementById('exam-form');
-    let answered = 0;
-    for (let i = 0; i < activeExamObj.questions.length; i++) {
-      if (form.querySelector(`input[name="q_${i}"]:checked`)) {
-        answered++;
-      }
-    }
-    document.getElementById('exam-answered-badge').textContent = `${answered} / 10 respondidas`;
-    if (answered === 10) {
-      document.getElementById('exam-incomplete-msg').hidden = true;
-    }
+    updateExamNavAndProgress();
   });
 
   document.getElementById('exam-form').addEventListener('submit', (e) => {
@@ -974,12 +1054,14 @@
     if (!activeExamObj) return;
 
     const form = e.target;
+    const qNav = document.getElementById('exam-question-nav');
     const userAnswers = [];
     const missingNumbers = [];
     let firstMissingCard = null;
 
     for (let i = 0; i < activeExamObj.questions.length; i++) {
       const card = form.querySelector(`.question-card[data-q-index="${i}"]`);
+      const pill = qNav?.querySelector(`.exam-nav-pill[data-q-index="${i}"]`);
       const checked = form.querySelector(`input[name="q_${i}"]:checked`);
       if (!checked) {
         missingNumbers.push(i + 1);
@@ -987,8 +1069,10 @@
           card.classList.add('is-missing');
           if (!firstMissingCard) firstMissingCard = card;
         }
+        if (pill) pill.classList.add('is-missing');
       } else {
         if (card) card.classList.remove('is-missing');
+        if (pill) pill.classList.remove('is-missing');
         userAnswers.push(Number(checked.value));
       }
     }
@@ -1291,11 +1375,41 @@
       applyTheme(appState.theme || 'light');
       renderDashboard();
       updateReportTextarea();
+      const importTextarea = document.getElementById('import-json-textarea');
+      if (importTextarea) importTextarea.value = '';
       showView('view-dashboard');
       showToast('✅ Save JSON carregado e aplicado com sucesso!');
     } catch (err) {
       showToast('❌ Erro ao ler o JSON. Verifique se copiou o texto completo.');
     }
+  }
+
+  function setupTwoStepConfirm(buttonEl, confirmLabel, onConfirm, shouldConfirmFn = () => true) {
+    if (!buttonEl) return;
+    const defaultLabel = buttonEl.textContent;
+    let confirmTimer = null;
+
+    const resetButton = () => {
+      buttonEl.dataset.confirmPending = 'false';
+      buttonEl.textContent = defaultLabel;
+      buttonEl.classList.remove('is-confirming');
+      if (confirmTimer) {
+        clearTimeout(confirmTimer);
+        confirmTimer = null;
+      }
+    };
+
+    buttonEl.addEventListener('click', () => {
+      if (!shouldConfirmFn() || buttonEl.dataset.confirmPending === 'true') {
+        resetButton();
+        onConfirm();
+        return;
+      }
+      buttonEl.dataset.confirmPending = 'true';
+      buttonEl.textContent = confirmLabel;
+      buttonEl.classList.add('is-confirming');
+      confirmTimer = setTimeout(resetButton, 4000);
+    });
   }
 
   document.getElementById('btn-import-json-text').addEventListener('click', () => {
@@ -1311,27 +1425,37 @@
       importSaveFromText(String(reader.result || ''));
     };
     reader.readAsText(file);
+    e.target.value = '';
   });
 
   document.getElementById('btn-dashboard-next-day')?.addEventListener('click', () => {
     advanceToNextDay();
   });
 
-  document.getElementById('btn-advance-day').addEventListener('click', () => {
-    advanceToNextDay();
-    updateReportTextarea();
-    showView('view-dashboard');
-    showToast(`⏭️ Dia ${appState.dayNumber} iniciado! Os cartões com mais erros foram priorizados.`);
-  });
+  setupTwoStepConfirm(
+    document.getElementById('btn-advance-day'),
+    '⚠️ Dia incompleto — Clique de novo para virar',
+    () => {
+      advanceToNextDay();
+      updateReportTextarea();
+      showView('view-dashboard');
+      showToast(`⏭️ Dia ${appState.dayNumber} iniciado! Os cartões com mais erros foram priorizados.`);
+    },
+    () => !isDayFullyFinished(appState)
+  );
 
-  document.getElementById('btn-reset-all').addEventListener('click', () => {
-    localStorage.removeItem(STORAGE_KEY);
-    appState = loadState();
-    renderDashboard();
-    updateReportTextarea();
-    showView('view-dashboard');
-    showToast('🗑️ Progresso zerado.');
-  });
+  setupTwoStepConfirm(
+    document.getElementById('btn-reset-all'),
+    '⚠️ Clique de novo para ZERAR TUDO',
+    () => {
+      localStorage.removeItem(STORAGE_KEY);
+      appState = loadState();
+      renderDashboard();
+      updateReportTextarea();
+      showView('view-dashboard');
+      showToast('🗑️ Progresso zerado.');
+    }
+  );
 
   // Boot
   renderDashboard();

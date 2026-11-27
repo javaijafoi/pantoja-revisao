@@ -372,10 +372,77 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.3rem 0.55rem;
+  padding: 0.35rem 0.55rem;
   border-radius: 0.55rem;
   background: var(--pico-card-sectioning-background-color);
   font-size: 0.8rem;
+}
+
+.history-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.history-wrong-tag {
+  font-size: 0.72rem;
+  color: var(--vf-false-color);
+  font-weight: 600;
+}
+
+.attention-count-tag {
+  color: var(--vf-false-color);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.exam-question-nav {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 0.9rem;
+}
+
+@media (max-width: 520px) {
+  .exam-question-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+.exam-nav-pill {
+  padding: 0.3rem 0;
+  margin-bottom: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  border-radius: 0.6rem;
+  border: 1px solid var(--pico-muted-border-color);
+  background: var(--pico-card-background-color);
+  color: var(--pico-muted-color);
+  text-align: center;
+}
+
+.exam-nav-pill:hover,
+.exam-nav-pill:focus-visible {
+  border-color: var(--pico-primary);
+  color: var(--pico-primary);
+}
+
+.exam-nav-pill.is-answered {
+  background: var(--pico-primary-background);
+  border-color: var(--pico-primary-background);
+  color: #ffffff;
+}
+
+.exam-nav-pill.is-missing {
+  border-color: var(--vf-false-color);
+  background: var(--vf-false-bg);
+  color: var(--vf-false-color);
+}
+
+button.is-confirming {
+  background-color: var(--vf-false-color) !important;
+  border-color: var(--vf-false-color) !important;
+  color: #ffffff !important;
 }
 
 .question-card.is-missing {
