@@ -132,6 +132,7 @@
           <strong id="vf-feedback-title">Ops, você errou!</strong>
           <span id="vf-feedback-badge" class="badge-pill">Voltou p/ Caixa 0</span>
         </header>
+        <p id="vf-feedback-topic" class="feedback-topic-tag" hidden></p>
         <p id="vf-feedback-statement" class="feedback-stmt"></p>
         <p id="vf-feedback-correct-ans" class="feedback-ans"></p>
 
@@ -185,6 +186,9 @@
           <div class="exam-sticky-actions">
             <button type="button" class="outline secondary btn-sm" id="btn-toggle-exam-focus">
               🎯 1 por vez
+            </button>
+            <button type="button" class="outline secondary btn-xs" id="btn-toggle-exam-autoadvance" hidden title="Avançar automaticamente para a próxima questão ao responder no modo 1 por vez">
+              ⚡ Auto-avanço: OFF
             </button>
             <button type="button" class="outline secondary btn-sm" id="btn-clear-exam-draft" disabled>
               🧹 Limpar marcações
@@ -240,9 +244,12 @@
 
       <div class="result-review-header">
         <h3>Gabarito Comentado</h3>
-        <div class="result-filter-group" id="result-filter-bar" role="group" aria-label="Filtrar questões do gabarito">
-          <button type="button" class="btn-sm primary" id="btn-filter-all" data-filter="all">Todas (10)</button>
-          <button type="button" class="btn-sm outline secondary" id="btn-filter-wrong" data-filter="wrong">Apenas Erros (0)</button>
+        <div class="result-review-controls">
+          <div class="result-filter-group" id="result-filter-bar" role="group" aria-label="Filtrar questões do gabarito">
+            <button type="button" class="btn-sm primary" id="btn-filter-all" data-filter="all">Todas (10)</button>
+            <button type="button" class="btn-sm outline secondary" id="btn-filter-wrong" data-filter="wrong">Apenas Erros (0)</button>
+          </div>
+          <button type="button" class="btn-sm outline secondary" id="btn-toggle-all-explanations">📖 Abrir comentários</button>
         </div>
       </div>
       <div id="result-review-container">

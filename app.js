@@ -22,10 +22,30 @@
   }
 
   // Fallback for declarative command="show-modal" if browser lacks Invoker Commands
+  let examPausedByDialog = false;
+
+  function pauseExamForModal() {
+    const examView = document.getElementById('view-exam');
+    if (examView && !examView.hidden && activeExamObj && !examTimerPaused) {
+      pauseExamTimer();
+      examPausedByDialog = true;
+    }
+  }
+
+  function resumeExamAfterModal() {
+    if (!examPausedByDialog) return;
+    examPausedByDialog = false;
+    const examView = document.getElementById('view-exam');
+    if (examView && !examView.hidden && activeExamObj && examTimerPaused && !document.querySelector('dialog[open]')) {
+      resumeExamTimer();
+    }
+  }
+
   const btnOpenReport = document.getElementById('btn-open-report');
   const dialogReport = document.getElementById('dialog-report');
   if (btnOpenReport && dialogReport) {
     btnOpenReport.addEventListener('click', () => {
+      pauseExamForModal();
       updateReportTextarea();
       if (!dialogReport.open) {
         dialogReport.showModal();
@@ -37,6 +57,7 @@
   const dialogGlossary = document.getElementById('dialog-glossary');
   if (btnOpenGlossary && dialogGlossary) {
     btnOpenGlossary.addEventListener('click', () => {
+      pauseExamForModal();
       renderGlossaryResults();
       if (!dialogGlossary.open) {
         dialogGlossary.showModal();
@@ -44,6 +65,10 @@
       document.getElementById('glossary-search-input')?.focus();
     });
   }
+
+  dialogGlossary?.addEventListener('close', () => {
+    resumeExamAfterModal();
+  });
 
   // Gather the 3 Science subjects
   function getSubjectsMap() {
@@ -126,14 +151,26 @@
         dayNumber: 1,
         theme: 'light',
         examFocusMode: false,
+        examAutoAdvance: false,
         examDrafts: {},
         examDraftFlags: {},
         examDraftTimers: {},
         subjects: {},
       };
     }
+    if (typeof saved.dayNumber !== 'number' || Number.isNaN(saved.dayNumber) || saved.dayNumber < 1) {
+      saved.dayNumber = 1;
+    } else {
+      saved.dayNumber = Math.floor(saved.dayNumber);
+    }
+    if (saved.theme !== 'dark' && saved.theme !== 'light') {
+      saved.theme = 'light';
+    }
     if (typeof saved.examFocusMode !== 'boolean') {
       saved.examFocusMode = false;
+    }
+    if (typeof saved.examAutoAdvance !== 'boolean') {
+      saved.examAutoAdvance = false;
     }
     if (!saved.examDrafts || typeof saved.examDrafts !== 'object') {
       saved.examDrafts = {};
@@ -166,7 +203,7 @@
           st.nextExamIndex = Math.floor(st.nextExamIndex);
         }
         if (typeof st.passedToday !== 'boolean') st.passedToday = false;
-        if (typeof st.bestScoreToday !== 'number') st.bestScoreToday = null;
+        if (typeof st.bestScoreToday !== 'number' || Number.isNaN(st.bestScoreToday)) st.bestScoreToday = null;
         if (typeof st.vfCompletedToday !== 'boolean') st.vfCompletedToday = false;
 
         for (const c of subjData.cards) {
@@ -297,6 +334,8 @@
   let activeExamObj = null;
   let examSessionMode = 'official'; // 'official' | 'errors' | 'practice'
   let examFocusMode = Boolean(appState.examFocusMode);
+  let examAutoAdvance = Boolean(appState.examAutoAdvance);
+  let examAutoAdvanceTimer = null;
   let examCurrentIndex = 0;
   let examAccumulatedSeconds = 0;
   let examStartedAt = null;
@@ -424,10 +463,19 @@
     applyTheme(next);
   });
 
+  function clearExamAutoAdvanceTimer() {
+    if (examAutoAdvanceTimer) {
+      clearTimeout(examAutoAdvanceTimer);
+      examAutoAdvanceTimer = null;
+    }
+  }
+
   // Views switcher
-  function showView(viewId) {
+  function showView(viewId, scrollToTop = true) {
     const examView = document.getElementById('view-exam');
     if (viewId !== 'view-exam') {
+      clearExamAutoAdvanceTimer();
+      examPausedByDialog = false;
       if (examView && !examView.hidden && activeExamObj) {
         examAccumulatedSeconds = getElapsedExamSeconds();
         examStartedAt = null;
@@ -440,7 +488,9 @@
       const el = document.getElementById(id);
       if (el) el.hidden = id !== viewId;
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (scrollToTop) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   // ==========================================================================
@@ -680,9 +730,10 @@
         }
       });
       const completedExamsCount = subj.exams.filter((ex) => bestByExamId.has(ex.id)).length;
+      const passedExamsCount = subj.exams.filter((ex) => (bestByExamId.get(ex.id)?.score ?? -1) >= 8).length;
       const examMapHtml = `
         <details class="exam-history-details">
-          <summary>📚 Mapa das ${subj.exams.length} Provas (${completedExamsCount}/${subj.exams.length} feitas)</summary>
+          <summary>📚 Mapa das ${subj.exams.length} Provas (${completedExamsCount}/${subj.exams.length} feitas${completedExamsCount > 0 ? ` • ${passedExamsCount} c/ meta ✅` : ''})</summary>
           <div class="exam-map-grid">
             ${subj.exams
               .map((ex, idx) => {
@@ -1319,6 +1370,7 @@
   }
 
   function handleFlashcardAnswer(userAnswerBoolean) {
+    if (document.getElementById('view-flashcards')?.hidden) return;
     const { subj, st, isErrorMode, cards, queue, boxes } = getVfRuntime();
     if (!queue || queue.length === 0) return;
 
@@ -1414,6 +1466,7 @@
     const feedbackBox = document.getElementById('vf-feedback-box');
     const titleEl = document.getElementById('vf-feedback-title');
     const badgeEl = document.getElementById('vf-feedback-badge');
+    const topicEl = document.getElementById('vf-feedback-topic');
     const stmtEl = document.getElementById('vf-feedback-statement');
     const ansEl = document.getElementById('vf-feedback-correct-ans');
     const expContent = document.getElementById('vf-explanation-content');
@@ -1439,6 +1492,12 @@
       ansEl.textContent = `Você marcou ${userAnswerBoolean ? 'VERDADEIRO' : 'FALSO'}, mas o gabarito é ${cardObj.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}.`;
     }
 
+    if (topicEl) {
+      const subjLabel = cardObj._subjTitle ? `${cardObj._subjTitle} • ` : '';
+      const fullTopic = `${subjLabel}${cardObj.topic || ''}`.trim();
+      topicEl.textContent = fullTopic;
+      topicEl.hidden = !fullTopic;
+    }
     stmtEl.textContent = `"${cardObj.statement}"`;
     expText.textContent = cardObj.explanation;
 
@@ -1544,6 +1603,7 @@
           return;
         }
         e.preventDefault();
+        lastVfUndoSnapshot = null;
         renderCurrentFlashcard();
       } else if (key === 'e') {
         e.preventDefault();
@@ -1613,6 +1673,14 @@
     if (btnToggle) {
       btnToggle.textContent = examFocusMode ? '📄 Ver todas' : '🎯 1 por vez';
       btnToggle.disabled = totalQ <= 1;
+    }
+
+    const btnAutoAdv = document.getElementById('btn-toggle-exam-autoadvance');
+    if (btnAutoAdv) {
+      btnAutoAdv.hidden = !examFocusMode || totalQ <= 1;
+      btnAutoAdv.textContent = examAutoAdvance ? '⚡ Auto-avanço: ON' : '⚡ Auto-avanço: OFF';
+      btnAutoAdv.classList.toggle('is-active', examAutoAdvance);
+      btnAutoAdv.setAttribute('aria-pressed', examAutoAdvance ? 'true' : 'false');
     }
 
     const pager = document.getElementById('exam-focus-pager');
@@ -1696,16 +1764,24 @@
   }
 
   function renderExamView({ subjKey, subj, examObj, attemptLabel, noticeHtml, mode }) {
+    clearExamAutoAdvanceTimer();
+    examPausedByDialog = false;
     activeSubjectKey = subjKey;
     examSessionMode = mode;
     activeExamObj = examObj;
     examFocusMode = Boolean(appState.examFocusMode);
-    examCurrentIndex = 0;
+    examAutoAdvance = Boolean(appState.examAutoAdvance);
     const draftKey = `${subjKey}:${activeExamObj.id}`;
     const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
     const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
     const savedTimer = (appState.examDraftTimers && appState.examDraftTimers[draftKey]) || 0;
     const totalQ = activeExamObj.questions.length;
+    const firstUnansweredIdx = activeExamObj.questions.findIndex((q, idx) => {
+      const val = savedDraft[getExamQuestionDraftKey(q, idx)];
+      return val === undefined || val === null || val === '';
+    });
+    const hasAnySavedAnswer = Object.values(savedDraft).some((v) => v !== undefined && v !== null && v !== '');
+    examCurrentIndex = hasAnySavedAnswer && firstUnansweredIdx !== -1 ? firstUnansweredIdx : 0;
 
     document.getElementById('exam-subject-title').textContent = `${subj.title} — ${activeExamObj.title}`;
     document.getElementById('exam-attempt-label').textContent = attemptLabel;
@@ -1778,11 +1854,16 @@
       }
     });
 
+    startExamTimer(savedTimer);
     updateExamNavAndProgress();
     applyExamFocusLayout();
     setupExamVisibilityObserver();
-    startExamTimer(savedTimer);
-    showView('view-exam');
+    const shouldScrollResumed = !examFocusMode && examCurrentIndex > 0;
+    showView('view-exam', !shouldScrollResumed);
+    if (shouldScrollResumed) {
+      const resumedCard = document.querySelector(`.question-card[data-q-index="${examCurrentIndex}"]`);
+      resumedCard?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
   }
 
   function openExam(subjKey) {
@@ -1942,7 +2023,9 @@
       resetSubmitExamConfirm();
     }
     const btnClearDraft = document.getElementById('btn-clear-exam-draft');
-    if (btnClearDraft) btnClearDraft.disabled = answered === 0 && flaggedCount === 0;
+    if (btnClearDraft) {
+      btnClearDraft.disabled = answered === 0 && flaggedCount === 0 && getElapsedExamSeconds() === 0;
+    }
     if (progBar) {
       progBar.max = total;
       progBar.value = answered;
@@ -1977,11 +2060,23 @@
   }
 
   document.getElementById('btn-toggle-exam-focus')?.addEventListener('click', () => {
+    clearExamAutoAdvanceTimer();
     examFocusMode = !examFocusMode;
     appState.examFocusMode = examFocusMode;
     saveState();
     applyExamFocusLayout();
     setupExamVisibilityObserver();
+  });
+
+  document.getElementById('btn-toggle-exam-autoadvance')?.addEventListener('click', () => {
+    clearExamAutoAdvanceTimer();
+    examAutoAdvance = !examAutoAdvance;
+    appState.examAutoAdvance = examAutoAdvance;
+    saveState();
+    applyExamFocusLayout();
+    showToast(examAutoAdvance
+      ? '⚡ Auto-avanço ativado no modo 1 por vez!'
+      : '⚡ Auto-avanço desativado.');
   });
 
   document.getElementById('btn-toggle-exam-timer')?.addEventListener('click', () => {
@@ -2094,6 +2189,19 @@
         if (clearBtn) clearBtn.hidden = false;
       }
       setCurrentExamPill(qIdx);
+      updateExamNavAndProgress();
+
+      if (examFocusMode && examAutoAdvance && qIdx === examCurrentIndex && qIdx + 1 < activeExamObj.questions.length) {
+        clearExamAutoAdvanceTimer();
+        examAutoAdvanceTimer = setTimeout(() => {
+          examAutoAdvanceTimer = null;
+          const examView = document.getElementById('view-exam');
+          if (examView && !examView.hidden && activeExamObj && examFocusMode && examAutoAdvance && examCurrentIndex === qIdx) {
+            navigateExamToIndex(qIdx + 1, true);
+          }
+        }, 280);
+      }
+      return;
     }
 
     updateExamNavAndProgress();
@@ -2194,6 +2302,8 @@
     }
 
     resetSubmitExamConfirm();
+    clearExamAutoAdvanceTimer();
+    examPausedByDialog = false;
     const durationSeconds = Math.max(1, getElapsedExamSeconds());
     stopExamTimer();
     examStartedAt = null;
@@ -2206,6 +2316,16 @@
       gradeAndShowExamResult(userAnswers, durationSeconds);
     }
   });
+
+  function updateToggleAllExplanationsBtn() {
+    const reviewContainer = document.getElementById('result-review-container');
+    const toggleBtn = document.getElementById('btn-toggle-all-explanations');
+    if (!reviewContainer || !toggleBtn) return;
+    const visibleDetails = Array.from(reviewContainer.querySelectorAll('.review-q-card:not([hidden]) details'));
+    toggleBtn.disabled = visibleDetails.length === 0;
+    const anyClosed = visibleDetails.some((d) => !d.open);
+    toggleBtn.textContent = anyClosed ? '📖 Abrir comentários' : '🙈 Recolher comentários';
+  }
 
   function applyResultReviewFilter(filterMode) {
     const reviewContainer = document.getElementById('result-review-container');
@@ -2220,12 +2340,25 @@
     for (const card of reviewContainer.querySelectorAll('.review-q-card')) {
       card.hidden = showOnlyWrong && card.classList.contains('is-correct');
     }
+    updateToggleAllExplanationsBtn();
   }
 
   document.getElementById('result-filter-bar')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-filter]');
     if (!btn || btn.disabled) return;
     applyResultReviewFilter(btn.dataset.filter);
+  });
+
+  document.getElementById('btn-toggle-all-explanations')?.addEventListener('click', () => {
+    const reviewContainer = document.getElementById('result-review-container');
+    if (!reviewContainer) return;
+    const visibleDetails = Array.from(reviewContainer.querySelectorAll('.review-q-card:not([hidden]) details'));
+    if (visibleDetails.length === 0) return;
+    const shouldOpen = visibleDetails.some((d) => !d.open);
+    for (const d of visibleDetails) {
+      d.open = shouldOpen;
+    }
+    updateToggleAllExplanationsBtn();
   });
 
   function buildExamErrorsWhatsAppText({ subj, examObj, score, userAnswers, wrongQuestions }) {
@@ -2366,6 +2499,18 @@
       ctaContainer.appendChild(btnCopyErrors);
     }
 
+    if (!isErrorDrill && subjKey !== 'mixed' && subj && st) {
+      const pendingSubjectErrors = getPendingExamErrorQuestions(subj, st).length;
+      if (pendingSubjectErrors > 0) {
+        const btnPracticeSubjectErrors = document.createElement('button');
+        btnPracticeSubjectErrors.type = 'button';
+        btnPracticeSubjectErrors.className = 'outline secondary';
+        btnPracticeSubjectErrors.textContent = `🧠 Treinar Erros de Prova (${pendingSubjectErrors})`;
+        btnPracticeSubjectErrors.addEventListener('click', () => openExamErrorDrill(subjKey));
+        ctaContainer.appendChild(btnPracticeSubjectErrors);
+      }
+    }
+
     const btnBackDash = document.createElement('button');
     btnBackDash.type = 'button';
     btnBackDash.className = 'outline secondary';
@@ -2437,6 +2582,7 @@
       reviewContainer.appendChild(card);
     });
 
+    updateToggleAllExplanationsBtn();
     showView('view-exam-result');
   }
 
@@ -2665,6 +2811,25 @@
     const lines = [];
     lines.push(`📊 *RELATÓRIO DE REVISÃO — PANTOJA (8º ANO)*`);
     lines.push(`📅 Dia ${appState.dayNumber || 1} (${formatDateBR(appState.currentDay)})`);
+
+    let totalUniqueExams = 0;
+    let doneUniqueExams = 0;
+    let passedUniqueExams = 0;
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st) continue;
+      totalUniqueExams += subj.exams.length;
+      for (const ex of subj.exams) {
+        const matches = (st.examHistory || []).filter((h) => h.examId === ex.id || h.examTitle === ex.title);
+        if (matches.length > 0) {
+          doneUniqueExams++;
+          if (matches.some((h) => h.score >= 8 || h.passed)) passedUniqueExams++;
+        }
+      }
+    }
+    const { pendingVf, pendingExam } = getTotalPendingErrorsSummary();
+    lines.push(`📚 Edital: ${doneUniqueExams}/${totalUniqueExams} provas feitas (${passedUniqueExams} com meta ≥8) • Pendências: ${pendingVf} V/F, ${pendingExam} de prova`);
     lines.push('');
 
     for (const key of ['quimica', 'biologia', 'fisica']) {
@@ -2814,6 +2979,7 @@
       appState = loadState();
       checkDailyRollover();
       examFocusMode = Boolean(appState.examFocusMode);
+      examAutoAdvance = Boolean(appState.examAutoAdvance);
       lastVfUndoSnapshot = null;
       saveState();
       applyTheme(appState.theme || 'light');
@@ -3165,6 +3331,7 @@
     '⚠️ Clique de novo para limpar',
     () => {
       if (!activeExamObj || !activeSubjectKey) return;
+      clearExamAutoAdvanceTimer();
       const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
       if (appState.examDrafts && appState.examDrafts[draftKey]) {
         delete appState.examDrafts[draftKey];
@@ -3219,9 +3386,12 @@
     () => {
       localStorage.removeItem(STORAGE_KEY);
       lastVfUndoSnapshot = null;
+      clearExamAutoAdvanceTimer();
+      examPausedByDialog = false;
       stopExamTimer();
       appState = loadState();
       examFocusMode = Boolean(appState.examFocusMode);
+      examAutoAdvance = Boolean(appState.examAutoAdvance);
       renderDashboard();
       updateReportTextarea();
       showView('view-dashboard');
@@ -3232,6 +3402,7 @@
   dialogReport?.addEventListener('close', () => {
     resetAdvanceDayConfirm?.();
     resetAllConfirm?.();
+    resumeExamAfterModal();
   });
 
   // Boot

@@ -4,6 +4,26 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 8)] — Retomada inteligente no simulado, feedback V/F contextualizado e diagnóstico do edital
+
+### Melhorias implementadas
+1. **Simulado mais fluido: retomada na próxima questão em branco, auto-avanço no Modo Foco e pausa em modais (`index.html`, `app.js`, `style.css`)**
+   - Atualizada `renderExamView()` para posicionar automaticamente `examCurrentIndex` na primeira questão ainda não respondida ao retomar um rascunho em andamento (rolando até ela na lista completa ou exibindo-a direto no Modo Foco), evitando cliques repetidos ao continuar provas pausadas.
+   - Adicionado o toggle persistente **⚡ Auto-avanço: ON/OFF** (`#btn-toggle-exam-autoadvance` / `appState.examAutoAdvance`) no Modo Foco (`🎯 1 por vez`), avançando automaticamente após marcar uma alternativa, além de habilitar **🧹 Limpar marcações** também quando há apenas tempo decorrido salvo.
+   - Adicionada pausa automática do cronômetro ao abrir **🔍 Glossário** ou **📊 Relatório / Save** durante uma prova (`pauseExamForModal()` / `resumeExamAfterModal()`), retomando automaticamente ao fechar a janela caso não estivesse pausado manualmente.
+
+2. **Flashcards V/F com tópico no feedback, correções de estado e gabarito conectado aos erros (`index.html`, `app.js`, `style.css`)**
+   - Exibida a tag do tópico/frente (`#vf-feedback-topic`) dentro do card de feedback `#vf-feedback-box` para contextualizar imediatamente o erro ou macete ao assunto estudado.
+   - Corrigidos dois bugs sutis no fluxo V/F: limpeza consistente de `lastVfUndoSnapshot` ao avançar via teclado (`Enter`/`Espaço`) e proteção em `handleFlashcardAnswer()` caso o usuário volte ao painel durante a animação de saída do cartão.
+   - Adicionados o botão **📖 Abrir / Recolher comentários** (`#btn-toggle-all-explanations`) no cabeçalho do **Gabarito Comentado** e o atalho direto **🧠 Treinar Erros de Prova (N)** na tela de resultado quando houver pendências na frente.
+
+3. **Mapa das 9 Provas com metas batidas, resumo do edital no WhatsApp e blindagem do save (`app.js`)**
+   - Atualizado o título do **📚 Mapa das 9 Provas** no Dashboard para indicar também quantas provas já atingiram a meta `≥ 8/10` (`X/9 feitas • Y c/ meta ✅`).
+   - Enriquecido `generateReportAndSaveText()` com uma linha de síntese global do edital (provas únicas concluídas, aprovadas com meta `≥ 8/10` e totais de erros V/F e de prova pendentes).
+   - Endurecida `loadState()` para validar `dayNumber` (inteiro `>= 1`), `theme` (`'light'` | `'dark'`), `examAutoAdvance` (booleano) e `NaN` em `bestScoreToday`.
+
+---
+
 ## [2026-11-27 (Atualização 7)] — Auto-explicação nos erros V/F, rascunho no painel e revisão mista das 3 frentes
 
 ### Melhorias implementadas
