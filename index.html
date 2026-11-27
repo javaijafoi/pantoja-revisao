@@ -100,6 +100,9 @@
         <span>👈 Arraste p/ Esquerda = <strong>FALSO</strong></span>
         <span><strong>VERDADEIRO</strong> = Arraste p/ Direita 👉</span>
       </p>
+      <p class="keyboard-hint" id="vf-keyboard-hint">
+        ⌨️ Atalhos: <kbd>←</kbd> ou <kbd>F</kbd> = Falso • <kbd>→</kbd> ou <kbd>V</kbd> = Verdadeiro • <kbd>E</kbd> = Explicação • <kbd>Enter</kbd> = Próximo
+      </p>
 
       <!-- Native CSS Scroll-Snap Swipe Deck (modern-web-guidance swipe-to-remove pattern) -->
       <ul class="SwipeableList" id="vf-swipe-list" role="list" aria-label="Cartão atual de Verdadeiro ou Falso">
@@ -177,7 +180,13 @@
         </div>
       </article>
 
-      <h3>Gabarito Comentado</h3>
+      <div class="result-review-header">
+        <h3>Gabarito Comentado</h3>
+        <div class="result-filter-group" id="result-filter-bar" role="group" aria-label="Filtrar questões do gabarito">
+          <button type="button" class="btn-sm primary" id="btn-filter-all" data-filter="all">Todas (10)</button>
+          <button type="button" class="btn-sm outline secondary" id="btn-filter-wrong" data-filter="wrong">Apenas Erros (0)</button>
+        </div>
+      </div>
       <div id="result-review-container">
         <!-- Detailed review of each question with optional/expanded explanation -->
       </div>

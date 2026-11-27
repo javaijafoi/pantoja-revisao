@@ -56,6 +56,15 @@
     return `${parts[2]}/${parts[1]}`;
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#39;');
+  }
+
   function createDefaultSubjectState(subjectData) {
     const cardBoxes = {};
     const cardErrorsToday = {};
@@ -102,8 +111,12 @@
         currentDay: today,
         dayNumber: 1,
         theme: 'light',
+        examDrafts: {},
         subjects: {},
       };
+    }
+    if (!saved.examDrafts || typeof saved.examDrafts !== 'object') {
+      saved.examDrafts = {};
     }
 
     for (const key of Object.keys(subjects)) {
@@ -207,6 +220,7 @@
       st.bestScoreToday = null;
     }
 
+    appState.examDrafts = {};
     saveState();
     if (shouldRender) {
       renderDashboard();
@@ -215,7 +229,7 @@
 
   function checkDailyRollover() {
     const today = getTodayString();
-    if (!appState.currentDay || today <= appState.currentDay) return;
+    if (!appState.currentDay || today <= appState.currentDay) return false;
 
     if (isDayFullyFinished(appState)) {
       advanceToNextDay(false);
@@ -224,12 +238,22 @@
       appState.currentDay = today;
       saveState();
     }
+    return true;
   }
 
   let appState = loadState();
   checkDailyRollover();
   let activeSubjectKey = null;
   let activeExamObj = null;
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && checkDailyRollover()) {
+      const dashView = document.getElementById('view-dashboard');
+      if (dashView && !dashView.hidden) {
+        renderDashboard();
+      }
+    }
+  });
 
   // Apply theme
   function applyTheme(theme) {
@@ -316,6 +340,28 @@
 
       const nextExamNum = (st.nextExamIndex % subj.exams.length) + 1;
       const canTakeExam = vfDone && !st.passedToday && st.examsTodayCount < 3;
+      const totalCardErrors = Object.values(st.cardErrorsTotal || {}).reduce((acc, n) => acc + (n || 0), 0);
+      const historyList = [...(st.examHistory || [])].reverse();
+      const historyHtml = historyList.length > 0
+        ? `
+          <details class="exam-history-details">
+            <summary>📜 Histórico de provas (${historyList.length})</summary>
+            <ul class="exam-history-list">
+              ${historyList
+                .slice(0, 6)
+                .map(
+                  (h) => `
+                  <li>
+                    <span>Dia ${escapeHtml(h.dayNumber || 1)} • ${escapeHtml(h.examTitle)}</span>
+                    <strong>${escapeHtml(h.score)}/10 ${h.passed ? '✅' : '⚠️'}</strong>
+                  </li>
+                `
+                )
+                .join('')}
+            </ul>
+          </details>
+        `
+        : '';
 
       const cardEl = document.createElement('article');
       cardEl.className = 'subject-card';
@@ -325,10 +371,10 @@
         <div>
           <header>
             <div class="subject-header-row">
-              <h3>${subj.title}</h3>
-              <span class="status-chip ${chipClass}">${chipText}</span>
+              <h3>${escapeHtml(subj.title)}</h3>
+              <span class="status-chip ${chipClass}">${escapeHtml(chipText)}</span>
             </div>
-            <small class="subject-subtitle">${subj.subtitle}</small>
+            <small class="subject-subtitle">${escapeHtml(subj.subtitle)}</small>
           </header>
 
           <div class="step-box">
@@ -345,7 +391,13 @@
               <span>Melhor nota de hoje:</span>
               <strong>${st.bestScoreToday !== null ? `${st.bestScoreToday} / 10` : '—'}</strong>
             </div>
+            ${
+              totalCardErrors > 0
+                ? `<div class="step-row"><span>Erros acumulados V/F:</span><strong>${totalCardErrors}</strong></div>`
+                : ''
+            }
           </div>
+          ${historyHtml}
         </div>
 
         <div class="subject-actions">
@@ -584,6 +636,7 @@
     const listEl = document.getElementById('vf-swipe-list');
     const feedbackBox = document.getElementById('vf-feedback-box');
     const swipeHint = document.getElementById('vf-swipe-hint');
+    const keyboardHint = document.getElementById('vf-keyboard-hint');
 
     listEl.innerHTML = '';
     feedbackBox.hidden = true;
@@ -593,6 +646,7 @@
 
     if (st.vfQueue.length === 0) {
       if (swipeHint) swipeHint.hidden = true;
+      if (keyboardHint) keyboardHint.hidden = true;
       st.vfCompletedToday = true;
       saveState();
 
@@ -600,8 +654,8 @@
       doneLi.innerHTML = `
         <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
           <h2>🎉 Parabéns, Pantoja!</h2>
-          <p>Você dominou todos os <strong>30 cartões V/F de ${subj.title}</strong> (revisão completa concluída)!</p>
-          <p class="muted-text" style="margin-bottom: 1.25rem;">Agora as provas de ${subj.title} estão liberadas.</p>
+          <p>Você dominou todos os <strong>30 cartões V/F de ${escapeHtml(subj.title)}</strong> (revisão completa concluída)!</p>
+          <p class="muted-text" style="margin-bottom: 1.25rem;">Agora as provas de ${escapeHtml(subj.title)} estão liberadas.</p>
           <div class="grid">
             <button type="button" class="primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>
             <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
@@ -621,6 +675,7 @@
     }
 
     if (swipeHint) swipeHint.hidden = false;
+    if (keyboardHint) keyboardHint.hidden = false;
 
     const currentCardId = st.vfQueue[0];
     const cardObj = subj.cards.find((c) => c.id === currentCardId);
@@ -635,18 +690,18 @@
         <div class="SwipeableList-content">
           <div>
             <div class="card-meta-top">
-              <span class="card-topic-tag">${cardObj.topic}</span>
+              <span class="card-topic-tag">${escapeHtml(cardObj.topic)}</span>
               <span class="card-box-tag">Caixa ${currentBox} (${currentBox}/2 acertos)</span>
             </div>
-            <p class="card-statement-text SwipeableList-label">${cardObj.statement}</p>
+            <p class="card-statement-text SwipeableList-label">${escapeHtml(cardObj.statement)}</p>
           </div>
 
           <div class="vf-button-pair">
             <button type="button" class="SwipeableList-action btn-vf-false" data-direction="right">
-              👈 FALSO <span class="visually-hidden">${cardObj.statement}</span>
+              👈 FALSO <span class="visually-hidden">${escapeHtml(cardObj.statement)}</span>
             </button>
             <button type="button" class="SwipeableList-action btn-vf-true" data-direction="left">
-              VERDADEIRO 👉 <span class="visually-hidden">${cardObj.statement}</span>
+              VERDADEIRO 👉 <span class="visually-hidden">${escapeHtml(cardObj.statement)}</span>
             </button>
           </div>
         </div>
@@ -717,7 +772,9 @@
 
   function showCardFeedback(cardObj, userAnswerBoolean, isCorrect, nextBox, queueEmpty) {
     const swipeHint = document.getElementById('vf-swipe-hint');
+    const keyboardHint = document.getElementById('vf-keyboard-hint');
     if (swipeHint) swipeHint.hidden = true;
+    if (keyboardHint) keyboardHint.hidden = true;
 
     const feedbackBox = document.getElementById('vf-feedback-box');
     const titleEl = document.getElementById('vf-feedback-title');
@@ -776,6 +833,43 @@
     showView('view-dashboard');
   });
 
+  // Keyboard shortcuts for Flashcards V/F view
+  document.addEventListener('keydown', (e) => {
+    const vfView = document.getElementById('view-flashcards');
+    if (!vfView || vfView.hidden) return;
+    if (dialogReport && dialogReport.open) return;
+
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const feedbackBox = document.getElementById('vf-feedback-box');
+    const feedbackOpen = feedbackBox && !feedbackBox.hidden;
+    const key = e.key.toLowerCase();
+
+    if (feedbackOpen) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        renderCurrentFlashcard();
+      } else if (key === 'e') {
+        e.preventDefault();
+        document.getElementById('btn-toggle-explanation')?.click();
+      }
+      return;
+    }
+
+    const activeItem = vfSwipeList?.querySelector('.SwipeableList-item:not(.is-removing)');
+    if (!activeItem) return;
+
+    if (e.key === 'ArrowLeft' || key === 'f') {
+      e.preventDefault();
+      activeItem.querySelector('.btn-vf-false')?.click();
+    } else if (e.key === 'ArrowRight' || key === 'v') {
+      e.preventDefault();
+      activeItem.querySelector('.btn-vf-true')?.click();
+    }
+  });
+
   // ==========================================================================
   // EXAM SIMULADO (10 Multiple-Choice Questions, No Immediate Spoiler)
   // ==========================================================================
@@ -797,27 +891,32 @@
 
     const examIdx = st.nextExamIndex % subj.exams.length;
     activeExamObj = subj.exams[examIdx];
+    const draftKey = `${subjKey}:${activeExamObj.id}`;
+    const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
 
     document.getElementById('exam-subject-title').textContent = `${subj.title} — ${activeExamObj.title}`;
     document.getElementById('exam-attempt-label').textContent = `Tentativa ${st.examsTodayCount + 1} de 3 hoje • Meta: 8/10`;
-    document.getElementById('exam-answered-badge').textContent = '0 / 10 respondidas';
     document.getElementById('exam-incomplete-msg').hidden = true;
 
     const qContainer = document.getElementById('exam-questions-container');
     qContainer.innerHTML = '';
 
     const letters = ['A', 'B', 'C', 'D'];
+    let preAnswered = 0;
 
     activeExamObj.questions.forEach((q, idx) => {
       const article = document.createElement('article');
       article.className = 'question-card';
+      article.dataset.qIndex = String(idx);
+      const savedChoice = savedDraft[idx];
+      if (typeof savedChoice === 'number') preAnswered++;
 
       const optionsHtml = q.options
         .map(
           (optText, optIdx) => `
           <label class="option-label">
-            <input type="radio" name="q_${idx}" value="${optIdx}">
-            <span><strong>${letters[optIdx]})</strong> ${optText}</span>
+            <input type="radio" name="q_${idx}" value="${optIdx}" ${savedChoice === optIdx ? 'checked' : ''}>
+            <span><strong>${letters[optIdx]})</strong> ${escapeHtml(optText)}</span>
           </label>
         `
         )
@@ -825,7 +924,7 @@
 
       article.innerHTML = `
         <span class="question-num">Questão ${idx + 1} de 10</span>
-        <p class="question-text">${q.text}</p>
+        <p class="question-text">${escapeHtml(q.text)}</p>
         <div class="options-group">
           ${optionsHtml}
         </div>
@@ -834,11 +933,29 @@
       qContainer.appendChild(article);
     });
 
+    document.getElementById('exam-answered-badge').textContent = `${preAnswered} / 10 respondidas`;
     showView('view-exam');
   }
 
-  document.getElementById('exam-questions-container').addEventListener('change', () => {
-    if (!activeExamObj) return;
+  document.getElementById('exam-questions-container').addEventListener('change', (e) => {
+    if (!activeExamObj || !activeSubjectKey) return;
+    const radio = e.target.closest('input[type="radio"]');
+    if (radio && radio.name.startsWith('q_')) {
+      const qIdx = Number(radio.name.slice(2));
+      const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+      if (!appState.examDrafts || typeof appState.examDrafts !== 'object') {
+        appState.examDrafts = {};
+      }
+      if (!appState.examDrafts[draftKey]) {
+        appState.examDrafts[draftKey] = {};
+      }
+      appState.examDrafts[draftKey][qIdx] = Number(radio.value);
+      saveState();
+
+      const card = radio.closest('.question-card');
+      if (card) card.classList.remove('is-missing');
+    }
+
     const form = document.getElementById('exam-form');
     let answered = 0;
     for (let i = 0; i < activeExamObj.questions.length; i++) {
@@ -858,23 +975,66 @@
 
     const form = e.target;
     const userAnswers = [];
+    const missingNumbers = [];
+    let firstMissingCard = null;
 
     for (let i = 0; i < activeExamObj.questions.length; i++) {
+      const card = form.querySelector(`.question-card[data-q-index="${i}"]`);
       const checked = form.querySelector(`input[name="q_${i}"]:checked`);
       if (!checked) {
-        document.getElementById('exam-incomplete-msg').hidden = false;
-        return;
+        missingNumbers.push(i + 1);
+        if (card) {
+          card.classList.add('is-missing');
+          if (!firstMissingCard) firstMissingCard = card;
+        }
+      } else {
+        if (card) card.classList.remove('is-missing');
+        userAnswers.push(Number(checked.value));
       }
-      userAnswers.push(Number(checked.value));
+    }
+
+    if (missingNumbers.length > 0) {
+      const msgEl = document.getElementById('exam-incomplete-msg');
+      msgEl.textContent = `⚠️ Falta responder a(s) questão(ões): ${missingNumbers.join(', ')}`;
+      msgEl.hidden = false;
+      if (firstMissingCard) {
+        firstMissingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
     }
 
     gradeAndShowExamResult(userAnswers);
+  });
+
+  function applyResultReviewFilter(filterMode) {
+    const reviewContainer = document.getElementById('result-review-container');
+    const btnAll = document.getElementById('btn-filter-all');
+    const btnWrong = document.getElementById('btn-filter-wrong');
+    if (!reviewContainer || !btnAll || !btnWrong) return;
+
+    const showOnlyWrong = filterMode === 'wrong';
+    btnAll.className = showOnlyWrong ? 'btn-sm outline secondary' : 'btn-sm primary';
+    btnWrong.className = showOnlyWrong ? 'btn-sm primary' : 'btn-sm outline secondary';
+
+    for (const card of reviewContainer.querySelectorAll('.review-q-card')) {
+      card.hidden = showOnlyWrong && card.classList.contains('is-correct');
+    }
+  }
+
+  document.getElementById('result-filter-bar')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-filter]');
+    if (!btn || btn.disabled) return;
+    applyResultReviewFilter(btn.dataset.filter);
   });
 
   function gradeAndShowExamResult(userAnswers) {
     const subj = getSubjectsMap()[activeSubjectKey];
     const st = appState.subjects[activeSubjectKey];
     const letters = ['A', 'B', 'C', 'D'];
+    const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+    if (appState.examDrafts && appState.examDrafts[draftKey]) {
+      delete appState.examDrafts[draftKey];
+    }
 
     let score = 0;
     const wrongQuestions = [];
@@ -927,10 +1087,10 @@
     ctaContainer.innerHTML = '';
 
     if (passed) {
-      statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/10</strong> (meta era ≥ 8) e concluiu <strong>${subj.title}</strong> por hoje!`;
+      statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/10</strong> (meta era ≥ 8) e concluiu <strong>${escapeHtml(subj.title)}</strong> por hoje!`;
     } else if (st.examsTodayCount < 3) {
       const remaining = 3 - st.examsTodayCount;
-      statusMsg.innerHTML = `Você tirou <strong>${score}/10</strong> (a meta é ≥ 8). Revise o gabarito abaixo com atenção e tente a próxima prova! Você ainda tem <strong>${remaining} tentativa(s)</strong> hoje em ${subj.title}.`;
+      statusMsg.innerHTML = `Você tirou <strong>${score}/10</strong> (a meta é ≥ 8). Revise o gabarito abaixo com atenção e tente a próxima prova! Você ainda tem <strong>${remaining} tentativa(s)</strong> hoje em ${escapeHtml(subj.title)}.`;
       const btnRetry = document.createElement('button');
       btnRetry.type = 'button';
       btnRetry.className = 'primary';
@@ -938,7 +1098,7 @@
       btnRetry.addEventListener('click', () => openExam(activeSubjectKey));
       ctaContainer.appendChild(btnRetry);
     } else {
-      statusMsg.innerHTML = `Você tirou <strong>${score}/10</strong> e completou o limite de <strong>3 provas de hoje</strong> em ${subj.title} (Melhor nota: ${st.bestScoreToday}/10). Revise o gabarito abaixo e mande o Relatório do Dia para o Peter ajustar a revisão de amanhã!`;
+      statusMsg.innerHTML = `Você tirou <strong>${score}/10</strong> e completou o limite de <strong>3 provas de hoje</strong> em ${escapeHtml(subj.title)} (Melhor nota: ${st.bestScoreToday}/10). Revise o gabarito abaixo e mande o Relatório do Dia para o Peter ajustar a revisão de amanhã!`;
     }
 
     const btnBackDash = document.createElement('button');
@@ -950,6 +1110,17 @@
       showView('view-dashboard');
     });
     ctaContainer.appendChild(btnBackDash);
+
+    // Filter controls
+    const wrongCount = wrongQuestions.length;
+    const btnAll = document.getElementById('btn-filter-all');
+    const btnWrong = document.getElementById('btn-filter-wrong');
+    if (btnAll && btnWrong) {
+      btnAll.textContent = `Todas (${activeExamObj.questions.length})`;
+      btnWrong.textContent = `Apenas Erros (${wrongCount})`;
+      btnWrong.disabled = wrongCount === 0;
+      applyResultReviewFilter('all');
+    }
 
     // Render Question-by-Question Review
     const reviewContainer = document.getElementById('result-review-container');
@@ -964,20 +1135,20 @@
 
       card.innerHTML = `
         <span class="question-num">Questão ${idx + 1} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
-        <p class="question-text">${q.text}</p>
+        <p class="question-text">${escapeHtml(q.text)}</p>
         <p class="review-ans-line">
-          <strong>Sua resposta:</strong> ${letters[userAns]}) ${q.options[userAns]}
+          <strong>Sua resposta:</strong> ${letters[userAns]}) ${escapeHtml(q.options[userAns])}
         </p>
         ${
           !isRight
             ? `<p class="review-ans-line" style="color: var(--vf-true-color);">
-                <strong>Gabarito correto:</strong> ${letters[q.correct]}) ${q.options[q.correct]}
+                <strong>Gabarito correto:</strong> ${letters[q.correct]}) ${escapeHtml(q.options[q.correct])}
               </p>`
             : ''
         }
         <details ${!isRight ? 'open' : ''}>
           <summary><small><strong>💡 Comentário da questão</strong></small></summary>
-          <p class="muted-text" style="margin-top:0.4rem;">${q.explanation}</p>
+          <p class="muted-text" style="margin-top:0.4rem;">${escapeHtml(q.explanation)}</p>
         </details>
       `;
 
