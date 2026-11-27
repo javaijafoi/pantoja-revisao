@@ -112,11 +112,15 @@
         dayNumber: 1,
         theme: 'light',
         examDrafts: {},
+        examDraftFlags: {},
         subjects: {},
       };
     }
     if (!saved.examDrafts || typeof saved.examDrafts !== 'object') {
       saved.examDrafts = {};
+    }
+    if (!saved.examDraftFlags || typeof saved.examDraftFlags !== 'object') {
+      saved.examDraftFlags = {};
     }
 
     for (const key of Object.keys(subjects)) {
@@ -240,6 +244,7 @@
     }
 
     appState.examDrafts = {};
+    appState.examDraftFlags = {};
     saveState();
     if (shouldRender) {
       renderDashboard();
@@ -264,6 +269,7 @@
   checkDailyRollover();
   let activeSubjectKey = null;
   let activeExamObj = null;
+  let vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && checkDailyRollover()) {
@@ -388,7 +394,11 @@
       }
 
       const vfDone = masteredCount === totalCards;
-      st.vfCompletedToday = vfDone;
+      if (vfDone && !st.vfCompletedToday) {
+        st.vfCompletedToday = true;
+        saveState();
+      }
+      const vfUnlocked = st.vfCompletedToday || vfDone;
 
       let chipClass = 'chip-pending';
       let chipText = 'Pendente';
@@ -398,14 +408,15 @@
       } else if (st.examsTodayCount >= 3) {
         chipClass = 'chip-progress';
         chipText = `3/3 Provas Hoje (Melhor: ${st.bestScoreToday ?? 0}/10)`;
-      } else if (vfDone || totalHits > 0) {
+      } else if (vfUnlocked || totalHits > 0) {
         chipClass = 'chip-progress';
         chipText = 'Em Andamento';
       }
 
       const nextExamNum = (st.nextExamIndex % subj.exams.length) + 1;
-      const canTakeExam = vfDone && !st.passedToday && st.examsTodayCount < 3;
+      const canTakeExam = vfUnlocked && !st.passedToday && st.examsTodayCount < 3;
       const totalCardErrors = Object.values(st.cardErrorsTotal || {}).reduce((acc, n) => acc + (n || 0), 0);
+      const errorCardsCount = subj.cards.filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0).length;
       const topAttentionCards = subj.cards
         .filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0)
         .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0))
@@ -439,14 +450,15 @@
         : '';
 
       const letters = ['A', 'B', 'C', 'D'];
-      const historyList = [...(st.examHistory || [])].reverse();
+      const historyList = (st.examHistory || [])
+        .map((h, idx) => ({ ...h, _idx: idx }))
+        .reverse();
       const historyHtml = historyList.length > 0
         ? `
           <details class="exam-history-details">
             <summary>📜 Histórico de provas (${historyList.length})</summary>
             <ul class="exam-history-list">
               ${historyList
-                .slice(0, 6)
                 .map((h) => {
                   const wrongList = Array.isArray(h.wrongQuestions) ? h.wrongQuestions : [];
                   const wrongNums = wrongList.map((w) => `Q${escapeHtml(w.number)}`).join(', ');
@@ -458,12 +470,17 @@
                           ${wrongList
                             .map((w) => {
                               const fullQ = findExamQuestion(subj, h.examId, w);
+                              const markedIdx = Array.isArray(h.userAnswers) ? h.userAnswers[Number(w.number) - 1] : null;
+                              const userAnsLine = fullQ && typeof markedIdx === 'number' && fullQ.options[markedIdx] !== undefined
+                                ? `<p><strong>Sua resposta:</strong> ${letters[markedIdx]}) ${escapeHtml(fullQ.options[markedIdx])}</p>`
+                                : '';
                               const ansLine = fullQ
                                 ? `<p><strong>Gabarito:</strong> ${letters[fullQ.correct]}) ${escapeHtml(fullQ.options[fullQ.correct])}</p><p class="muted-text">${escapeHtml(fullQ.explanation)}</p>`
                                 : '';
                               return `
                                 <li>
                                   <strong>Q${escapeHtml(w.number)}:</strong> ${escapeHtml(w.text)}
+                                  ${userAnsLine}
                                   ${ansLine}
                                 </li>
                               `;
@@ -479,7 +496,12 @@
                       <span>Dia ${escapeHtml(h.dayNumber || 1)} • ${escapeHtml(h.examTitle)}</span>
                       ${wrongDetailsHtml}
                     </div>
-                    <strong>${escapeHtml(h.score)}/10 ${h.passed ? '✅' : '⚠️'}</strong>
+                    <div class="history-item-side">
+                      <strong>${escapeHtml(h.score)}/10 ${h.passed ? '✅' : '⚠️'}</strong>
+                      <button type="button" class="outline secondary btn-xs" data-action="review-history-exam" data-subject="${key}" data-history-index="${h._idx}">
+                        🔍 Gabarito
+                      </button>
+                    </div>
                   </li>
                 `;
                 })
@@ -506,7 +528,7 @@
           <div class="step-box">
             <div class="step-row">
               <span><strong>a) 30 Flashcards V/F</strong> (2 acertos cada)</span>
-              <span><strong>${masteredCount}/${totalCards}</strong> ${vfDone ? '✅' : ''}</span>
+              <span><strong>${masteredCount}/${totalCards}</strong> ${vfUnlocked ? '✅' : ''}</span>
             </div>
             <progress value="${totalHits}" max="${totalCards * 2}"></progress>
             <div class="step-row">
@@ -531,13 +553,20 @@
           <button type="button" class="${vfDone ? 'outline secondary' : 'primary'}" data-action="start-vf" data-subject="${key}">
             ${vfDone ? '🔄 Revisar 30 V/F Novamente' : `🃏 Revisar Cartões V/F (${masteredCount}/30)`}
           </button>
+          ${
+            errorCardsCount > 0
+              ? `<button type="button" class="outline secondary" data-action="start-vf-errors" data-subject="${key}">
+                  🎯 Treinar Erros V/F (${errorCardsCount})
+                </button>`
+              : ''
+          }
           <button type="button" class="${canTakeExam ? 'primary' : 'outline secondary'}" data-action="start-exam" data-subject="${key}" ${!canTakeExam ? 'disabled' : ''}>
             ${
               st.passedToday
                 ? `🏆 Concluído Hoje (Nota ${st.bestScoreToday}/10)`
                 : st.examsTodayCount >= 3
                 ? '🔒 Limite de 3 Provas Hoje Atingido'
-                : !vfDone
+                : !vfUnlocked
                 ? '🔒 Fazer Prova (Conclua os 30 V/F antes)'
                 : `📝 Fazer Prova ${nextExamNum} (Tentativa ${st.examsTodayCount + 1}/3)`
             }
@@ -556,9 +585,13 @@
     const subjKey = btn.dataset.subject;
 
     if (action === 'start-vf') {
-      openFlashcards(subjKey);
+      openFlashcards(subjKey, 'daily');
+    } else if (action === 'start-vf-errors') {
+      openFlashcards(subjKey, 'errors');
     } else if (action === 'start-exam') {
       openExam(subjKey);
+    } else if (action === 'review-history-exam') {
+      openHistoryExamResult(subjKey, Number(btn.dataset.historyIndex));
     }
   });
 
@@ -698,18 +731,73 @@
     });
   }
 
-  function openFlashcards(subjKey) {
+  function getVfRuntime() {
+    const subj = getSubjectsMap()[activeSubjectKey];
+    const st = appState.subjects[activeSubjectKey];
+    if (vfSession.mode === 'errors' && Array.isArray(vfSession.cards) && vfSession.cards.length > 0) {
+      return {
+        subj,
+        st,
+        isErrorMode: true,
+        cards: vfSession.cards,
+        queue: vfSession.queue,
+        setQueue: (q) => { vfSession.queue = q; },
+        boxes: vfSession.boxes,
+      };
+    }
+    return {
+      subj,
+      st,
+      isErrorMode: false,
+      cards: subj.cards,
+      queue: st.vfQueue || [],
+      setQueue: (q) => { st.vfQueue = q; },
+      boxes: st.cardBoxes,
+    };
+  }
+
+  function openFlashcards(subjKey, mode = 'daily') {
     activeSubjectKey = subjKey;
     const subj = getSubjectsMap()[subjKey];
     const st = appState.subjects[subjKey];
+    const modeLabel = document.getElementById('vf-mode-label');
+
+    if (mode === 'errors') {
+      const errorCards = subj.cards
+        .filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0)
+        .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0));
+
+      if (errorCards.length > 0) {
+        vfSession = {
+          mode: 'errors',
+          cards: errorCards,
+          queue: errorCards.map((c) => c.id),
+          boxes: Object.fromEntries(errorCards.map((c) => [c.id, 0])),
+        };
+        document.getElementById('vf-subject-title').textContent = `${subj.title} — Treino de Erros`;
+        if (modeLabel) {
+          modeLabel.textContent = `🎯 Foco em ${errorCards.length} card(s) com erro • Progresso diário preservado`;
+          modeLabel.hidden = false;
+        }
+        document.getElementById('vf-feedback-box').hidden = true;
+        showView('view-flashcards');
+        renderCurrentFlashcard();
+        return;
+      }
+    }
+
+    vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
 
     // If all 30 are already mastered and she clicked "Revisar Novamente", reset boxes to 0 for a fresh practice
     const allMastered = subj.cards.every((c) => (st.cardBoxes[c.id] || 0) >= 2);
     if (allMastered) {
+      st.vfCompletedToday = true;
       for (const c of subj.cards) {
         st.cardBoxes[c.id] = 0;
       }
       rebuildQueueFromBoxes(st, subj);
+      // Keep daily unlock active once 30/30 was already completed today
+      st.vfCompletedToday = true;
       saveState();
     } else if (!st.vfQueue || st.vfQueue.length === 0) {
       rebuildQueueFromBoxes(st, subj);
@@ -717,21 +805,29 @@
     }
 
     document.getElementById('vf-subject-title').textContent = `${subj.title} — 30 V/F`;
+    if (modeLabel) {
+      if (st.vfCompletedToday && !subj.cards.every((c) => (st.cardBoxes[c.id] || 0) >= 2)) {
+        modeLabel.textContent = '🔄 Revisão extra • Provas do dia continuam liberadas';
+        modeLabel.hidden = false;
+      } else {
+        modeLabel.textContent = '';
+        modeLabel.hidden = true;
+      }
+    }
     document.getElementById('vf-feedback-box').hidden = true;
     showView('view-flashcards');
     renderCurrentFlashcard();
   }
 
   function updateLeitnerCounters() {
-    const subj = getSubjectsMap()[activeSubjectKey];
-    const st = appState.subjects[activeSubjectKey];
+    const { cards, queue, boxes } = getVfRuntime();
     let b0 = 0;
     let b1 = 0;
     let b2 = 0;
     let totalPoints = 0;
 
-    for (const c of subj.cards) {
-      const box = st.cardBoxes[c.id] || 0;
+    for (const c of cards) {
+      const box = boxes[c.id] || 0;
       if (box === 0) b0++;
       else if (box === 1) b1++;
       else b2++;
@@ -741,15 +837,15 @@
     document.getElementById('count-box-0').textContent = b0;
     document.getElementById('count-box-1').textContent = b1;
     document.getElementById('count-box-2').textContent = b2;
-    document.getElementById('vf-counter-badge').textContent = `${b2} / ${subj.cards.length} dominados`;
+    document.getElementById('vf-counter-badge').textContent = `${b2} / ${cards.length} dominados`;
     const queueBadge = document.getElementById('vf-queue-badge');
     if (queueBadge) {
-      const qLen = (st.vfQueue || []).filter((id) => (st.cardBoxes[id] || 0) < 2).length;
+      const qLen = queue.filter((id) => (boxes[id] || 0) < 2).length;
       queueBadge.textContent = `Fila: ${qLen}`;
     }
 
     const prog = document.getElementById('vf-progress-bar');
-    prog.max = subj.cards.length * 2;
+    prog.max = cards.length * 2;
     prog.value = totalPoints;
   }
 
@@ -763,8 +859,7 @@
 
   function renderCurrentFlashcard() {
     updateLeitnerCounters();
-    const subj = getSubjectsMap()[activeSubjectKey];
-    const st = appState.subjects[activeSubjectKey];
+    const { subj, st, isErrorMode, cards, queue, setQueue, boxes } = getVfRuntime();
     const listEl = document.getElementById('vf-swipe-list');
     const feedbackBox = document.getElementById('vf-feedback-box');
     const swipeHint = document.getElementById('vf-swipe-hint');
@@ -774,30 +869,70 @@
     feedbackBox.hidden = true;
 
     // Filter queue to ensure only cards with box < 2 remain
-    st.vfQueue = st.vfQueue.filter((id) => (st.cardBoxes[id] || 0) < 2);
+    const filteredQueue = queue.filter((id) => (boxes[id] || 0) < 2);
+    setQueue(filteredQueue);
 
-    if (st.vfQueue.length === 0) {
+    if (filteredQueue.length === 0) {
       if (swipeHint) swipeHint.hidden = true;
       if (keyboardHint) keyboardHint.hidden = true;
-      st.vfCompletedToday = true;
-      saveState();
+      if (!isErrorMode) {
+        st.vfCompletedToday = true;
+        saveState();
+      }
+
+      const canTakeExamNow = st.vfCompletedToday && !st.passedToday && st.examsTodayCount < 3;
+      const errorCardsCount = subj.cards.filter((c) => (st.cardErrorsTotal[c.id] || 0) > 0).length;
 
       const doneLi = document.createElement('li');
-      doneLi.innerHTML = `
-        <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
-          <h2>🎉 Parabéns, Pantoja!</h2>
-          <p>Você dominou todos os <strong>30 cartões V/F de ${escapeHtml(subj.title)}</strong> (revisão completa concluída)!</p>
-          <p class="muted-text" style="margin-bottom: 1.25rem;">Agora as provas de ${escapeHtml(subj.title)} estão liberadas.</p>
-          <div class="grid">
-            <button type="button" class="primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>
-            <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
-          </div>
-        </article>
-      `;
+      if (isErrorMode) {
+        doneLi.innerHTML = `
+          <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
+            <h2>🎯 Treino de erros concluído!</h2>
+            <p>Você dominou todos os <strong>${cards.length} cartões de atenção de ${escapeHtml(subj.title)}</strong> nesta sessão.</p>
+            <p class="muted-text" style="margin-bottom: 1.25rem;">Seu progresso principal no painel foi mantido intacto.</p>
+            <div class="grid">
+              <button type="button" class="primary" id="btn-retry-errors-now">🔄 Treinar Erros Novamente</button>
+              ${
+                canTakeExamNow
+                  ? '<button type="button" class="outline primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>'
+                  : ''
+              }
+              <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
+            </div>
+          </article>
+        `;
+      } else {
+        doneLi.innerHTML = `
+          <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
+            <h2>🎉 Parabéns, Pantoja!</h2>
+            <p>Você dominou todos os <strong>30 cartões V/F de ${escapeHtml(subj.title)}</strong> (revisão completa concluída)!</p>
+            <p class="muted-text" style="margin-bottom: 1.25rem;">Agora as provas de ${escapeHtml(subj.title)} estão liberadas.</p>
+            <div class="grid">
+              ${
+                canTakeExamNow
+                  ? '<button type="button" class="primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>'
+                  : ''
+              }
+              ${
+                errorCardsCount > 0
+                  ? `<button type="button" class="outline secondary" id="btn-go-to-errors-now">🎯 Treinar Erros V/F (${errorCardsCount})</button>`
+                  : ''
+              }
+              <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
+            </div>
+          </article>
+        `;
+      }
       listEl.appendChild(doneLi);
 
       document.getElementById('btn-go-to-exam-now')?.addEventListener('click', () => {
         openExam(activeSubjectKey);
+      });
+      document.getElementById('btn-retry-errors-now')?.addEventListener('click', () => {
+        openFlashcards(activeSubjectKey, 'errors');
+      });
+      document.getElementById('btn-go-to-errors-now')?.addEventListener('click', () => {
+        openFlashcards(activeSubjectKey, 'errors');
       });
       document.getElementById('btn-done-back-dash')?.addEventListener('click', () => {
         renderDashboard();
@@ -809,9 +944,9 @@
     if (swipeHint) swipeHint.hidden = false;
     if (keyboardHint) keyboardHint.hidden = false;
 
-    const currentCardId = st.vfQueue[0];
-    const cardObj = subj.cards.find((c) => c.id === currentCardId);
-    const currentBox = st.cardBoxes[currentCardId] || 0;
+    const currentCardId = filteredQueue[0];
+    const cardObj = cards.find((c) => c.id === currentCardId) || subj.cards.find((c) => c.id === currentCardId);
+    const currentBox = boxes[currentCardId] || 0;
     const totalErrs = st.cardErrorsTotal[currentCardId] || 0;
     const flagBadge = totalErrs > 0
       ? `<span class="card-flag-tag">⚠️ Reforço (${totalErrs}x)</span>`
@@ -853,31 +988,30 @@
   }
 
   function handleFlashcardAnswer(userAnswerBoolean) {
-    const subj = getSubjectsMap()[activeSubjectKey];
-    const st = appState.subjects[activeSubjectKey];
-    if (!st.vfQueue || st.vfQueue.length === 0) return;
+    const { subj, st, isErrorMode, cards, queue, boxes } = getVfRuntime();
+    if (!queue || queue.length === 0) return;
 
-    const currentCardId = st.vfQueue.shift();
-    const cardObj = subj.cards.find((c) => c.id === currentCardId);
+    const currentCardId = queue.shift();
+    const cardObj = cards.find((c) => c.id === currentCardId) || subj.cards.find((c) => c.id === currentCardId);
     if (!cardObj) return;
 
     const isCorrect = Boolean(userAnswerBoolean) === Boolean(cardObj.answer);
     const liveStatus = document.getElementById('vf-live-status');
 
     if (isCorrect) {
-      const prevBox = st.cardBoxes[currentCardId] || 0;
+      const prevBox = boxes[currentCardId] || 0;
       const nextBox = prevBox + 1;
-      st.cardBoxes[currentCardId] = nextBox;
+      boxes[currentCardId] = nextBox;
 
       if (nextBox < 2) {
         // Still needs 1 more hit: place it in the second half of the queue so it doesn't repeat immediately
-        const insertAt = Math.max(1, Math.floor(st.vfQueue.length * 0.6));
-        st.vfQueue.splice(insertAt, 0, currentCardId);
+        const insertAt = Math.max(1, Math.floor(queue.length * 0.6));
+        queue.splice(insertAt, 0, currentCardId);
       }
 
-      const remaining = st.vfQueue.filter((id) => (st.cardBoxes[id] || 0) < 2);
+      const remaining = queue.filter((id) => (boxes[id] || 0) < 2);
       const queueEmpty = remaining.length === 0;
-      if (queueEmpty) {
+      if (queueEmpty && !isErrorMode) {
         st.vfCompletedToday = true;
       }
 
@@ -887,18 +1021,20 @@
           : 'Acertou! Cartão subiu para a Caixa 1.';
       }
 
-      saveState();
+      if (!isErrorMode) {
+        saveState();
+      }
       updateLeitnerCounters();
       pulseLeitnerBox(Math.min(2, nextBox));
       showCardFeedback(cardObj, userAnswerBoolean, true, nextBox, queueEmpty);
     } else {
       // Wrong answer: resets to Box 0 and goes to middle/back of queue
-      st.cardBoxes[currentCardId] = 0;
+      boxes[currentCardId] = 0;
       st.cardErrorsToday[currentCardId] = (st.cardErrorsToday[currentCardId] || 0) + 1;
       st.cardErrorsTotal[currentCardId] = (st.cardErrorsTotal[currentCardId] || 0) + 1;
 
-      const insertAt = Math.max(1, Math.min(4, st.vfQueue.length));
-      st.vfQueue.splice(insertAt, 0, currentCardId);
+      const insertAt = Math.max(1, Math.min(4, queue.length));
+      queue.splice(insertAt, 0, currentCardId);
 
       if (liveStatus) {
         liveStatus.textContent = 'Errou! Cartão voltou para a Caixa 0.';
@@ -912,6 +1048,7 @@
   }
 
   function showCardFeedback(cardObj, userAnswerBoolean, isCorrect, nextBox, queueEmpty) {
+    if (document.getElementById('view-flashcards')?.hidden) return;
     const swipeHint = document.getElementById('vf-swipe-hint');
     const keyboardHint = document.getElementById('vf-keyboard-hint');
     if (swipeHint) swipeHint.hidden = true;
@@ -1076,17 +1213,13 @@
     activeExamObj = subj.exams[examIdx];
     const draftKey = `${subjKey}:${activeExamObj.id}`;
     const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
+    const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
 
     document.getElementById('exam-subject-title').textContent = `${subj.title} — ${activeExamObj.title}`;
     document.getElementById('exam-attempt-label').textContent = `Tentativa ${st.examsTodayCount + 1} de 3 hoje • Meta: 8/10`;
     document.getElementById('exam-incomplete-msg').hidden = true;
 
-    const btnClearDraft = document.getElementById('btn-clear-exam-draft');
-    if (btnClearDraft) {
-      btnClearDraft.dataset.confirmPending = 'false';
-      btnClearDraft.classList.remove('is-confirming');
-      btnClearDraft.textContent = '🧹 Limpar marcações';
-    }
+    resetClearDraftConfirm?.();
 
     const qContainer = document.getElementById('exam-questions-container');
     const qNav = document.getElementById('exam-question-nav');
@@ -1096,16 +1229,18 @@
     const letters = ['A', 'B', 'C', 'D'];
 
     activeExamObj.questions.forEach((q, idx) => {
+      const isFlagged = Boolean(savedFlags[idx]);
       const article = document.createElement('article');
-      article.className = 'question-card';
+      article.className = `question-card${isFlagged ? ' is-flagged' : ''}`;
       article.dataset.qIndex = String(idx);
       const savedChoice = savedDraft[idx];
+      const hasSavedChoice = savedChoice !== undefined && savedChoice !== null && savedChoice !== '';
 
       const optionsHtml = q.options
         .map(
           (optText, optIdx) => `
           <label class="option-label">
-            <input type="radio" name="q_${idx}" value="${optIdx}" ${savedChoice === optIdx ? 'checked' : ''}>
+            <input type="radio" name="q_${idx}" value="${optIdx}" ${hasSavedChoice && Number(savedChoice) === optIdx ? 'checked' : ''}>
             <span><strong>${letters[optIdx]})</strong> ${escapeHtml(optText)}</span>
           </label>
         `
@@ -1113,7 +1248,12 @@
         .join('');
 
       article.innerHTML = `
-        <span class="question-num">Questão ${idx + 1} de 10</span>
+        <div class="question-card-top">
+          <span class="question-num">Questão ${idx + 1} de 10</span>
+          <button type="button" class="btn-flag-question outline secondary btn-xs${isFlagged ? ' is-flagged' : ''}" data-q-index="${idx}" aria-pressed="${isFlagged ? 'true' : 'false'}">
+            ${isFlagged ? '🚩 Marcada p/ revisar' : '🏳️ Revisar depois'}
+          </button>
+        </div>
         <p class="question-text">${escapeHtml(q.text)}</p>
         <div class="options-group">
           ${optionsHtml}
@@ -1125,7 +1265,7 @@
       if (qNav) {
         const navBtn = document.createElement('button');
         navBtn.type = 'button';
-        navBtn.className = 'exam-nav-pill';
+        navBtn.className = `exam-nav-pill${isFlagged ? ' is-flagged' : ''}`;
         navBtn.dataset.qIndex = String(idx);
         navBtn.textContent = String(idx + 1);
         navBtn.setAttribute('aria-label', `Ir para a questão ${idx + 1}`);
@@ -1145,14 +1285,20 @@
     const qNav = document.getElementById('exam-question-nav');
     const progBar = document.getElementById('exam-progress-bar');
     const total = activeExamObj.questions.length;
+    const draftKey = activeSubjectKey ? `${activeSubjectKey}:${activeExamObj.id}` : '';
+    const savedFlags = (draftKey && appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
     let answered = 0;
+    let flaggedCount = 0;
 
     for (let i = 0; i < total; i++) {
       const isChecked = Boolean(form?.querySelector(`input[name="q_${i}"]:checked`));
+      const isFlagged = Boolean(savedFlags[i]);
       if (isChecked) answered++;
+      if (isFlagged) flaggedCount++;
       const pill = qNav?.querySelector(`.exam-nav-pill[data-q-index="${i}"]`);
       if (pill) {
         pill.classList.toggle('is-answered', isChecked);
+        pill.classList.toggle('is-flagged', isFlagged);
         if (isChecked) pill.classList.remove('is-missing');
       }
     }
@@ -1161,8 +1307,13 @@
     if (badge) badge.textContent = `${answered} / ${total} respondidas`;
     const stickyStatus = document.getElementById('exam-sticky-status');
     if (stickyStatus) stickyStatus.innerHTML = `<strong>${answered} / ${total}</strong> respondidas`;
+    const flaggedStatus = document.getElementById('exam-flagged-status');
+    if (flaggedStatus) {
+      flaggedStatus.hidden = flaggedCount === 0;
+      flaggedStatus.textContent = `🚩 ${flaggedCount} para revisar`;
+    }
     const btnClearDraft = document.getElementById('btn-clear-exam-draft');
-    if (btnClearDraft) btnClearDraft.disabled = answered === 0;
+    if (btnClearDraft) btnClearDraft.disabled = answered === 0 && flaggedCount === 0;
     if (progBar) {
       progBar.max = total;
       progBar.value = answered;
@@ -1181,6 +1332,36 @@
     if (card) {
       card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+  });
+
+  document.getElementById('exam-questions-container').addEventListener('click', (e) => {
+    const flagBtn = e.target.closest('.btn-flag-question');
+    if (!flagBtn || !activeExamObj || !activeSubjectKey) return;
+
+    const qIdx = Number(flagBtn.dataset.qIndex);
+    const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+    if (!appState.examDraftFlags || typeof appState.examDraftFlags !== 'object') {
+      appState.examDraftFlags = {};
+    }
+    if (!appState.examDraftFlags[draftKey]) {
+      appState.examDraftFlags[draftKey] = {};
+    }
+
+    const willFlag = !appState.examDraftFlags[draftKey][qIdx];
+    if (willFlag) {
+      appState.examDraftFlags[draftKey][qIdx] = true;
+    } else {
+      delete appState.examDraftFlags[draftKey][qIdx];
+    }
+    saveState();
+
+    const card = flagBtn.closest('.question-card');
+    if (card) card.classList.toggle('is-flagged', willFlag);
+    flagBtn.classList.toggle('is-flagged', willFlag);
+    flagBtn.setAttribute('aria-pressed', willFlag ? 'true' : 'false');
+    flagBtn.textContent = willFlag ? '🚩 Marcada p/ revisar' : '🏳️ Revisar depois';
+    setCurrentExamPill(qIdx);
+    updateExamNavAndProgress();
   });
 
   document.getElementById('exam-questions-container').addEventListener('change', (e) => {
@@ -1268,13 +1449,135 @@
     applyResultReviewFilter(btn.dataset.filter);
   });
 
+  function renderExamResultView({ subjKey, subj, st, examObj, score, passed, userAnswers, wrongQuestions, isHistoryReview = false, dayNumber = 1 }) {
+    const letters = ['A', 'B', 'C', 'D'];
+    const totalQ = examObj.questions.length;
+
+    document.getElementById('result-exam-title').textContent = `${subj.title} — ${examObj.title}`;
+    const heroCard = document.getElementById('result-summary-card');
+    const scoreHeading = document.getElementById('result-score-heading');
+    const statusMsg = document.getElementById('result-status-message');
+    const ctaContainer = document.getElementById('result-cta-container');
+
+    heroCard.className = `result-hero-card ${passed ? 'passed' : 'retry'}`;
+    scoreHeading.textContent = `Nota: ${score} / ${totalQ} ${passed ? '🎉' : '💪'}`;
+
+    ctaContainer.innerHTML = '';
+
+    if (isHistoryReview) {
+      statusMsg.innerHTML = `📜 <strong>Revisão do Histórico (Dia ${escapeHtml(dayNumber)}):</strong> você tirou <strong>${score}/${totalQ}</strong> nesta tentativa. Confira abaixo todas as questões e comentários.`;
+    } else if (passed) {
+      statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/${totalQ}</strong> (meta era ≥ 8) e concluiu <strong>${escapeHtml(subj.title)}</strong> por hoje!`;
+    } else if (st.examsTodayCount < 3) {
+      const remaining = 3 - st.examsTodayCount;
+      statusMsg.innerHTML = `Você tirou <strong>${score}/${totalQ}</strong> (a meta é ≥ 8). Revise o gabarito abaixo com atenção e tente a próxima prova! Você ainda tem <strong>${remaining} tentativa(s)</strong> hoje em ${escapeHtml(subj.title)}.`;
+      const btnRetry = document.createElement('button');
+      btnRetry.type = 'button';
+      btnRetry.className = 'primary';
+      btnRetry.textContent = `📝 Fazer Próxima Prova de ${subj.title} (Tentativa ${st.examsTodayCount + 1}/3)`;
+      btnRetry.addEventListener('click', () => openExam(subjKey));
+      ctaContainer.appendChild(btnRetry);
+    } else {
+      statusMsg.innerHTML = `Você tirou <strong>${score}/${totalQ}</strong> e completou o limite de <strong>3 provas de hoje</strong> em ${escapeHtml(subj.title)} (Melhor nota: ${st.bestScoreToday}/${totalQ}). Revise o gabarito abaixo e mande o Relatório do Dia para o Peter ajustar a revisão de amanhã!`;
+    }
+
+    const btnBackDash = document.createElement('button');
+    btnBackDash.type = 'button';
+    btnBackDash.className = 'outline secondary';
+    btnBackDash.textContent = '← Voltar ao Painel Principal';
+    btnBackDash.addEventListener('click', () => {
+      renderDashboard();
+      showView('view-dashboard');
+    });
+    ctaContainer.appendChild(btnBackDash);
+
+    const hasUserAnswers = Array.isArray(userAnswers) && userAnswers.length === totalQ;
+    const wrongById = new Set((wrongQuestions || []).map((w) => w.id).filter(Boolean));
+    const wrongByNum = new Set((wrongQuestions || []).map((w) => Number(w.number)).filter((n) => !Number.isNaN(n)));
+    const wrongCount = hasUserAnswers
+      ? examObj.questions.filter((q, idx) => userAnswers[idx] !== q.correct).length
+      : (wrongQuestions || []).length;
+
+    const btnAll = document.getElementById('btn-filter-all');
+    const btnWrong = document.getElementById('btn-filter-wrong');
+    if (btnAll && btnWrong) {
+      btnAll.textContent = `Todas (${totalQ})`;
+      btnWrong.textContent = `Apenas Erros (${wrongCount})`;
+      btnWrong.disabled = wrongCount === 0;
+      applyResultReviewFilter('all');
+    }
+
+    const reviewContainer = document.getElementById('result-review-container');
+    reviewContainer.innerHTML = '';
+
+    examObj.questions.forEach((q, idx) => {
+      const userAns = hasUserAnswers ? userAnswers[idx] : null;
+      const isRight = hasUserAnswers
+        ? userAns === q.correct
+        : !(wrongById.has(q.id) || wrongByNum.has(idx + 1));
+
+      const card = document.createElement('article');
+      card.className = `review-q-card ${isRight ? 'is-correct' : 'is-wrong'}`;
+
+      const userChoiceLine = hasUserAnswers && typeof userAns === 'number' && q.options[userAns] !== undefined
+        ? `<p class="review-ans-line"><strong>Sua resposta:</strong> ${letters[userAns]}) ${escapeHtml(q.options[userAns])}</p>`
+        : `<p class="review-ans-line muted-text"><strong>Sua resposta:</strong> ${isRight ? 'Acertou (alternativa não registrada no histórico antigo)' : 'Errou (alternativa não registrada no histórico antigo)'}</p>`;
+
+      card.innerHTML = `
+        <span class="question-num">Questão ${idx + 1} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
+        <p class="question-text">${escapeHtml(q.text)}</p>
+        ${userChoiceLine}
+        ${
+          !isRight || !hasUserAnswers
+            ? `<p class="review-ans-line" style="color: var(--vf-true-color);">
+                <strong>Gabarito correto:</strong> ${letters[q.correct]}) ${escapeHtml(q.options[q.correct])}
+              </p>`
+            : ''
+        }
+        <details ${!isRight ? 'open' : ''}>
+          <summary><small><strong>💡 Comentário da questão</strong></small></summary>
+          <p class="muted-text" style="margin-top:0.4rem;">${escapeHtml(q.explanation)}</p>
+        </details>
+      `;
+
+      reviewContainer.appendChild(card);
+    });
+
+    showView('view-exam-result');
+  }
+
+  function openHistoryExamResult(subjKey, historyIndex) {
+    const subj = getSubjectsMap()[subjKey];
+    const st = appState.subjects[subjKey];
+    if (!subj || !st || !Array.isArray(st.examHistory)) return;
+    const entry = st.examHistory[historyIndex];
+    if (!entry) return;
+    const examObj = subj.exams.find((ex) => ex.id === entry.examId) || subj.exams.find((ex) => ex.title === entry.examTitle);
+    if (!examObj) return;
+
+    renderExamResultView({
+      subjKey,
+      subj,
+      st,
+      examObj,
+      score: entry.score,
+      passed: Boolean(entry.passed),
+      userAnswers: entry.userAnswers,
+      wrongQuestions: entry.wrongQuestions,
+      isHistoryReview: true,
+      dayNumber: entry.dayNumber || 1,
+    });
+  }
+
   function gradeAndShowExamResult(userAnswers) {
     const subj = getSubjectsMap()[activeSubjectKey];
     const st = appState.subjects[activeSubjectKey];
-    const letters = ['A', 'B', 'C', 'D'];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
     if (appState.examDrafts && appState.examDrafts[draftKey]) {
       delete appState.examDrafts[draftKey];
+    }
+    if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
+      delete appState.examDraftFlags[draftKey];
     }
 
     let score = 0;
@@ -1310,93 +1613,24 @@
       examTitle: activeExamObj.title,
       score,
       passed,
+      userAnswers: [...userAnswers],
       wrongQuestions,
     });
 
     saveState();
 
-    // Render Result View
-    document.getElementById('result-exam-title').textContent = `${subj.title} — ${activeExamObj.title}`;
-    const heroCard = document.getElementById('result-summary-card');
-    const scoreHeading = document.getElementById('result-score-heading');
-    const statusMsg = document.getElementById('result-status-message');
-    const ctaContainer = document.getElementById('result-cta-container');
-
-    heroCard.className = `result-hero-card ${passed ? 'passed' : 'retry'}`;
-    scoreHeading.textContent = `Nota: ${score} / 10 ${passed ? '🎉' : '💪'}`;
-
-    ctaContainer.innerHTML = '';
-
-    if (passed) {
-      statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/10</strong> (meta era ≥ 8) e concluiu <strong>${escapeHtml(subj.title)}</strong> por hoje!`;
-    } else if (st.examsTodayCount < 3) {
-      const remaining = 3 - st.examsTodayCount;
-      statusMsg.innerHTML = `Você tirou <strong>${score}/10</strong> (a meta é ≥ 8). Revise o gabarito abaixo com atenção e tente a próxima prova! Você ainda tem <strong>${remaining} tentativa(s)</strong> hoje em ${escapeHtml(subj.title)}.`;
-      const btnRetry = document.createElement('button');
-      btnRetry.type = 'button';
-      btnRetry.className = 'primary';
-      btnRetry.textContent = `📝 Fazer Próxima Prova de ${subj.title} (Tentativa ${st.examsTodayCount + 1}/3)`;
-      btnRetry.addEventListener('click', () => openExam(activeSubjectKey));
-      ctaContainer.appendChild(btnRetry);
-    } else {
-      statusMsg.innerHTML = `Você tirou <strong>${score}/10</strong> e completou o limite de <strong>3 provas de hoje</strong> em ${escapeHtml(subj.title)} (Melhor nota: ${st.bestScoreToday}/10). Revise o gabarito abaixo e mande o Relatório do Dia para o Peter ajustar a revisão de amanhã!`;
-    }
-
-    const btnBackDash = document.createElement('button');
-    btnBackDash.type = 'button';
-    btnBackDash.className = 'outline secondary';
-    btnBackDash.textContent = '← Voltar ao Painel Principal';
-    btnBackDash.addEventListener('click', () => {
-      renderDashboard();
-      showView('view-dashboard');
+    renderExamResultView({
+      subjKey: activeSubjectKey,
+      subj,
+      st,
+      examObj: activeExamObj,
+      score,
+      passed,
+      userAnswers,
+      wrongQuestions,
+      isHistoryReview: false,
+      dayNumber: appState.dayNumber || 1,
     });
-    ctaContainer.appendChild(btnBackDash);
-
-    // Filter controls
-    const wrongCount = wrongQuestions.length;
-    const btnAll = document.getElementById('btn-filter-all');
-    const btnWrong = document.getElementById('btn-filter-wrong');
-    if (btnAll && btnWrong) {
-      btnAll.textContent = `Todas (${activeExamObj.questions.length})`;
-      btnWrong.textContent = `Apenas Erros (${wrongCount})`;
-      btnWrong.disabled = wrongCount === 0;
-      applyResultReviewFilter('all');
-    }
-
-    // Render Question-by-Question Review
-    const reviewContainer = document.getElementById('result-review-container');
-    reviewContainer.innerHTML = '';
-
-    activeExamObj.questions.forEach((q, idx) => {
-      const userAns = userAnswers[idx];
-      const isRight = userAns === q.correct;
-
-      const card = document.createElement('article');
-      card.className = `review-q-card ${isRight ? 'is-correct' : 'is-wrong'}`;
-
-      card.innerHTML = `
-        <span class="question-num">Questão ${idx + 1} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
-        <p class="question-text">${escapeHtml(q.text)}</p>
-        <p class="review-ans-line">
-          <strong>Sua resposta:</strong> ${letters[userAns]}) ${escapeHtml(q.options[userAns])}
-        </p>
-        ${
-          !isRight
-            ? `<p class="review-ans-line" style="color: var(--vf-true-color);">
-                <strong>Gabarito correto:</strong> ${letters[q.correct]}) ${escapeHtml(q.options[q.correct])}
-              </p>`
-            : ''
-        }
-        <details ${!isRight ? 'open' : ''}>
-          <summary><small><strong>💡 Comentário da questão</strong></small></summary>
-          <p class="muted-text" style="margin-top:0.4rem;">${escapeHtml(q.explanation)}</p>
-        </details>
-      `;
-
-      reviewContainer.appendChild(card);
-    });
-
-    showView('view-exam-result');
   }
 
   document.getElementById('btn-back-from-exam').addEventListener('click', () => {
@@ -1472,13 +1706,19 @@
     }
   }
 
+  let toastTimer = null;
+
   function showToast(msg) {
     const toast = document.getElementById('report-feedback-toast');
     if (!toast) return;
+    if (toastTimer) {
+      clearTimeout(toastTimer);
+    }
     toast.textContent = msg;
     toast.hidden = false;
-    setTimeout(() => {
+    toastTimer = setTimeout(() => {
       toast.hidden = true;
+      toastTimer = null;
     }, 3500);
   }
 
@@ -1544,7 +1784,7 @@
   }
 
   function setupTwoStepConfirm(buttonEl, confirmLabel, onConfirm, shouldConfirmFn = () => true) {
-    if (!buttonEl) return;
+    if (!buttonEl) return null;
     const defaultLabel = buttonEl.textContent;
     let confirmTimer = null;
 
@@ -1569,6 +1809,8 @@
       buttonEl.classList.add('is-confirming');
       confirmTimer = setTimeout(resetButton, 4000);
     });
+
+    return resetButton;
   }
 
   document.getElementById('btn-import-json-text').addEventListener('click', () => {
@@ -1591,7 +1833,7 @@
     advanceToNextDay();
   });
 
-  setupTwoStepConfirm(
+  const resetClearDraftConfirm = setupTwoStepConfirm(
     document.getElementById('btn-clear-exam-draft'),
     '⚠️ Clique de novo para limpar',
     () => {
@@ -1599,15 +1841,23 @@
       const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
       if (appState.examDrafts && appState.examDrafts[draftKey]) {
         delete appState.examDrafts[draftKey];
-        saveState();
       }
+      if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
+        delete appState.examDraftFlags[draftKey];
+      }
+      saveState();
       const form = document.getElementById('exam-form');
       if (form) {
         for (const input of form.querySelectorAll('input[type="radio"]:checked')) {
           input.checked = false;
         }
-        for (const card of form.querySelectorAll('.question-card.is-missing')) {
-          card.classList.remove('is-missing');
+        for (const card of form.querySelectorAll('.question-card')) {
+          card.classList.remove('is-missing', 'is-flagged');
+        }
+        for (const flagBtn of form.querySelectorAll('.btn-flag-question')) {
+          flagBtn.classList.remove('is-flagged');
+          flagBtn.setAttribute('aria-pressed', 'false');
+          flagBtn.textContent = '🏳️ Revisar depois';
         }
       }
       const incMsg = document.getElementById('exam-incomplete-msg');
@@ -1616,7 +1866,7 @@
     }
   );
 
-  setupTwoStepConfirm(
+  const resetAdvanceDayConfirm = setupTwoStepConfirm(
     document.getElementById('btn-advance-day'),
     '⚠️ Dia incompleto — Clique de novo para virar',
     () => {
@@ -1628,7 +1878,7 @@
     () => !isDayFullyFinished(appState)
   );
 
-  setupTwoStepConfirm(
+  const resetAllConfirm = setupTwoStepConfirm(
     document.getElementById('btn-reset-all'),
     '⚠️ Clique de novo para ZERAR TUDO',
     () => {
@@ -1640,6 +1890,11 @@
       showToast('🗑️ Progresso zerado.');
     }
   );
+
+  dialogReport?.addEventListener('close', () => {
+    resetAdvanceDayConfirm?.();
+    resetAllConfirm?.();
+  });
 
   // Boot
   renderDashboard();

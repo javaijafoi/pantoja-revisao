@@ -77,7 +77,10 @@
     <section id="view-flashcards" hidden>
       <div class="top-bar-nav">
         <button type="button" class="outline secondary btn-sm" id="btn-back-from-vf">← Voltar ao Início</button>
-        <strong id="vf-subject-title">Química</strong>
+        <div>
+          <strong id="vf-subject-title">Química</strong>
+          <small id="vf-mode-label" class="block-sub" hidden></small>
+        </div>
         <div class="vf-header-badges">
           <span class="badge-pill" id="vf-queue-badge">Fila: 30</span>
           <span class="badge-pill" id="vf-counter-badge">0 / 30</span>
@@ -155,7 +158,10 @@
 
       <div class="exam-sticky-bar">
         <div class="exam-sticky-top">
-          <small id="exam-sticky-status" class="muted-text"><strong>0 / 10</strong> respondidas</small>
+          <div class="exam-sticky-meta">
+            <small id="exam-sticky-status" class="muted-text"><strong>0 / 10</strong> respondidas</small>
+            <small id="exam-flagged-status" class="exam-flagged-counter" hidden>🚩 0 para revisar</small>
+          </div>
           <button type="button" class="outline secondary btn-sm" id="btn-clear-exam-draft" disabled>
             🧹 Limpar marcações
           </button>
@@ -249,7 +255,7 @@
           </button>
           <label class="file-upload-btn outline secondary">
             📂 Escolher Arquivo .json
-            <input type="file" id="input-import-file" accept=".json,application/json" hidden>
+            <input type="file" id="input-import-file" accept=".json,application/json" class="visually-hidden">
           </label>
         </div>
         <hr>

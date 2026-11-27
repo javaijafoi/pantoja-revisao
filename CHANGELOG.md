@@ -4,6 +4,23 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 3)] — Treino focado de erros V/F, gabarito pelo histórico e marcador de revisão no simulado
+
+### Melhorias implementadas
+1. **Proteção do desbloqueio diário e Modo "Treinar Erros V/F" (`index.html`, `app.js`)**
+   - Corrigido o bug em que clicar em *"🔄 Revisar 30 V/F Novamente"* após concluir os 30 cartões re-bloqueava o botão de prova no painel; agora `st.vfCompletedToday` permanece ativo no dia após atingir 30/30.
+   - Adicionado o modo focado **🎯 Treinar Erros V/F** (`openFlashcards(subjKey, 'errors')` + `getVfRuntime()`), permitindo treinar apenas os cartões com erros acumulados em sessão isolada sem zerar as caixas já dominadas, mantendo a contabilização de novos erros e exibindo o indicador `#vf-mode-label` no topo.
+
+2. **Reabertura do Gabarito Comentado pelo Histórico e registro da alternativa marcada (`app.js`, `style.css`)**
+   - Passado a gravar `userAnswers` em cada registro de `st.examHistory` dentro de `gradeAndShowExamResult()` (mantendo compatibilidade com históricos antigos sem esse campo).
+   - Exibida `"Sua resposta: X)"` nos detalhes de erro do painel e adicionado o botão **🔍 Gabarito** (`openHistoryExamResult` + `renderExamResultView`) para reabrir a tela completa de gabarito comentado com filtro *Todas / Apenas Erros*, além de remover o corte de 6 itens com lista rolável em `.exam-history-list`.
+
+3. **Marcador "🚩 Revisar depois" no Simulado e ajustes de timers/acessibilidade (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o botão **🏳️ Revisar depois / 🚩 Marcada p/ revisar** em cada questão do simulado, sincronizado com as pílulas do navegador fixo (`.exam-nav-pill.is-flagged`), contador `#exam-flagged-status` e persistência em `appState.examDraftFlags`.
+   - Corrigido o gerenciamento de timers em `setupTwoStepConfirm()` (retornando função de reset usada ao abrir prova ou fechar o modal) e em `showToast()` (cancelando timeout anterior), protegido `showCardFeedback()` contra foco após sair dos flashcards, normalizado `Number(savedChoice)` nos rascunhos e trocado `hidden` por `.visually-hidden` no `#input-import-file` para navegação por teclado.
+
+---
+
 ## [2026-11-27 (Atualização 2)] — Painel global do dia, navegador fixo no simulado e revisão rápida de erros
 
 ### Melhorias implementadas
