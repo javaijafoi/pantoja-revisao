@@ -4,6 +4,26 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 11)] — Glossário com Auto-Teste e treino de provas, sistema de Favoritas (⭐) e treino dos erros da prova
+
+### Melhorias implementadas
+1. **Glossário Interativo: Modo Auto-Teste, filtro de pendências em provas e treino direto de questões (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o toggle **🙈 Auto-teste** (`#glossary-hide-answers`) no `#dialog-glossary` para ocultar o gabarito e o comentário de cartões V/F e questões de prova atrás de um `<details>` (*Revelar resposta / gabarito*), permitindo revisar sem spoiler antes de conferir.
+   - Habilitado o checkbox `#glossary-only-pending` também na aba **📝 Provas já feitas** (alternando o rótulo para *Erro pendente*), facilitando encontrar apenas questões erradas ainda não resolvidas.
+   - Adicionado o botão **🧠 Treinar estas questões (N)** (`#btn-glossary-practice-exams`) na aba **📝 Provas já feitas**, abrindo `openCustomExamPractice()` em modo treino livre com as questões filtradas (com baixa automática nas pendências ao acertar).
+
+2. **Sistema de Favoritas / Dúvidas (⭐) integrado aos Flashcards, Gabarito, Glossário e Relatório (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o estado persistente `appState.starredItems` (`{ cards, questions }`, normalizado em `loadState()`) com botões **☆ / ⭐** no feedback dos Flashcards V/F (`#btn-star-vf`), no cabeçalho de cada questão do **Gabarito Comentado** (`.btn-star-q`) e nos cartões do **Glossário** (`.btn-star-glossary`).
+   - Adicionado o filtro **⭐ Favoritas** (`#glossary-only-starred`) no `#dialog-glossary` para listar e treinar rapidamente apenas os cartões V/F ou questões favoritadas.
+   - Incluído automaticamente o resumo de **⭐ Favoritas / Dúvidas** no relatório de WhatsApp gerado por `generateReportAndSaveText()`.
+
+3. **Treino focado nos erros da prova no Gabarito, indicador de rascunho no Histórico e correção na cópia de dúvida (`app.js`)**
+   - Adicionado no **Gabarito Comentado** (`#view-exam-result`) o botão **🎯 Treinar só os N erros desta prova** (`openSpecificExamErrorsPractice()`) quando houver acertos e erros na prova, permitindo refazer de imediato apenas as questões erradas daquela tentativa (com baixa nas pendências).
+   - Atualizado `getExamDraftStatus()` para considerar também questões marcadas com `🚩` ou alternativas riscadas (`✂️`), e atualizado `renderDashboard()` e `renderExamResultView()` para indicar `📝 Continuar` quando houver rascunho em andamento ao refazer provas do **📜 Histórico de provas**.
+   - Corrigido `buildSingleQuestionWhatsAppText()` para não prefixar `❌ Marquei:` ao clicar em **💬 Copiar dúvida** em uma questão que a aluna acertou (exibindo `✅ Marquei e acertei: ... (fiquei com dúvida)`).
+
+---
+
 ## [2026-11-27 (Atualização 10)] — Riscar alternativas no simulado, treino pelo Glossário com streak V/F e mapa do gabarito
 
 ### Melhorias implementadas

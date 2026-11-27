@@ -157,6 +157,7 @@
         examDraftTimers: {},
         examDraftOrders: {},
         examDraftEliminated: {},
+        starredItems: { cards: {}, questions: {} },
         subjects: {},
       };
     }
@@ -188,6 +189,12 @@
     }
     if (!saved.examDraftEliminated || typeof saved.examDraftEliminated !== 'object') {
       saved.examDraftEliminated = {};
+    }
+    if (!saved.starredItems || typeof saved.starredItems !== 'object') {
+      saved.starredItems = { cards: {}, questions: {} };
+    } else {
+      if (!saved.starredItems.cards || typeof saved.starredItems.cards !== 'object') saved.starredItems.cards = {};
+      if (!saved.starredItems.questions || typeof saved.starredItems.questions !== 'object') saved.starredItems.questions = {};
     }
 
     for (const key of Object.keys(subjects)) {
@@ -364,9 +371,43 @@
   }
 
   let lastVfUndoSnapshot = null;
+  let currentFeedbackCardId = null;
   let vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
   let vfSessionStats = createEmptyVfSessionStats();
   let activeResultReviewContext = null;
+
+  function isStarredItem(type, key) {
+    return Boolean(key && appState.starredItems?.[type]?.[key]);
+  }
+
+  function toggleStarItem(type, key) {
+    if (!key) return false;
+    if (!appState.starredItems || typeof appState.starredItems !== 'object') {
+      appState.starredItems = { cards: {}, questions: {} };
+    }
+    if (!appState.starredItems[type] || typeof appState.starredItems[type] !== 'object') {
+      appState.starredItems[type] = {};
+    }
+    const next = !appState.starredItems[type][key];
+    if (next) {
+      appState.starredItems[type][key] = true;
+    } else {
+      delete appState.starredItems[type][key];
+    }
+    saveState();
+    return next;
+  }
+
+  function applyStarButtonVisual(btn, isStarred, compact = false) {
+    if (!btn) return;
+    btn.classList.toggle('is-starred', isStarred);
+    btn.setAttribute('aria-pressed', isStarred ? 'true' : 'false');
+    if (compact) {
+      btn.textContent = isStarred ? '⭐' : '☆';
+    } else {
+      btn.textContent = isStarred ? '⭐ Favorita' : '☆ Favoritar';
+    }
+  }
 
   function formatDuration(totalSeconds) {
     const secs = Math.max(0, Math.floor(Number(totalSeconds) || 0));
@@ -583,16 +624,26 @@
 
   function getExamDraftStatus(draftKey, questions, keyResolver = (q, idx) => String(idx)) {
     const draftMap = (draftKey && appState.examDrafts && appState.examDrafts[draftKey]) || {};
-    const answered = questions.reduce((acc, q, idx) => {
-      const val = draftMap[keyResolver(q, idx)];
-      return acc + (val !== undefined && val !== null && val !== '' ? 1 : 0);
-    }, 0);
+    const flagsMap = (draftKey && appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
+    const elimMap = (draftKey && appState.examDraftEliminated && appState.examDraftEliminated[draftKey]) || {};
+    let answered = 0;
+    let flagged = 0;
+    let eliminated = 0;
+    questions.forEach((q, idx) => {
+      const k = keyResolver(q, idx);
+      const val = draftMap[k];
+      if (val !== undefined && val !== null && val !== '') answered++;
+      if (flagsMap[k]) flagged++;
+      if (Array.isArray(elimMap[k]) && elimMap[k].length > 0) eliminated++;
+    });
     const timer = (draftKey && Number(appState.examDraftTimers?.[draftKey])) || 0;
     return {
       answered,
       total: questions.length,
       timer,
-      hasDraft: answered > 0 || timer > 0,
+      flagged,
+      eliminated,
+      hasDraft: answered > 0 || timer > 0 || flagged > 0 || eliminated > 0,
     };
   }
 
@@ -862,10 +913,12 @@
       const nextExamNum = nextExamIdx + 1;
       const nextExamObj = subj.exams[nextExamIdx];
       const nextDraftKey = nextExamObj ? `${key}:${nextExamObj.id}` : '';
-      const nextDraftMap = (nextDraftKey && appState.examDrafts && appState.examDrafts[nextDraftKey]) || {};
-      const nextDraftAnswered = Object.values(nextDraftMap).filter((v) => v !== undefined && v !== null && v !== '').length;
-      const nextDraftTimer = (nextDraftKey && Number(appState.examDraftTimers?.[nextDraftKey])) || 0;
-      const hasNextDraft = nextDraftAnswered > 0 || nextDraftTimer > 0;
+      const nextDraftStatus = nextExamObj
+        ? getExamDraftStatus(nextDraftKey, nextExamObj.questions)
+        : { answered: 0, timer: 0, hasDraft: false };
+      const nextDraftAnswered = nextDraftStatus.answered;
+      const nextDraftTimer = nextDraftStatus.timer;
+      const hasNextDraft = nextDraftStatus.hasDraft;
       const canTakeExam = vfUnlocked && !st.passedToday && st.examsTodayCount < 3;
       const pendingExamErrors = getPendingExamErrorQuestions(subj, st);
       const pendingExamErrorsCount = pendingExamErrors.length;
@@ -1017,6 +1070,13 @@
                   const durationPart = typeof h.durationSeconds === 'number' && h.durationSeconds > 0
                     ? ` • ⏱️ ${formatDuration(h.durationSeconds)}`
                     : '';
+                  const matchedExam = subj.exams.find((ex) => ex.id === h.examId) || subj.exams.find((ex) => ex.title === h.examTitle);
+                  const practiceDraft = matchedExam
+                    ? getExamDraftStatus(`${key}:practice-${matchedExam.id}`, matchedExam.questions)
+                    : { hasDraft: false };
+                  const retakeBtnLabel = practiceDraft.hasDraft
+                    ? `📝 Continuar (${practiceDraft.answered}/${practiceDraft.total})`
+                    : '🔁 Refazer';
                   return `
                   <li>
                     <div class="history-item-main">
@@ -1030,7 +1090,7 @@
                           🔍 Gabarito
                         </button>
                         <button type="button" class="outline secondary btn-xs" data-action="retake-history-exam" data-subject="${key}" data-history-index="${h._idx}">
-                          🔁 Refazer
+                          ${retakeBtnLabel}
                         </button>
                       </div>
                     </div>
@@ -1841,11 +1901,20 @@
     if (skipBtn) {
       skipBtn.disabled = true;
     }
+    currentFeedbackCardId = cardObj.id;
+    applyStarButtonVisual(document.getElementById('btn-star-vf'), isStarredItem('cards', cardObj.id), false);
     btnNextCard.textContent = queueEmpty ? '🎉 Ver Conclusão →' : 'Próximo Card →';
 
     feedbackBox.hidden = false;
     btnNextCard.focus();
   }
+
+  document.getElementById('btn-star-vf')?.addEventListener('click', (e) => {
+    if (!currentFeedbackCardId) return;
+    const isStarred = toggleStarItem('cards', currentFeedbackCardId);
+    applyStarButtonVisual(e.currentTarget, isStarred, false);
+    showToast(isStarred ? '⭐ Cartão adicionado às favoritas!' : '☆ Cartão removido das favoritas.');
+  });
 
   document.getElementById('btn-undo-vf')?.addEventListener('click', () => {
     const snap = lastVfUndoSnapshot;
@@ -2399,6 +2468,55 @@
     });
   }
 
+  function openCustomExamPractice(questionsList) {
+    if (!Array.isArray(questionsList) || questionsList.length === 0) {
+      showToast('Selecione pelo menos 1 questão de prova já feita no glossário para treinar!');
+      return;
+    }
+
+    const draftKey = 'mixed:custom-glossary-practice';
+    clearExamDraftState(draftKey, true);
+    renderExamView({
+      subjKey: 'mixed',
+      subj: { title: 'Treino pelo Glossário' },
+      examObj: {
+        id: 'custom-glossary-practice',
+        title: `Questões Selecionadas (${questionsList.length} Q)`,
+        questions: questionsList,
+        _practiceSubjTitle: 'Treino pelo Glossário',
+      },
+      attemptLabel: `🔍 ${questionsList.length} questão(ões) filtrada(s) no glossário • Sem gastar tentativas`,
+      noticeHtml: '🔍 <strong>Treino pelo Glossário:</strong> Pratique as questões filtradas sem gastar tentativas do dia. Acertos também dão baixa nas pendências!',
+      mode: 'practice',
+    });
+  }
+
+  function openSpecificExamErrorsPractice({ subjKey, subj, examObj, wrongQuestionsList }) {
+    if (!Array.isArray(wrongQuestionsList) || wrongQuestionsList.length === 0) {
+      showToast('🎉 Não há erros nesta prova para treinar!');
+      return;
+    }
+    const baseExamId = examObj._sourceExamId || examObj.id;
+    const practiceId = `specific-errors-${baseExamId}`;
+    clearExamDraftState(`${subjKey}:${practiceId}`, false);
+
+    renderExamView({
+      subjKey,
+      subj,
+      examObj: {
+        id: practiceId,
+        title: `Erros de ${examObj.title} (${wrongQuestionsList.length} Q)`,
+        questions: wrongQuestionsList,
+        _sourceExamId: baseExamId,
+        _isSpecificErrors: true,
+        _practiceSubjTitle: subj?.title || 'Revisão Mista',
+      },
+      attemptLabel: `🎯 Treinando apenas os ${wrongQuestionsList.length} erro(s) desta prova • Não consome tentativas`,
+      noticeHtml: '🎯 <strong>Foco nos Erros desta Prova:</strong> Refaça somente as questões que você errou acima. Acertos dão baixa na lista de pendências!',
+      mode: 'practice',
+    });
+  }
+
   function openHistoryExamPractice(subjKey, historyIndex) {
     const subj = getSubjectsMap()[subjKey];
     const st = appState.subjects[subjKey];
@@ -2879,6 +2997,10 @@
     lines.push(`❓ *DÚVIDA DE PROVA — ${subj.title.toUpperCase()} (${examObj.title})*`);
     lines.push(`*Q${idx + 1}${q._sourceExamTitle ? ` (${q._sourceExamTitle})` : ''}:* ${q.text}`);
     if (hasUserAnswers && q.options?.[userAns] !== undefined) {
+      if (userAns === q.correct) {
+        lines.push(`✅ Marquei e acertei: ${letters[userAns]}) ${q.options[userAns]} (fiquei com dúvida)`);
+        return lines.join('\n');
+      }
       lines.push(`❌ Marquei: ${letters[userAns]}) ${q.options[userAns]}`);
     }
     lines.push(`✅ Gabarito: ${letters[q.correct]}) ${q.options?.[q.correct] || ''}`);
@@ -2959,7 +3081,7 @@
       }
     } else if (isPracticeMode) {
       statusMsg.innerHTML = `🔁 <strong>Treino Livre concluído:</strong> você acertou <strong>${score}/${totalQ}</strong>${durationNote} sem gastar suas tentativas do dia.`;
-      if (subjKey === 'mixed') {
+      if (examObj.id === 'mixed-general-practice') {
         const btnNewMixed = document.createElement('button');
         btnNewMixed.type = 'button';
         btnNewMixed.className = 'primary';
@@ -2969,10 +3091,10 @@
       }
       const btnRetake = document.createElement('button');
       btnRetake.type = 'button';
-      btnRetake.className = subjKey === 'mixed' ? 'outline secondary' : 'primary';
+      btnRetake.className = examObj.id === 'mixed-general-practice' ? 'outline secondary' : 'primary';
       btnRetake.textContent = '🔁 Refazer este treino';
       btnRetake.addEventListener('click', () => {
-        if (subjKey === 'mixed') {
+        if (examObj.id === 'mixed-general-practice') {
           if (!appState.examDraftOrders || typeof appState.examDraftOrders !== 'object') {
             appState.examDraftOrders = {};
           }
@@ -2992,10 +3114,13 @@
     } else if (isHistoryReview) {
       statusMsg.innerHTML = `📜 <strong>Revisão do Histórico (Dia ${escapeHtml(dayNumber)}):</strong> você tirou <strong>${score}/${totalQ}</strong> nesta tentativa${durationNote}. Confira abaixo todas as questões e comentários.`;
       if (typeof historyIndex === 'number' && historyIndex >= 0) {
+        const practiceDraft = getExamDraftStatus(`${subjKey}:practice-${examObj.id}`, examObj.questions);
         const btnRetakeHistory = document.createElement('button');
         btnRetakeHistory.type = 'button';
         btnRetakeHistory.className = 'primary';
-        btnRetakeHistory.textContent = '🔁 Refazer esta prova (treino livre)';
+        btnRetakeHistory.textContent = practiceDraft.hasDraft
+          ? `📝 Continuar treino desta prova (${practiceDraft.answered}/${practiceDraft.total})`
+          : '🔁 Refazer esta prova (treino livre)';
         btnRetakeHistory.addEventListener('click', () => openHistoryExamPractice(subjKey, historyIndex));
         ctaContainer.appendChild(btnRetakeHistory);
       }
@@ -3020,6 +3145,43 @@
     const wrongCount = hasUserAnswers
       ? examObj.questions.filter((q, idx) => userAnswers[idx] !== q.correct).length
       : (wrongQuestions || []).length;
+
+    const baseExamId = examObj._sourceExamId || examObj.id;
+    const wrongQuestionsForPractice = [];
+    examObj.questions.forEach((q, idx) => {
+      const userAns = hasUserAnswers ? userAnswers[idx] : null;
+      const isRight = hasUserAnswers
+        ? userAns === q.correct
+        : !(wrongById.has(q.id) || wrongByNum.has(idx + 1));
+      if (!isRight) {
+        const targetSubjKey = q._subjKey || subjKey;
+        const rawKey = q._rawErrorKey || getExamQuestionKey(q, baseExamId, idx + 1);
+        wrongQuestionsForPractice.push({
+          ...q,
+          _subjKey: targetSubjKey,
+          _subjTitle: q._subjTitle || subj.title,
+          _rawErrorKey: rawKey,
+          _practiceKey: q._practiceKey || `${targetSubjKey}:${rawKey}`,
+          _sourceExamTitle: q._sourceExamTitle || (subjKey === 'mixed' ? undefined : examObj.title),
+        });
+      }
+    });
+
+    if (!isErrorDrill && wrongQuestionsForPractice.length > 0 && !(examObj._isSpecificErrors && wrongQuestionsForPractice.length === totalQ)) {
+      const btnRetryThisExamErrors = document.createElement('button');
+      btnRetryThisExamErrors.type = 'button';
+      btnRetryThisExamErrors.className = 'outline primary';
+      btnRetryThisExamErrors.textContent = `🎯 Treinar só os ${wrongQuestionsForPractice.length} erro(s) desta prova`;
+      btnRetryThisExamErrors.addEventListener('click', () => {
+        openSpecificExamErrorsPractice({
+          subjKey,
+          subj,
+          examObj,
+          wrongQuestionsList: wrongQuestionsForPractice,
+        });
+      });
+      ctaContainer.appendChild(btnRetryThisExamErrors);
+    }
 
     if (wrongCount > 0) {
       const btnCopyErrors = document.createElement('button');
@@ -3121,13 +3283,22 @@
       const legacyChoiceLine = !hasUserAnswers
         ? `<p class="review-ans-line muted-text"><strong>Sua resposta:</strong> ${isRight ? 'Acertou (alternativa não registrada no histórico antigo)' : 'Errou (alternativa não registrada no histórico antigo)'}</p>`
         : '';
+      const qSubjKey = q._subjKey || subjKey;
+      const qRawKey = q._rawErrorKey || q._errorKey || getExamQuestionKey(q, baseExamId, idx + 1);
+      const qStarKey = `${qSubjKey}:${qRawKey}`;
+      const isQStarred = isStarredItem('questions', qStarKey);
 
       card.innerHTML = `
         <div class="review-q-head">
           <span class="question-num">Questão ${idx + 1}${q._sourceExamTitle ? ` • ${escapeHtml(q._sourceExamTitle)}` : ''} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
-          <button type="button" class="outline secondary btn-xs btn-copy-single-q" data-q-index="${idx}" title="Copiar apenas esta questão para dúvida no WhatsApp">
-            💬 Copiar dúvida
-          </button>
+          <div class="review-q-head-actions">
+            <button type="button" class="outline secondary btn-xs btn-star-toggle btn-star-q${isQStarred ? ' is-starred' : ''}" data-star-key="${escapeHtml(qStarKey)}" aria-pressed="${isQStarred ? 'true' : 'false'}" title="Marcar ou desmarcar esta questão como favorita/dúvida">
+              ${isQStarred ? '⭐ Favorita' : '☆ Favoritar'}
+            </button>
+            <button type="button" class="outline secondary btn-xs btn-copy-single-q" data-q-index="${idx}" title="Copiar apenas esta questão para dúvida no WhatsApp">
+              💬 Copiar dúvida
+            </button>
+          </div>
         </div>
         <p class="question-text">${escapeHtml(q.text)}</p>
         ${legacyChoiceLine}
@@ -3159,6 +3330,14 @@
   });
 
   document.getElementById('result-review-container')?.addEventListener('click', async (e) => {
+    const starBtn = e.target.closest('.btn-star-q');
+    if (starBtn) {
+      const starKey = starBtn.dataset.starKey;
+      const isStarred = toggleStarItem('questions', starKey);
+      applyStarButtonVisual(starBtn, isStarred, false);
+      showToast(isStarred ? '⭐ Questão adicionada às favoritas!' : '☆ Questão removida das favoritas.');
+      return;
+    }
     const btn = e.target.closest('.btn-copy-single-q');
     if (!btn || !activeResultReviewContext) return;
     const idx = Number(btn.dataset.qIndex);
@@ -3317,7 +3496,9 @@
 
   function gradeAndShowPracticeResult(userAnswers, durationSeconds = null) {
     const isMixedPractice = activeSubjectKey === 'mixed';
-    const subj = isMixedPractice ? { title: 'Simulado Geral Misto' } : getSubjectsMap()[activeSubjectKey];
+    const subj = isMixedPractice
+      ? { title: activeExamObj._practiceSubjTitle || 'Simulado Geral Misto' }
+      : getSubjectsMap()[activeSubjectKey];
     const st = isMixedPractice ? null : appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
     clearExamDraftState(draftKey, true);
@@ -3430,6 +3611,34 @@
         lines.push(`• Provas realizadas hoje: 0/3`);
       }
       lines.push('');
+    }
+
+    const starredCardIds = Object.keys(appState.starredItems?.cards || {}).filter((id) => appState.starredItems.cards[id]);
+    const starredQuestionKeys = Object.keys(appState.starredItems?.questions || {}).filter((k) => appState.starredItems.questions[k]);
+    if (starredCardIds.length > 0 || starredQuestionKeys.length > 0) {
+      const starredLabels = [];
+      for (const key of ['quimica', 'biologia', 'fisica']) {
+        const subj = subjects[key];
+        if (!subj) continue;
+        for (const c of subj.cards) {
+          if (appState.starredItems?.cards?.[c.id]) {
+            starredLabels.push(`${c.id} (${c.topic})`);
+          }
+        }
+        subj.exams.forEach((ex) => {
+          ex.questions.forEach((q, qIdx) => {
+            const qKey = `${key}:${getExamQuestionKey(q, ex.id, qIdx + 1)}`;
+            if (appState.starredItems?.questions?.[qKey]) {
+              starredLabels.push(`${subj.title} ${ex.title.split('—')[0].trim()} Q${qIdx + 1}`);
+            }
+          });
+        });
+      }
+      if (starredLabels.length > 0) {
+        const extra = starredLabels.length > 8 ? ` (+ ${starredLabels.length - 8} outro(s))` : '';
+        lines.push(`⭐ *Favoritas / Dúvidas (${starredLabels.length}):* ${starredLabels.slice(0, 8).join(', ')}${extra}`);
+        lines.push('');
+      }
     }
 
     lines.push('--- SAVE_JSON_START ---');
@@ -3637,6 +3846,7 @@
   let glossarySource = 'cards'; // 'cards' | 'exams'
   let lastGlossaryExportText = '';
   let lastGlossaryMatchedCards = [];
+  let lastGlossaryMatchedExams = [];
 
   function normalizeSearchText(value) {
     return String(value || '')
@@ -3695,23 +3905,30 @@
     const listEl = document.getElementById('glossary-results-list');
     const countEl = document.getElementById('glossary-count-label');
     const pendingWrap = document.getElementById('glossary-pending-wrap');
+    const pendingLabel = document.getElementById('glossary-only-pending-label');
     const copyBtn = document.getElementById('btn-copy-glossary');
-    const practiceBtn = document.getElementById('btn-glossary-practice-vf');
+    const practiceVfBtn = document.getElementById('btn-glossary-practice-vf');
+    const practiceExamsBtn = document.getElementById('btn-glossary-practice-exams');
     if (!listEl || !countEl) return;
 
     if (pendingWrap) {
-      pendingWrap.hidden = glossarySource !== 'cards';
+      pendingWrap.hidden = false;
+    }
+    if (pendingLabel) {
+      pendingLabel.textContent = glossarySource === 'exams' ? 'Erro pendente' : 'Falta dominar';
     }
 
     const query = normalizeSearchText(document.getElementById('glossary-search-input')?.value);
     const onlyErrors = Boolean(document.getElementById('glossary-only-errors')?.checked);
     const onlyPending = Boolean(document.getElementById('glossary-only-pending')?.checked);
+    const onlyStarred = Boolean(document.getElementById('glossary-only-starred')?.checked);
+    const hideAnswers = Boolean(document.getElementById('glossary-hide-answers')?.checked);
     const subjects = getSubjectsMap();
     const keys = glossarySubjectFilter === 'all' ? ['quimica', 'biologia', 'fisica'] : [glossarySubjectFilter];
 
     if (glossarySource === 'exams') {
       lastGlossaryMatchedCards = [];
-      if (practiceBtn) practiceBtn.hidden = true;
+      if (practiceVfBtn) practiceVfBtn.hidden = true;
       const letters = ['A', 'B', 'C', 'D'];
       const matches = [];
       let totalAttempted = 0;
@@ -3738,9 +3955,13 @@
           examObj.questions.forEach((q, idx) => {
             totalAttempted++;
             const qKey = getExamQuestionKey(q, examObj.id, idx + 1);
+            const starKey = `${key}:${qKey}`;
             const wasWrong = wrongSet.has(qKey);
             const isResolved = Boolean(st.resolvedExamErrors && st.resolvedExamErrors[qKey]);
+            const isStarred = isStarredItem('questions', starKey);
             if (onlyErrors && !wasWrong) return;
+            if (onlyPending && !(wasWrong && !isResolved)) return;
+            if (onlyStarred && !isStarred) return;
 
             if (query) {
               const haystack = normalizeSearchText(
@@ -3750,9 +3971,13 @@
             }
 
             matches.push({
+              subjKey: key,
               subjTitle: subj.title,
               examTitle: examObj.title,
               qNumber: idx + 1,
+              rawKey: qKey,
+              starKey,
+              isStarred,
               question: q,
               wasWrong,
               isResolved,
@@ -3762,8 +3987,20 @@
       }
 
       matches.sort((a, b) => Number(b.wasWrong && !b.isResolved) - Number(a.wasWrong && !a.isResolved) || Number(b.wasWrong) - Number(a.wasWrong));
+      lastGlossaryMatchedExams = matches.map(({ subjKey, subjTitle, examTitle, rawKey, starKey, question }) => ({
+        ...question,
+        _subjKey: subjKey,
+        _subjTitle: subjTitle,
+        _rawErrorKey: rawKey,
+        _practiceKey: starKey,
+        _sourceExamTitle: `${subjTitle} • ${examTitle}`,
+      }));
       countEl.textContent = `Exibindo ${matches.length} de ${totalAttempted} questões de provas já feitas`;
       if (copyBtn) copyBtn.disabled = matches.length === 0;
+      if (practiceExamsBtn) {
+        practiceExamsBtn.hidden = matches.length === 0;
+        practiceExamsBtn.textContent = `🧠 Treinar estas questões (${matches.length})`;
+      }
 
       lastGlossaryExportText = matches
         .map((m) => `${m.subjTitle} • ${m.examTitle} Q${m.qNumber}\n${m.question.text}\nGabarito: ${letters[m.question.correct]}) ${m.question.options[m.question.correct]}\nComentário: ${m.question.explanation}`)
@@ -3780,7 +4017,7 @@
       }
 
       listEl.innerHTML = matches
-        .map(({ subjTitle, examTitle, qNumber, question, wasWrong, isResolved }) => {
+        .map(({ subjTitle, examTitle, qNumber, starKey, isStarred, question, wasWrong, isResolved }) => {
           const correctLetter = letters[question.correct] || '?';
           const correctText = question.options?.[question.correct] || '';
           const errBadge = wasWrong
@@ -3788,18 +4025,28 @@
               ? '<span class="glossary-ans-pill is-true">✅ Erro revisado</span>'
               : '<span class="card-flag-tag">⚠️ Erro pendente</span>'
             : '';
+          const ansBodyHtml = hideAnswers
+            ? `<details class="glossary-reveal-details">
+                <summary>👁️ Revelar gabarito e comentário</summary>
+                <div class="glossary-reveal-body">
+                  <p class="glossary-item-stmt"><strong>Gabarito: ${correctLetter})</strong> ${highlightSearchMatch(correctText, query)}</p>
+                  <p class="muted-text glossary-item-exp">${highlightSearchMatch(question.explanation, query)}</p>
+                </div>
+              </details>`
+            : `<p class="glossary-item-stmt"><strong>${correctLetter})</strong> ${highlightSearchMatch(correctText, query)}</p>
+               <p class="muted-text glossary-item-exp">${highlightSearchMatch(question.explanation, query)}</p>`;
           return `
             <article class="glossary-item">
               <div class="glossary-item-head">
                 <span class="card-topic-tag">${escapeHtml(subjTitle)} • ${escapeHtml(examTitle)} Q${qNumber}</span>
                 <div class="glossary-item-badges">
+                  <button type="button" class="outline secondary btn-xs btn-star-toggle btn-star-glossary${isStarred ? ' is-starred' : ''}" data-star-type="questions" data-star-key="${escapeHtml(starKey)}" aria-pressed="${isStarred ? 'true' : 'false'}" title="Favoritar / Desfavoritar">${isStarred ? '⭐' : '☆'}</button>
                   ${errBadge}
-                  <span class="glossary-ans-pill is-true">Gabarito: ${correctLetter}</span>
+                  ${hideAnswers ? '' : `<span class="glossary-ans-pill is-true">Gabarito: ${correctLetter}</span>`}
                 </div>
               </div>
               <p class="glossary-item-stmt">${highlightSearchMatch(question.text, query)}</p>
-              <p class="glossary-item-stmt"><strong>${correctLetter})</strong> ${highlightSearchMatch(correctText, query)}</p>
-              <p class="muted-text glossary-item-exp">${highlightSearchMatch(question.explanation, query)}</p>
+              ${ansBodyHtml}
             </article>
           `;
         })
@@ -3807,6 +4054,8 @@
       return;
     }
 
+    lastGlossaryMatchedExams = [];
+    if (practiceExamsBtn) practiceExamsBtn.hidden = true;
     const matches = [];
     let totalScope = 0;
 
@@ -3820,15 +4069,17 @@
         const errCount = st.cardErrorsTotal[c.id] || 0;
         const isResolvedErr = errCount > 0 && Boolean(st.resolvedVfErrors && st.resolvedVfErrors[c.id]);
         const boxVal = st.cardBoxes[c.id] || 0;
+        const isStarred = isStarredItem('cards', c.id);
         if (onlyErrors && errCount === 0) continue;
         if (onlyPending && boxVal >= 2) continue;
+        if (onlyStarred && !isStarred) continue;
 
         if (query) {
           const haystack = normalizeSearchText(`${c.topic} ${c.statement} ${c.explanation} ${subj.title}`);
           if (!haystack.includes(query)) continue;
         }
 
-        matches.push({ key, subjTitle: subj.title, card: c, errCount, isResolvedErr, boxVal });
+        matches.push({ key, subjTitle: subj.title, card: c, errCount, isResolvedErr, boxVal, isStarred });
       }
     }
 
@@ -3836,9 +4087,9 @@
     lastGlossaryMatchedCards = matches.map(({ key, subjTitle, card }) => ({ ...card, _subjKey: key, _subjTitle: subjTitle }));
     countEl.textContent = `Exibindo ${matches.length} de ${totalScope} cartões V/F`;
     if (copyBtn) copyBtn.disabled = matches.length === 0;
-    if (practiceBtn) {
-      practiceBtn.hidden = matches.length === 0;
-      practiceBtn.textContent = `🎯 Treinar estes cards (${matches.length})`;
+    if (practiceVfBtn) {
+      practiceVfBtn.hidden = matches.length === 0;
+      practiceVfBtn.textContent = `🎯 Treinar estes cards (${matches.length})`;
     }
 
     lastGlossaryExportText = matches
@@ -3852,11 +4103,22 @@
 
     listEl.innerHTML = matches
       .map(
-        ({ subjTitle, card, errCount, isResolvedErr, boxVal }) => `
+        ({ subjTitle, card, errCount, isResolvedErr, boxVal, isStarred }) => {
+          const vfRevealHtml = hideAnswers
+            ? `<details class="glossary-reveal-details">
+                <summary>👁️ Revelar resposta e explicação</summary>
+                <div class="glossary-reveal-body">
+                  <p class="glossary-item-stmt"><span class="glossary-ans-pill ${card.answer ? 'is-true' : 'is-false'}">${card.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}</span></p>
+                  <p class="muted-text glossary-item-exp">${highlightSearchMatch(card.explanation, query)}</p>
+                </div>
+              </details>`
+            : `<p class="muted-text glossary-item-exp">${highlightSearchMatch(card.explanation, query)}</p>`;
+          return `
         <article class="glossary-item">
           <div class="glossary-item-head">
             <span class="card-topic-tag">${highlightSearchMatch(`${subjTitle} • ${card.topic}`, query)}</span>
             <div class="glossary-item-badges">
+              <button type="button" class="outline secondary btn-xs btn-star-toggle btn-star-glossary${isStarred ? ' is-starred' : ''}" data-star-type="cards" data-star-key="${escapeHtml(card.id)}" aria-pressed="${isStarred ? 'true' : 'false'}" title="Favoritar / Desfavoritar">${isStarred ? '⭐' : '☆'}</button>
               <span class="card-box-tag">Caixa ${boxVal}/2</span>
               ${
                 errCount > 0
@@ -3865,15 +4127,18 @@
                     : `<span class="card-flag-tag">⚠️ ${errCount}x erro</span>`
                   : ''
               }
-              <span class="glossary-ans-pill ${card.answer ? 'is-true' : 'is-false'}">
-                ${card.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}
-              </span>
+              ${
+                hideAnswers
+                  ? ''
+                  : `<span class="glossary-ans-pill ${card.answer ? 'is-true' : 'is-false'}">${card.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}</span>`
+              }
             </div>
           </div>
           <p class="glossary-item-stmt">${highlightSearchMatch(card.statement, query)}</p>
-          <p class="muted-text glossary-item-exp">${highlightSearchMatch(card.explanation, query)}</p>
+          ${vfRevealHtml}
         </article>
-      `
+      `;
+        }
       )
       .join('');
   }
@@ -3888,6 +4153,28 @@
 
   document.getElementById('glossary-only-pending')?.addEventListener('change', () => {
     renderGlossaryResults();
+  });
+
+  document.getElementById('glossary-only-starred')?.addEventListener('change', () => {
+    renderGlossaryResults();
+  });
+
+  document.getElementById('glossary-hide-answers')?.addEventListener('change', () => {
+    renderGlossaryResults();
+  });
+
+  document.getElementById('glossary-results-list')?.addEventListener('click', (e) => {
+    const starBtn = e.target.closest('.btn-star-glossary');
+    if (!starBtn) return;
+    const starType = starBtn.dataset.starType;
+    const starKey = starBtn.dataset.starKey;
+    const isStarred = toggleStarItem(starType, starKey);
+    if (document.getElementById('glossary-only-starred')?.checked && !isStarred) {
+      renderGlossaryResults();
+    } else {
+      applyStarButtonVisual(starBtn, isStarred, true);
+    }
+    showToast(isStarred ? '⭐ Adicionado às favoritas!' : '☆ Removido das favoritas.');
   });
 
   document.getElementById('glossary-source-tabs')?.addEventListener('click', (e) => {
@@ -3917,6 +4204,15 @@
       dialogGlossary.close();
     }
     openCustomVfPractice(cardsToPractice);
+  });
+
+  document.getElementById('btn-glossary-practice-exams')?.addEventListener('click', () => {
+    if (glossarySource !== 'exams' || lastGlossaryMatchedExams.length === 0) return;
+    const questionsToPractice = [...lastGlossaryMatchedExams];
+    if (dialogGlossary?.open) {
+      dialogGlossary.close();
+    }
+    openCustomExamPractice(questionsToPractice);
   });
 
   document.getElementById('btn-copy-glossary')?.addEventListener('click', async () => {

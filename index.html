@@ -132,7 +132,10 @@
       <article id="vf-feedback-box" class="vf-feedback-card" hidden>
         <header class="feedback-header">
           <strong id="vf-feedback-title">Ops, você errou!</strong>
-          <span id="vf-feedback-badge" class="badge-pill">Voltou p/ Caixa 0</span>
+          <div class="feedback-header-meta">
+            <button type="button" class="outline secondary btn-xs btn-star-toggle" id="btn-star-vf" aria-pressed="false" title="Marcar ou desmarcar este cartão como favorita/dúvida">☆ Favoritar</button>
+            <span id="vf-feedback-badge" class="badge-pill">Voltou p/ Caixa 0</span>
+          </div>
         </header>
         <p id="vf-feedback-topic" class="feedback-topic-tag" hidden></p>
         <p id="vf-feedback-statement" class="feedback-stmt"></p>
@@ -348,7 +351,15 @@
           </label>
           <label class="glossary-error-toggle" id="glossary-pending-wrap">
             <input type="checkbox" id="glossary-only-pending">
-            <span>Falta dominar</span>
+            <span id="glossary-only-pending-label">Falta dominar</span>
+          </label>
+          <label class="glossary-error-toggle">
+            <input type="checkbox" id="glossary-only-starred">
+            <span>⭐ Favoritas</span>
+          </label>
+          <label class="glossary-error-toggle" title="Ocultar respostas para se testar antes de conferir">
+            <input type="checkbox" id="glossary-hide-answers">
+            <span>🙈 Auto-teste</span>
           </label>
         </div>
       </div>
@@ -357,6 +368,7 @@
         <small id="glossary-count-label" class="muted-text glossary-count-label"></small>
         <div class="glossary-meta-actions">
           <button type="button" class="outline primary btn-xs" id="btn-glossary-practice-vf" hidden>🎯 Treinar estes cards (0)</button>
+          <button type="button" class="outline primary btn-xs" id="btn-glossary-practice-exams" hidden>🧠 Treinar estas questões (0)</button>
           <button type="button" class="outline secondary btn-xs" id="btn-copy-glossary">📋 Copiar lista</button>
         </div>
       </div>

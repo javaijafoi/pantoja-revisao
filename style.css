@@ -1141,7 +1141,26 @@ button.is-confirming {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   margin-bottom: 0.55rem;
+}
+
+.feedback-header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.btn-star-toggle {
+  margin-bottom: 0;
+}
+
+.btn-star-toggle.is-starred {
+  border-color: var(--vf-box1-color);
+  background: rgba(245, 158, 11, 0.18);
+  color: var(--vf-box1-color);
 }
 
 .feedback-topic-tag {
@@ -1647,6 +1666,25 @@ dialog::backdrop {
   line-height: 1.4;
 }
 
+.glossary-reveal-details {
+  margin-top: 0.35rem;
+  margin-bottom: 0;
+  font-size: 0.84rem;
+}
+
+.glossary-reveal-details summary {
+  cursor: pointer;
+  color: var(--pico-primary);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.glossary-reveal-body {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--pico-muted-border-color);
+}
+
 .vf-session-summary {
   background: var(--pico-card-sectioning-background-color);
   border: 1px solid var(--pico-muted-border-color);
@@ -1684,6 +1722,13 @@ dialog::backdrop {
 
 .review-q-head .question-num {
   margin-bottom: 0;
+}
+
+.review-q-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
 }
 
 .btn-copy-single-q {
