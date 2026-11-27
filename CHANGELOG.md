@@ -4,6 +4,24 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 12)] — Atalhos de Favoritas no painel, reforço imediato da sessão V/F e precisão no simulado
+
+### Melhorias implementadas
+1. **Favoritas (⭐) acessíveis direto no Painel, filtro no Gabarito e sincronização com o Glossário (`index.html`, `app.js`)**
+   - Adicionados na barra **🌐 Revisão mista (3 frentes)** do Dashboard (`#global-day-summary`) os atalhos diretos **⭐ Favoritas V/F (N)** (`openStarredVfPractice()`) e **⭐ Questões Favoritas (N)** (`openStarredExamPractice()`), permitindo treinar em 1 clique os itens favoritados sem precisar abrir o modal do Glossário.
+   - Adicionado o filtro **⭐ Favoritas (N)** (`#btn-filter-starred`) no cabeçalho do **Gabarito Comentado** (`#view-exam-result`), com atualização automática do contador via `updateResultStarredFilterCount()` e sincronização bidirecional dos botões `☆ / ⭐` via `syncVisibleStarButtons()`.
+   - Adicionado o botão **🧹 Limpar filtros** (`#btn-glossary-clear-filters`) no `#dialog-glossary` (exibido quando há busca, filtro por frente ou opções marcadas) e atualização do Dashboard ao fechar o Glossário.
+
+2. **Reforço imediato dos erros da sessão V/F e preservação de erros novos do Treino Livre (`app.js`)**
+   - Adicionado o botão **🎯 Reforçar N erro(s) desta sessão** (`#btn-go-to-session-errors-now`) na tela de conclusão dos Flashcards V/F sempre que houver erros na sessão recém-terminada, abrindo `openCustomVfPractice()` apenas com aqueles cartões (preservando o progresso diário).
+   - Adicionado `st.practiceWrongErrors` (normalizado em `loadState()` com retrocompatibilidade) para registrar questões erradas durante sessões de **Treino Livre** (`🔁 Refazer`, `🎲 Simulado Geral Misto` ou `🔍 Treino pelo Glossário`), integrando-as a `getPendingExamErrorQuestions()` e dando baixa automática ao acertar posteriormente.
+
+3. **Foco sincronizado no Simulado, atalho `C` para limpar resposta e ritmo por questão no resultado (`index.html`, `app.js`)**
+   - Adicionado listener `focusin` em `#exam-questions-container` para manter `examCurrentIndex` e a pílula ativa sincronizados ao navegar com `Tab` no modo *"📄 Ver todas"*, além do atalho **`C`** para limpar a resposta da questão atual (`↺ Limpar`) e atualização da legenda `.exam-keyboard-hint`.
+   - Adicionado o ritmo médio por questão (`~Xs/Q` ou `~Xm YYs/Q`) junto ao tempo total no resumo do **Gabarito Comentado** (`renderExamResultView()`).
+
+---
+
 ## [2026-11-27 (Atualização 11)] — Glossário com Auto-Teste e treino de provas, sistema de Favoritas (⭐) e treino dos erros da prova
 
 ### Melhorias implementadas

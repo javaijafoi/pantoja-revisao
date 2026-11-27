@@ -207,7 +207,7 @@
       <article class="simulado-notice">
         <small id="exam-simulado-notice-text">📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.</small>
         <small class="keyboard-hint exam-keyboard-hint">
-          ⌨️ Atalhos: <kbd>A</kbd>-<kbd>D</kbd> (ou <kbd>1</kbd>-<kbd>4</kbd>) = Marcar • <kbd>R</kbd> = Revisar depois • <kbd>P</kbd> = Pausar tempo • <kbd>[</kbd> <kbd>]</kbd> = Questão anterior/próxima
+          ⌨️ Atalhos: <kbd>A</kbd>-<kbd>D</kbd> (ou <kbd>1</kbd>-<kbd>4</kbd>) = Marcar • <kbd>R</kbd> = Revisar depois • <kbd>C</kbd> = Limpar questão • <kbd>P</kbd> = Pausar tempo • <kbd>[</kbd> <kbd>]</kbd> = Questão anterior/próxima
         </small>
       </article>
 
@@ -253,6 +253,7 @@
           <div class="result-filter-group" id="result-filter-bar" role="group" aria-label="Filtrar questões do gabarito">
             <button type="button" class="btn-sm primary" id="btn-filter-all" data-filter="all">Todas (10)</button>
             <button type="button" class="btn-sm outline secondary" id="btn-filter-wrong" data-filter="wrong">Apenas Erros (0)</button>
+            <button type="button" class="btn-sm outline secondary" id="btn-filter-starred" data-filter="starred">⭐ Favoritas (0)</button>
           </div>
           <button type="button" class="btn-sm outline secondary" id="btn-toggle-all-explanations">📖 Abrir comentários</button>
         </div>
@@ -367,6 +368,7 @@
       <div class="glossary-meta-row">
         <small id="glossary-count-label" class="muted-text glossary-count-label"></small>
         <div class="glossary-meta-actions">
+          <button type="button" class="outline secondary btn-xs" id="btn-glossary-clear-filters" hidden>🧹 Limpar filtros</button>
           <button type="button" class="outline primary btn-xs" id="btn-glossary-practice-vf" hidden>🎯 Treinar estes cards (0)</button>
           <button type="button" class="outline primary btn-xs" id="btn-glossary-practice-exams" hidden>🧠 Treinar estas questões (0)</button>
           <button type="button" class="outline secondary btn-xs" id="btn-copy-glossary">📋 Copiar lista</button>

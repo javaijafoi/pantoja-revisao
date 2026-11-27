@@ -67,6 +67,9 @@
   }
 
   dialogGlossary?.addEventListener('close', () => {
+    if (!document.getElementById('view-dashboard')?.hidden) {
+      renderDashboard();
+    }
     resumeExamAfterModal();
   });
 
@@ -127,6 +130,7 @@
       nextExamIndex: 0, // 0 to 8
       examHistory: [], // { date, examId, examTitle, score, wrongQuestionIds }
       resolvedExamErrors: {}, // { [questionId]: true }
+      practiceWrongErrors: {}, // { [questionKey]: { id, examId, examTitle, number, text } }
       resolvedVfErrors: {}, // { [cardId]: true }
     };
   }
@@ -209,6 +213,7 @@
         if (!st.cardErrorsToday || typeof st.cardErrorsToday !== 'object') st.cardErrorsToday = {};
         if (!st.cardErrorsTotal || typeof st.cardErrorsTotal !== 'object') st.cardErrorsTotal = {};
         if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') st.resolvedExamErrors = {};
+        if (!st.practiceWrongErrors || typeof st.practiceWrongErrors !== 'object') st.practiceWrongErrors = {};
         if (!st.resolvedVfErrors || typeof st.resolvedVfErrors !== 'object') st.resolvedVfErrors = {};
         if (!Array.isArray(st.examHistory)) st.examHistory = [];
         if (typeof st.examsTodayCount !== 'number' || Number.isNaN(st.examsTodayCount) || st.examsTodayCount < 0) st.examsTodayCount = 0;
@@ -409,6 +414,22 @@
     }
   }
 
+  function syncVisibleStarButtons(type, key, isStarred) {
+    if (type === 'cards' && currentFeedbackCardId === key) {
+      applyStarButtonVisual(document.getElementById('btn-star-vf'), isStarred, false);
+    }
+    if (type === 'questions') {
+      for (const btn of document.querySelectorAll('#result-review-container .btn-star-q')) {
+        if (btn.dataset.starKey === key) {
+          applyStarButtonVisual(btn, isStarred, false);
+          const card = btn.closest('.review-q-card');
+          if (card) card.dataset.starred = isStarred ? 'true' : 'false';
+        }
+      }
+      updateResultStarredFilterCount();
+    }
+  }
+
   function formatDuration(totalSeconds) {
     const secs = Math.max(0, Math.floor(Number(totalSeconds) || 0));
     const mins = Math.floor(secs / 60);
@@ -577,13 +598,23 @@
   function findExamQuestion(subjData, examId, wrongItem) {
     if (!subjData || !Array.isArray(subjData.exams)) return null;
     const exam = subjData.exams.find((ex) => ex.id === examId);
-    if (!exam || !Array.isArray(exam.questions)) return null;
-    if (wrongItem.id) {
-      const byId = exam.questions.find((q) => q.id === wrongItem.id);
-      if (byId) return byId;
+    if (exam && Array.isArray(exam.questions)) {
+      if (wrongItem.id) {
+        const byId = exam.questions.find((q) => q.id === wrongItem.id);
+        if (byId) return byId;
+      }
+      const idx = Number(wrongItem.number) - 1;
+      if (Number.isInteger(idx) && idx >= 0 && idx < exam.questions.length) {
+        return exam.questions[idx];
+      }
     }
-    const idx = Number(wrongItem.number) - 1;
-    return Number.isInteger(idx) && idx >= 0 && idx < exam.questions.length ? exam.questions[idx] : null;
+    if (wrongItem.id) {
+      for (const ex of subjData.exams) {
+        const byId = (ex.questions || []).find((q) => q.id === wrongItem.id);
+        if (byId) return byId;
+      }
+    }
+    return null;
   }
 
   function getExamQuestionKey(question, fallbackExamId, fallbackNumber) {
@@ -591,26 +622,40 @@
   }
 
   function getPendingExamErrorQuestions(subjData, st) {
-    if (!subjData || !st || !Array.isArray(st.examHistory)) return [];
+    if (!subjData || !st) return [];
     const resolved = st.resolvedExamErrors || {};
     const collected = new Map();
 
-    for (const h of st.examHistory) {
-      const wrongList = Array.isArray(h.wrongQuestions) ? h.wrongQuestions : [];
-      for (const w of wrongList) {
-        const q = findExamQuestion(subjData, h.examId, w);
-        if (!q) continue;
-        const qKey = getExamQuestionKey(q, h.examId, w.number);
-        if (resolved[qKey]) continue;
-        if (!collected.has(qKey)) {
-          collected.set(qKey, {
-            ...q,
-            _errorKey: qKey,
-            _sourceExamTitle: h.examTitle,
-          });
+    if (Array.isArray(st.examHistory)) {
+      for (const h of st.examHistory) {
+        const wrongList = Array.isArray(h.wrongQuestions) ? h.wrongQuestions : [];
+        for (const w of wrongList) {
+          const q = findExamQuestion(subjData, h.examId, w);
+          if (!q) continue;
+          const qKey = getExamQuestionKey(q, h.examId, w.number);
+          if (resolved[qKey]) continue;
+          if (!collected.has(qKey)) {
+            collected.set(qKey, {
+              ...q,
+              _errorKey: qKey,
+              _sourceExamTitle: h.examTitle,
+            });
+          }
         }
       }
     }
+
+    for (const [qKey, pItem] of Object.entries(st.practiceWrongErrors || {})) {
+      if (!pItem || resolved[qKey] || collected.has(qKey)) continue;
+      const q = findExamQuestion(subjData, pItem.examId, pItem);
+      if (!q) continue;
+      collected.set(qKey, {
+        ...q,
+        _errorKey: qKey,
+        _sourceExamTitle: pItem.examTitle || 'Treino Livre',
+      });
+    }
+
     return Array.from(collected.values());
   }
 
@@ -770,6 +815,47 @@
     return { pendingVf, pendingExam };
   }
 
+  function collectStarredCards() {
+    const subjects = getSubjectsMap();
+    const starredCards = [];
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      if (!subj) continue;
+      for (const c of subj.cards) {
+        if (isStarredItem('cards', c.id)) {
+          starredCards.push({ ...c, _subjKey: key, _subjTitle: subj.title });
+        }
+      }
+    }
+    return starredCards;
+  }
+
+  function collectStarredQuestions() {
+    const subjects = getSubjectsMap();
+    const starredQuestions = [];
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      if (!subj) continue;
+      for (const ex of subj.exams) {
+        ex.questions.forEach((q, idx) => {
+          const rawKey = getExamQuestionKey(q, ex.id, idx + 1);
+          const starKey = `${key}:${rawKey}`;
+          if (isStarredItem('questions', starKey)) {
+            starredQuestions.push({
+              ...q,
+              _subjKey: key,
+              _subjTitle: subj.title,
+              _rawErrorKey: rawKey,
+              _practiceKey: starKey,
+              _sourceExamTitle: `${subj.title} • ${ex.title}`,
+            });
+          }
+        });
+      }
+    }
+    return starredQuestions;
+  }
+
   function renderDashboard() {
     const subjects = getSubjectsMap();
     const container = document.getElementById('subject-cards-container');
@@ -815,6 +901,9 @@
         ? getExamDraftStatus('mixed:mixed-general-practice', savedMixedOrder, (q, idx) => q._practiceKey || String(idx))
         : { hasDraft: false };
 
+      const starredCards = collectStarredCards();
+      const starredQuestions = collectStarredQuestions();
+
       const mixedButtons = [];
       if (totalPendingVfErrors > 0) {
         mixedButtons.push(`<button type="button" class="outline secondary btn-xs" id="btn-mixed-vf-errors">🎯 Erros V/F (${totalPendingVfErrors})</button>`);
@@ -830,6 +919,12 @@
           ? `📝 Continuar Simulado Misto ${formatDraftButtonProgress(mixedPracticeDraft)}`
           : `🎲 Simulado Geral Misto (${Math.min(12, byPracticeKey.size)} Q)`;
         mixedButtons.push(`<button type="button" class="outline secondary btn-xs" id="btn-mixed-general-practice" title="Treino livre sem spoiler com questões de provas já realizadas">${practiceLabel}</button>`);
+      }
+      if (starredCards.length > 0) {
+        mixedButtons.push(`<button type="button" class="outline secondary btn-xs" id="btn-mixed-starred-vf">⭐ Favoritas V/F (${starredCards.length})</button>`);
+      }
+      if (starredQuestions.length > 0) {
+        mixedButtons.push(`<button type="button" class="outline secondary btn-xs" id="btn-mixed-starred-exams">⭐ Questões Favoritas (${starredQuestions.length})</button>`);
       }
 
       const mixedActionsHtml = mixedButtons.length > 0
@@ -855,6 +950,8 @@
       document.getElementById('btn-mixed-vf-errors')?.addEventListener('click', () => openMixedVfErrorDrill());
       document.getElementById('btn-mixed-exam-errors')?.addEventListener('click', () => openMixedExamErrorDrill());
       document.getElementById('btn-mixed-general-practice')?.addEventListener('click', () => openMixedCompletedPractice());
+      document.getElementById('btn-mixed-starred-vf')?.addEventListener('click', () => openStarredVfPractice());
+      document.getElementById('btn-mixed-starred-exams')?.addEventListener('click', () => openStarredExamPractice());
     }
 
     const nextDayBanner = document.getElementById('next-day-banner');
@@ -1376,7 +1473,7 @@
     };
   }
 
-  function openCustomVfPractice(cardsList) {
+  function openCustomVfPractice(cardsList, title = 'Treino Personalizado — Glossário', modeText = null) {
     if (!Array.isArray(cardsList) || cardsList.length === 0) {
       showToast('Selecione pelo menos 1 cartão V/F no glossário para treinar!');
       return;
@@ -1392,15 +1489,28 @@
       boxes: Object.fromEntries(cardsList.map((c) => [c.id, 0])),
     };
 
-    document.getElementById('vf-subject-title').textContent = 'Treino Personalizado — Glossário';
+    document.getElementById('vf-subject-title').textContent = title;
     const modeLabel = document.getElementById('vf-mode-label');
     if (modeLabel) {
-      modeLabel.textContent = `🔍 Foco em ${cardsList.length} card(s) selecionado(s) no glossário • Progresso diário preservado`;
+      modeLabel.textContent = modeText || `🔍 Foco em ${cardsList.length} card(s) selecionado(s) no glossário • Progresso diário preservado`;
       modeLabel.hidden = false;
     }
     document.getElementById('vf-feedback-box').hidden = true;
     showView('view-flashcards');
     renderCurrentFlashcard();
+  }
+
+  function openStarredVfPractice() {
+    const starredCards = collectStarredCards();
+    if (starredCards.length === 0) {
+      showToast('Você ainda não marcou nenhum cartão V/F com ⭐.');
+      return;
+    }
+    openCustomVfPractice(
+      starredCards,
+      '⭐ Favoritas V/F',
+      `⭐ Treinando ${starredCards.length} cartão(ões) favoritado(s) • Progresso diário preservado`
+    );
   }
 
   function openMixedVfErrorDrill() {
@@ -1618,6 +1728,13 @@
           </div>`
         : '';
 
+      const sessionWrongCards = cards
+        .filter((c) => vfSessionStats.wrongCardIds.has(c.id))
+        .map((c) => (c._subjKey ? c : { ...c, _subjKey: activeSubjectKey, _subjTitle: subj.title }));
+      const sessionWrongBtnHtml = sessionWrongCards.length > 0
+        ? `<button type="button" class="outline primary" id="btn-go-to-session-errors-now">🎯 Reforçar ${sessionWrongCards.length} erro(s) desta sessão</button>`
+        : '';
+
       const doneLi = document.createElement('li');
       if (isCustomMode) {
         doneLi.innerHTML = `
@@ -1627,6 +1744,7 @@
             ${sessionSummaryHtml}
             <p class="muted-text" style="margin-bottom: 1.25rem;">Seu progresso diário no painel foi preservado intacto.</p>
             <div class="grid">
+              ${sessionWrongBtnHtml}
               <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
             </div>
           </article>
@@ -1644,6 +1762,7 @@
                   ? '<button type="button" class="primary" id="btn-go-to-exam-now">📝 Ir para a Prova Agora</button>'
                   : ''
               }
+              ${sessionWrongBtnHtml}
               <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
             </div>
           </article>
@@ -1666,6 +1785,7 @@
                   ? `<button type="button" class="outline secondary" id="btn-go-to-errors-now">🎯 Treinar Erros V/F (${pendingVfErrorsCount})</button>`
                   : ''
               }
+              ${sessionWrongBtnHtml}
               <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
             </div>
           </article>
@@ -1678,6 +1798,13 @@
       });
       document.getElementById('btn-go-to-errors-now')?.addEventListener('click', () => {
         openFlashcards(activeSubjectKey, 'errors');
+      });
+      document.getElementById('btn-go-to-session-errors-now')?.addEventListener('click', () => {
+        openCustomVfPractice(
+          sessionWrongCards,
+          '🎯 Reforço da Sessão V/F',
+          `🎯 Praticando os ${sessionWrongCards.length} cartão(ões) com erro na sessão anterior • Progresso diário preservado`
+        );
       });
       document.getElementById('btn-done-back-dash')?.addEventListener('click', () => {
         renderDashboard();
@@ -2468,26 +2595,49 @@
     });
   }
 
-  function openCustomExamPractice(questionsList) {
+  function openCustomExamPractice(questionsList, options = {}) {
     if (!Array.isArray(questionsList) || questionsList.length === 0) {
       showToast('Selecione pelo menos 1 questão de prova já feita no glossário para treinar!');
       return;
     }
 
-    const draftKey = 'mixed:custom-glossary-practice';
+    const {
+      id = 'custom-glossary-practice',
+      subjTitle = 'Treino pelo Glossário',
+      title = `Questões Selecionadas (${questionsList.length} Q)`,
+      attemptLabel = `🔍 ${questionsList.length} questão(ões) filtrada(s) no glossário • Sem gastar tentativas`,
+      noticeHtml = '🔍 <strong>Treino pelo Glossário:</strong> Pratique as questões filtradas sem gastar tentativas do dia. Acertos também dão baixa nas pendências!',
+    } = options;
+
+    const draftKey = `mixed:${id}`;
     clearExamDraftState(draftKey, true);
     renderExamView({
       subjKey: 'mixed',
-      subj: { title: 'Treino pelo Glossário' },
+      subj: { title: subjTitle },
       examObj: {
-        id: 'custom-glossary-practice',
-        title: `Questões Selecionadas (${questionsList.length} Q)`,
+        id,
+        title,
         questions: questionsList,
-        _practiceSubjTitle: 'Treino pelo Glossário',
+        _practiceSubjTitle: subjTitle,
       },
-      attemptLabel: `🔍 ${questionsList.length} questão(ões) filtrada(s) no glossário • Sem gastar tentativas`,
-      noticeHtml: '🔍 <strong>Treino pelo Glossário:</strong> Pratique as questões filtradas sem gastar tentativas do dia. Acertos também dão baixa nas pendências!',
+      attemptLabel,
+      noticeHtml,
       mode: 'practice',
+    });
+  }
+
+  function openStarredExamPractice() {
+    const starredQuestions = collectStarredQuestions();
+    if (starredQuestions.length === 0) {
+      showToast('Você ainda não marcou nenhuma questão de prova com ⭐.');
+      return;
+    }
+    openCustomExamPractice(starredQuestions, {
+      id: 'starred-questions-practice',
+      subjTitle: '⭐ Questões Favoritas',
+      title: `Favoritas (${starredQuestions.length} Q)`,
+      attemptLabel: `⭐ ${starredQuestions.length} questão(ões) favoritada(s) • Sem gastar tentativas`,
+      noticeHtml: '⭐ <strong>Questões Favoritas:</strong> Pratique suas questões marcadas com estrela sem gastar tentativas do dia. Acertos também dão baixa nas pendências!',
     });
   }
 
@@ -2837,6 +2987,14 @@
     updateExamNavAndProgress();
   });
 
+  document.getElementById('exam-questions-container').addEventListener('focusin', (e) => {
+    if (!activeExamObj || examFocusMode) return;
+    const card = e.target.closest('.question-card');
+    if (card && !card.hidden && card.dataset.qIndex !== undefined) {
+      setCurrentExamPill(Number(card.dataset.qIndex));
+    }
+  });
+
   // Keyboard shortcuts for Exam view
   document.addEventListener('keydown', (e) => {
     const examView = document.getElementById('view-exam');
@@ -2867,6 +3025,15 @@
       if (flagBtn) {
         e.preventDefault();
         flagBtn.click();
+      }
+      return;
+    }
+
+    if (key === 'c') {
+      const clearBtn = document.querySelector(`.question-card[data-q-index="${examCurrentIndex}"] .btn-clear-question`);
+      if (clearBtn && !clearBtn.hidden) {
+        e.preventDefault();
+        clearBtn.click();
       }
       return;
     }
@@ -2957,18 +3124,40 @@
     toggleBtn.textContent = anyClosed ? '📖 Abrir comentários' : '🙈 Recolher comentários';
   }
 
+  function updateResultStarredFilterCount() {
+    const reviewContainer = document.getElementById('result-review-container');
+    const btnStarred = document.getElementById('btn-filter-starred');
+    if (!reviewContainer || !btnStarred) return;
+    const starredCount = reviewContainer.querySelectorAll('.review-q-card[data-starred="true"]').length;
+    btnStarred.textContent = `⭐ Favoritas (${starredCount})`;
+    btnStarred.disabled = starredCount === 0;
+    if (starredCount === 0 && btnStarred.classList.contains('primary')) {
+      applyResultReviewFilter('all');
+    }
+  }
+
   function applyResultReviewFilter(filterMode) {
     const reviewContainer = document.getElementById('result-review-container');
     const btnAll = document.getElementById('btn-filter-all');
     const btnWrong = document.getElementById('btn-filter-wrong');
+    const btnStarred = document.getElementById('btn-filter-starred');
     if (!reviewContainer || !btnAll || !btnWrong) return;
 
-    const showOnlyWrong = filterMode === 'wrong';
-    btnAll.className = showOnlyWrong ? 'btn-sm outline secondary' : 'btn-sm primary';
-    btnWrong.className = showOnlyWrong ? 'btn-sm primary' : 'btn-sm outline secondary';
+    const mode = filterMode === 'wrong' || filterMode === 'starred' ? filterMode : 'all';
+    btnAll.className = mode === 'all' ? 'btn-sm primary' : 'btn-sm outline secondary';
+    btnWrong.className = mode === 'wrong' ? 'btn-sm primary' : 'btn-sm outline secondary';
+    if (btnStarred) {
+      btnStarred.className = mode === 'starred' ? 'btn-sm primary' : 'btn-sm outline secondary';
+    }
 
     for (const card of reviewContainer.querySelectorAll('.review-q-card')) {
-      card.hidden = showOnlyWrong && card.classList.contains('is-correct');
+      if (mode === 'wrong') {
+        card.hidden = card.classList.contains('is-correct');
+      } else if (mode === 'starred') {
+        card.hidden = card.dataset.starred !== 'true';
+      } else {
+        card.hidden = false;
+      }
     }
     updateToggleAllExplanationsBtn();
   }
@@ -3053,9 +3242,18 @@
       : `Nota: ${score} / ${totalQ} ${passed ? '🎉' : '💪'}`;
 
     ctaContainer.innerHTML = '';
-    const durationNote = typeof durationSeconds === 'number' && durationSeconds > 0
-      ? ` (⏱️ Tempo: <strong>${formatDuration(durationSeconds)}</strong>)`
-      : '';
+    let durationNote = '';
+    if (typeof durationSeconds === 'number' && durationSeconds > 0) {
+      let pacePart = '';
+      if (totalQ > 0) {
+        const avgPerQ = Math.max(1, Math.round(durationSeconds / totalQ));
+        const avgLabel = avgPerQ >= 60
+          ? `${Math.floor(avgPerQ / 60)}m${String(avgPerQ % 60).padStart(2, '0')}s/Q`
+          : `${avgPerQ}s/Q`;
+        pacePart = ` • ~${avgLabel}`;
+      }
+      durationNote = ` (⏱️ Tempo: <strong>${formatDuration(durationSeconds)}</strong>${pacePart})`;
+    }
 
     if (isErrorDrill) {
       const isMixedDrill = subjKey === 'mixed';
@@ -3287,6 +3485,7 @@
       const qRawKey = q._rawErrorKey || q._errorKey || getExamQuestionKey(q, baseExamId, idx + 1);
       const qStarKey = `${qSubjKey}:${qRawKey}`;
       const isQStarred = isStarredItem('questions', qStarKey);
+      card.dataset.starred = isQStarred ? 'true' : 'false';
 
       card.innerHTML = `
         <div class="review-q-head">
@@ -3312,6 +3511,7 @@
       reviewContainer.appendChild(card);
     });
 
+    updateResultStarredFilterCount();
     updateToggleAllExplanationsBtn();
     showView('view-exam-result');
   }
@@ -3335,6 +3535,12 @@
       const starKey = starBtn.dataset.starKey;
       const isStarred = toggleStarItem('questions', starKey);
       applyStarButtonVisual(starBtn, isStarred, false);
+      const card = starBtn.closest('.review-q-card');
+      if (card) card.dataset.starred = isStarred ? 'true' : 'false';
+      updateResultStarredFilterCount();
+      if (!isStarred && document.getElementById('btn-filter-starred')?.classList.contains('primary')) {
+        applyResultReviewFilter('starred');
+      }
       showToast(isStarred ? '⭐ Questão adicionada às favoritas!' : '☆ Questão removida das favoritas.');
       return;
     }
@@ -3394,6 +3600,9 @@
       const qKey = getExamQuestionKey(q, activeExamObj.id, idx + 1);
       if (userAnswers[idx] === q.correct) {
         score++;
+        if (st.practiceWrongErrors?.[qKey]) {
+          delete st.practiceWrongErrors[qKey];
+        }
       } else {
         if (st.resolvedExamErrors && st.resolvedExamErrors[qKey]) {
           delete st.resolvedExamErrors[qKey];
@@ -3467,6 +3676,9 @@
             targetSt.resolvedExamErrors = {};
           }
           targetSt.resolvedExamErrors[qKey] = true;
+          if (targetSt.practiceWrongErrors?.[qKey]) {
+            delete targetSt.practiceWrongErrors[qKey];
+          }
         }
       } else {
         wrongQuestions.push({
@@ -3516,9 +3728,44 @@
       }
       if (userAnswers[idx] === q.correct) {
         score++;
-        if (targetSt) targetSt.resolvedExamErrors[qKey] = true;
+        if (targetSt) {
+          targetSt.resolvedExamErrors[qKey] = true;
+          if (targetSt.practiceWrongErrors?.[qKey]) {
+            delete targetSt.practiceWrongErrors[qKey];
+          }
+        }
       } else {
-        if (targetSt) delete targetSt.resolvedExamErrors[qKey];
+        if (targetSt) {
+          delete targetSt.resolvedExamErrors[qKey];
+          if (!targetSt.practiceWrongErrors || typeof targetSt.practiceWrongErrors !== 'object') {
+            targetSt.practiceWrongErrors = {};
+          }
+          const targetSubj = getSubjectsMap()[targetSubjKey];
+          let matchedExam = null;
+          let matchedNum = idx + 1;
+          if (targetSubj) {
+            for (const ex of targetSubj.exams) {
+              const foundIdx = ex.questions.findIndex((cand, cIdx) => getExamQuestionKey(cand, ex.id, cIdx + 1) === qKey);
+              if (foundIdx !== -1) {
+                matchedExam = ex;
+                matchedNum = foundIdx + 1;
+                break;
+              }
+            }
+          }
+          const alreadyInHistory = (targetSt.examHistory || []).some((h) =>
+            (h.wrongQuestions || []).some((w) => (w.id && q.id && w.id === q.id) || (h.examId === matchedExam?.id && Number(w.number) === matchedNum))
+          );
+          if (!alreadyInHistory) {
+            targetSt.practiceWrongErrors[qKey] = {
+              id: q.id,
+              examId: matchedExam?.id || baseExamId,
+              examTitle: matchedExam?.title || q._sourceExamTitle || activeExamObj._sourceExamTitle || activeExamObj.title,
+              number: matchedNum,
+              text: q.text,
+            };
+          }
+        }
         wrongQuestions.push({
           id: q.id,
           number: idx + 1,
@@ -3923,6 +4170,10 @@
     const onlyPending = Boolean(document.getElementById('glossary-only-pending')?.checked);
     const onlyStarred = Boolean(document.getElementById('glossary-only-starred')?.checked);
     const hideAnswers = Boolean(document.getElementById('glossary-hide-answers')?.checked);
+    const clearFiltersBtn = document.getElementById('btn-glossary-clear-filters');
+    if (clearFiltersBtn) {
+      clearFiltersBtn.hidden = !(query || onlyErrors || onlyPending || onlyStarred || hideAnswers || glossarySubjectFilter !== 'all');
+    }
     const subjects = getSubjectsMap();
     const keys = glossarySubjectFilter === 'all' ? ['quimica', 'biologia', 'fisica'] : [glossarySubjectFilter];
 
@@ -4169,12 +4420,30 @@
     const starType = starBtn.dataset.starType;
     const starKey = starBtn.dataset.starKey;
     const isStarred = toggleStarItem(starType, starKey);
+    syncVisibleStarButtons(starType, starKey, isStarred);
     if (document.getElementById('glossary-only-starred')?.checked && !isStarred) {
       renderGlossaryResults();
     } else {
       applyStarButtonVisual(starBtn, isStarred, true);
     }
     showToast(isStarred ? '⭐ Adicionado às favoritas!' : '☆ Removido das favoritas.');
+  });
+
+  document.getElementById('btn-glossary-clear-filters')?.addEventListener('click', () => {
+    const searchEl = document.getElementById('glossary-search-input');
+    if (searchEl) searchEl.value = '';
+    for (const id of ['glossary-only-errors', 'glossary-only-pending', 'glossary-only-starred', 'glossary-hide-answers']) {
+      const cb = document.getElementById(id);
+      if (cb) cb.checked = false;
+    }
+    glossarySubjectFilter = 'all';
+    const subjGroup = document.getElementById('glossary-subject-filters');
+    if (subjGroup) {
+      for (const b of subjGroup.querySelectorAll('button[data-subj]')) {
+        b.className = b.dataset.subj === 'all' ? 'btn-xs primary' : 'btn-xs outline secondary';
+      }
+    }
+    renderGlossaryResults();
   });
 
   document.getElementById('glossary-source-tabs')?.addEventListener('click', (e) => {
