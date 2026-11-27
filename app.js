@@ -155,6 +155,7 @@
         examDrafts: {},
         examDraftFlags: {},
         examDraftTimers: {},
+        examDraftOrders: {},
         subjects: {},
       };
     }
@@ -180,6 +181,9 @@
     }
     if (!saved.examDraftTimers || typeof saved.examDraftTimers !== 'object') {
       saved.examDraftTimers = {};
+    }
+    if (!saved.examDraftOrders || typeof saved.examDraftOrders !== 'object') {
+      saved.examDraftOrders = {};
     }
 
     for (const key of Object.keys(subjects)) {
@@ -307,6 +311,7 @@
     appState.examDrafts = {};
     appState.examDraftFlags = {};
     appState.examDraftTimers = {};
+    appState.examDraftOrders = {};
     lastVfUndoSnapshot = null;
     saveState();
     if (shouldRender) {
@@ -341,8 +346,20 @@
   let examStartedAt = null;
   let examTimerPaused = false;
   let examTimerInterval = null;
+  function createEmptyVfSessionStats() {
+    return {
+      answered: 0,
+      correct: 0,
+      wrong: 0,
+      wrongCardIds: new Set(),
+      wrongTopics: [],
+    };
+  }
+
   let lastVfUndoSnapshot = null;
   let vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
+  let vfSessionStats = createEmptyVfSessionStats();
+  let activeResultReviewContext = null;
 
   function formatDuration(totalSeconds) {
     const secs = Math.max(0, Math.floor(Number(totalSeconds) || 0));
@@ -377,6 +394,10 @@
       btn.title = examTimerPaused
         ? 'Cronômetro pausado — clique ou aperte P para retomar'
         : 'Pausar cronômetro (atalho P)';
+    }
+    const btnClearDraft = document.getElementById('btn-clear-exam-draft');
+    if (btnClearDraft && elapsed > 0) {
+      btnClearDraft.disabled = false;
     }
   }
 
@@ -544,6 +565,130 @@
       .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0));
   }
 
+  function getExamDraftStatus(draftKey, questions, keyResolver = (q, idx) => String(idx)) {
+    const draftMap = (draftKey && appState.examDrafts && appState.examDrafts[draftKey]) || {};
+    const answered = questions.reduce((acc, q, idx) => {
+      const val = draftMap[keyResolver(q, idx)];
+      return acc + (val !== undefined && val !== null && val !== '' ? 1 : 0);
+    }, 0);
+    const timer = (draftKey && Number(appState.examDraftTimers?.[draftKey])) || 0;
+    return {
+      answered,
+      total: questions.length,
+      timer,
+      hasDraft: answered > 0 || timer > 0,
+    };
+  }
+
+  function formatDraftButtonProgress(status) {
+    const timerPart = status.timer > 0 ? ` • ⏱️ ${formatDuration(status.timer)}` : '';
+    return `(${status.answered}/${status.total}${timerPart})`;
+  }
+
+  function getEditalExamStats() {
+    const subjects = getSubjectsMap();
+    let totalUniqueExams = 0;
+    let doneUniqueExams = 0;
+    let passedUniqueExams = 0;
+    let totalAttempts = 0;
+    let sumScores = 0;
+
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st) continue;
+      totalUniqueExams += subj.exams.length;
+      for (const h of st.examHistory || []) {
+        if (typeof h.score === 'number' && !Number.isNaN(h.score)) {
+          totalAttempts++;
+          sumScores += h.score;
+        }
+      }
+      for (const ex of subj.exams) {
+        const matches = (st.examHistory || []).filter((h) => h.examId === ex.id || h.examTitle === ex.title);
+        if (matches.length > 0) {
+          doneUniqueExams++;
+          if (matches.some((h) => h.score >= 8 || h.passed)) passedUniqueExams++;
+        }
+      }
+    }
+
+    const avgScore = totalAttempts > 0 ? sumScores / totalAttempts : null;
+    return { totalUniqueExams, doneUniqueExams, passedUniqueExams, totalAttempts, avgScore };
+  }
+
+  function collectMixedPendingExamErrors() {
+    const subjects = getSubjectsMap();
+    const mixedQuestions = [];
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st) continue;
+      for (const q of getPendingExamErrorQuestions(subj, st)) {
+        mixedQuestions.push({
+          ...q,
+          _subjKey: key,
+          _subjTitle: subj.title,
+          _rawErrorKey: q._errorKey,
+          _errorKey: `${key}:${q._errorKey}`,
+          _sourceExamTitle: `${subj.title} • ${q._sourceExamTitle}`,
+        });
+      }
+    }
+    return mixedQuestions;
+  }
+
+  function collectCompletedExamPoolBySubject() {
+    const subjects = getSubjectsMap();
+    const bySubject = {};
+    const byPracticeKey = new Map();
+
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st || !Array.isArray(st.examHistory) || st.examHistory.length === 0) continue;
+
+      const seenExams = new Set();
+      const everWrongSet = new Set();
+      for (const h of st.examHistory) {
+        const matched = subj.exams.find((ex) => ex.id === h.examId) || subj.exams.find((ex) => ex.title === h.examTitle);
+        if (!matched) continue;
+        seenExams.add(matched.id);
+        for (const w of h.wrongQuestions || []) {
+          const wQ = findExamQuestion(subj, matched.id, w);
+          if (wQ) everWrongSet.add(getExamQuestionKey(wQ, matched.id, w.number));
+        }
+      }
+
+      const pendingSet = new Set(getPendingExamErrorQuestions(subj, st).map((q) => q._errorKey));
+      const items = [];
+      for (const ex of subj.exams) {
+        if (!seenExams.has(ex.id)) continue;
+        ex.questions.forEach((q, idx) => {
+          const rawKey = getExamQuestionKey(q, ex.id, idx + 1);
+          const practiceKey = `${key}:${rawKey}`;
+          const priority = pendingSet.has(rawKey) ? 3 : everWrongSet.has(rawKey) ? 2 : 1;
+          const wrapped = {
+            ...q,
+            _subjKey: key,
+            _subjTitle: subj.title,
+            _rawErrorKey: rawKey,
+            _practiceKey: practiceKey,
+            _sourceExamTitle: `${subj.title} • ${ex.title}`,
+            _priority: priority,
+          };
+          items.push(wrapped);
+          byPracticeKey.set(practiceKey, wrapped);
+        });
+      }
+      if (items.length > 0) {
+        bySubject[key] = items;
+      }
+    }
+
+    return { bySubject, byPracticeKey };
+  }
+
   function getTotalPendingErrorsSummary() {
     const subjects = getSubjectsMap();
     let pendingVf = 0;
@@ -574,8 +719,6 @@
       let totalHitsAll = 0;
       let passedSubjects = 0;
       let totalExamsToday = 0;
-      let totalUniqueExams = 0;
-      let doneUniqueExams = 0;
 
       for (const k of subjectKeys) {
         const subj = subjects[k];
@@ -589,33 +732,62 @@
         }
         if (st.passedToday) passedSubjects++;
         totalExamsToday += st.examsTodayCount || 0;
-        totalUniqueExams += subj.exams.length;
-        doneUniqueExams += subj.exams.filter((ex) =>
-          (st.examHistory || []).some((h) => h.examId === ex.id || h.examTitle === ex.title)
-        ).length;
       }
 
+      const { totalUniqueExams, doneUniqueExams, passedUniqueExams, avgScore } = getEditalExamStats();
       const { pendingVf: totalPendingVfErrors, pendingExam: totalPendingExamErrors } = getTotalPendingErrorsSummary();
-      const mixedActionsHtml = (totalPendingVfErrors > 0 || totalPendingExamErrors > 0)
+      const mixedErrorQuestions = totalPendingExamErrors > 0 ? collectMixedPendingExamErrors() : [];
+      const mixedErrorDraft = getExamDraftStatus('mixed:mixed-error-drill', mixedErrorQuestions, (q, idx) => q._errorKey || q.id || String(idx));
+
+      const { byPracticeKey } = collectCompletedExamPoolBySubject();
+      const hasCompletedPool = byPracticeKey.size > 0;
+      const savedMixedOrder = Array.isArray(appState.examDraftOrders?.['mixed:mixed-general-practice'])
+        ? appState.examDraftOrders['mixed:mixed-general-practice'].map((pKey) => byPracticeKey.get(pKey)).filter(Boolean)
+        : [];
+      const mixedPracticeDraft = savedMixedOrder.length > 0
+        ? getExamDraftStatus('mixed:mixed-general-practice', savedMixedOrder, (q, idx) => q._practiceKey || String(idx))
+        : { hasDraft: false };
+
+      const mixedButtons = [];
+      if (totalPendingVfErrors > 0) {
+        mixedButtons.push(`<button type="button" class="outline secondary btn-xs" id="btn-mixed-vf-errors">🎯 Erros V/F (${totalPendingVfErrors})</button>`);
+      }
+      if (totalPendingExamErrors > 0) {
+        const errLabel = mixedErrorDraft.hasDraft
+          ? `📝 Continuar Erros de Prova ${formatDraftButtonProgress(mixedErrorDraft)}`
+          : `🧠 Erros de Prova (${totalPendingExamErrors})`;
+        mixedButtons.push(`<button type="button" class="outline secondary btn-xs" id="btn-mixed-exam-errors">${errLabel}</button>`);
+      }
+      if (hasCompletedPool) {
+        const practiceLabel = mixedPracticeDraft.hasDraft
+          ? `📝 Continuar Simulado Misto ${formatDraftButtonProgress(mixedPracticeDraft)}`
+          : `🎲 Simulado Geral Misto (${Math.min(12, byPracticeKey.size)} Q)`;
+        mixedButtons.push(`<button type="button" class="outline secondary btn-xs" id="btn-mixed-general-practice" title="Treino livre sem spoiler com questões de provas já realizadas">${practiceLabel}</button>`);
+      }
+
+      const mixedActionsHtml = mixedButtons.length > 0
         ? `<div class="global-mixed-actions">
             <small class="muted-text">🌐 <strong>Revisão mista (3 frentes):</strong></small>
-            ${totalPendingVfErrors > 0 ? `<button type="button" class="outline secondary btn-xs" id="btn-mixed-vf-errors">🎯 Erros V/F (${totalPendingVfErrors})</button>` : ''}
-            ${totalPendingExamErrors > 0 ? `<button type="button" class="outline secondary btn-xs" id="btn-mixed-exam-errors">🧠 Erros de Prova (${totalPendingExamErrors})</button>` : ''}
+            ${mixedButtons.join('')}
           </div>`
         : '';
 
+      const avgBadge = avgScore !== null
+        ? ` • 📈 <strong>${avgScore.toFixed(1).replace('.', ',')}/10</strong> média`
+        : '';
       const maxSteps = totalCardsAll * 2 + subjectKeys.length * 2;
       const doneSteps = totalHitsAll + passedSubjects * 2;
       globalSummaryEl.innerHTML = `
         <div class="global-progress-row">
           <span>🎯 <strong>Meta geral do dia:</strong> ${passedSubjects}/${subjectKeys.length} frentes aprovadas</span>
-          <span>🃏 <strong>${totalMasteredAll}/${totalCardsAll}</strong> V/F • 📝 <strong>${totalExamsToday}</strong> hoje • 📚 <strong>${doneUniqueExams}/${totalUniqueExams}</strong> provas do edital</span>
+          <span>🃏 <strong>${totalMasteredAll}/${totalCardsAll}</strong> V/F • 📝 <strong>${totalExamsToday}</strong> hoje • 📚 <strong>${doneUniqueExams}/${totalUniqueExams}</strong> provas (${passedUniqueExams} c/ meta)${avgBadge}</span>
         </div>
         <progress value="${doneSteps}" max="${maxSteps}"></progress>
         ${mixedActionsHtml}
       `;
       document.getElementById('btn-mixed-vf-errors')?.addEventListener('click', () => openMixedVfErrorDrill());
       document.getElementById('btn-mixed-exam-errors')?.addEventListener('click', () => openMixedExamErrorDrill());
+      document.getElementById('btn-mixed-general-practice')?.addEventListener('click', () => openMixedCompletedPractice());
     }
 
     const nextDayBanner = document.getElementById('next-day-banner');
@@ -679,7 +851,11 @@
       const nextDraftTimer = (nextDraftKey && Number(appState.examDraftTimers?.[nextDraftKey])) || 0;
       const hasNextDraft = nextDraftAnswered > 0 || nextDraftTimer > 0;
       const canTakeExam = vfUnlocked && !st.passedToday && st.examsTodayCount < 3;
-      const pendingExamErrorsCount = getPendingExamErrorQuestions(subj, st).length;
+      const pendingExamErrors = getPendingExamErrorQuestions(subj, st);
+      const pendingExamErrorsCount = pendingExamErrors.length;
+      const errorDrillDraft = pendingExamErrorsCount > 0
+        ? getExamDraftStatus(`${key}:error-drill`, pendingExamErrors, (q, idx) => q._errorKey || q.id || String(idx))
+        : { hasDraft: false };
       const pendingVfErrorsCount = getPendingVfErrorCards(subj, st).length;
       const totalCardErrors = Object.values(st.cardErrorsTotal || {}).reduce((acc, n) => acc + (n || 0), 0);
       const topAttentionCards = subj.cards
@@ -751,6 +927,37 @@
       `;
 
       const letters = ['A', 'B', 'C', 'D'];
+      const examPendingHtml = pendingExamErrorsCount > 0
+        ? `
+          <details class="exam-history-details">
+            <summary>🧠 Pendências de Prova (${pendingExamErrorsCount})</summary>
+            <ul class="exam-history-list">
+              ${pendingExamErrors
+                .slice(0, 6)
+                .map((q) => {
+                  const preview = q.text.length > 68 ? `${q.text.slice(0, 68)}…` : q.text;
+                  return `
+                  <li>
+                    <details class="attention-card-details">
+                      <summary>
+                        <span>${escapeHtml(q._sourceExamTitle || 'Prova')} • ${escapeHtml(preview)}</span>
+                        <span class="attention-count-tag">⚠️ Pendente ▾</span>
+                      </summary>
+                      <div class="attention-card-body">
+                        <p>${escapeHtml(q.text)}</p>
+                        <p><strong>Gabarito:</strong> ${letters[q.correct]}) ${escapeHtml(q.options?.[q.correct] || '')}</p>
+                        <p class="muted-text">${escapeHtml(q.explanation)}</p>
+                      </div>
+                    </details>
+                  </li>
+                `;
+                })
+                .join('')}
+              ${pendingExamErrorsCount > 6 ? `<li><span class="muted-text">+ ${pendingExamErrorsCount - 6} outra(s) questão(ões) pendente(s) no treino focado.</span></li>` : ''}
+            </ul>
+          </details>
+        `
+        : '';
       const historyList = (st.examHistory || [])
         .map((h, idx) => ({ ...h, _idx: idx }))
         .reverse();
@@ -856,6 +1063,7 @@
           </div>
           ${examMapHtml}
           ${attentionHtml}
+          ${examPendingHtml}
           ${historyHtml}
         </div>
 
@@ -886,7 +1094,7 @@
           ${
             pendingExamErrorsCount > 0
               ? `<button type="button" class="outline secondary" data-action="start-exam-errors" data-subject="${key}">
-                  🧠 Treinar Erros de Prova (${pendingExamErrorsCount})
+                  ${errorDrillDraft.hasDraft ? `📝 Continuar Erros de Prova ${formatDraftButtonProgress(errorDrillDraft)}` : `🧠 Treinar Erros de Prova (${pendingExamErrorsCount})`}
                 </button>`
               : ''
           }
@@ -1110,6 +1318,7 @@
 
     activeSubjectKey = 'mixed';
     lastVfUndoSnapshot = null;
+    vfSessionStats = createEmptyVfSessionStats();
     vfSession = {
       mode: 'mixed-errors',
       cards: mixedCards,
@@ -1131,6 +1340,7 @@
   function openFlashcards(subjKey, mode = 'daily') {
     activeSubjectKey = subjKey;
     lastVfUndoSnapshot = null;
+    vfSessionStats = createEmptyVfSessionStats();
     const subj = getSubjectsMap()[subjKey];
     const st = appState.subjects[subjKey];
     const modeLabel = document.getElementById('vf-mode-label');
@@ -1245,6 +1455,10 @@
     const filteredQueue = queue.filter((id) => (boxes[id] || 0) < 2);
     setQueue(filteredQueue);
 
+    const skipBtn = document.getElementById('btn-skip-vf');
+    if (skipBtn) {
+      skipBtn.disabled = filteredQueue.length <= 1;
+    }
     const shuffleBtn = document.getElementById('btn-shuffle-vf');
     if (shuffleBtn) {
       shuffleBtn.disabled = filteredQueue.length <= 1;
@@ -1265,12 +1479,30 @@
       const canTakeExamNow = !isMixedErrorMode && st && st.vfCompletedToday && !st.passedToday && st.examsTodayCount < 3;
       const pendingVfErrorsCount = !isMixedErrorMode && st ? getPendingVfErrorCards(subj, st).length : 0;
 
+      const accPct = vfSessionStats.answered > 0
+        ? Math.round((vfSessionStats.correct / vfSessionStats.answered) * 100)
+        : null;
+      const topicsHtml = vfSessionStats.wrongTopics.length > 0
+        ? `<p class="vf-session-topics"><strong>⚠️ Precisaram de reforço nesta sessão:</strong> ${vfSessionStats.wrongTopics.map((t) => escapeHtml(t.topic)).join(' • ')}</p>`
+        : '';
+      const sessionSummaryHtml = vfSessionStats.answered > 0
+        ? `<div class="vf-session-summary">
+            <div class="vf-session-summary-metrics">
+              <span>🎯 Precisão: ${accPct}%</span>
+              <span>✅ ${vfSessionStats.correct} acerto(s)</span>
+              <span>❌ ${vfSessionStats.wrong} erro(s)</span>
+            </div>
+            ${topicsHtml}
+          </div>`
+        : '';
+
       const doneLi = document.createElement('li');
       if (isErrorMode) {
         doneLi.innerHTML = `
           <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
             <h2>🎯 ${isMixedErrorMode ? 'Revisão mista de erros concluída!' : 'Treino de erros concluído!'}</h2>
             <p>Você dominou e deu baixa em todos os <strong>${cards.length} cartões pendentes ${isMixedErrorMode ? 'das 3 frentes' : `de ${escapeHtml(subj.title)}`}</strong>.</p>
+            ${sessionSummaryHtml}
             <p class="muted-text" style="margin-bottom: 1.25rem;">Seu progresso principal no painel foi mantido intacto e esses erros saíram da lista de pendências.</p>
             <div class="grid">
               ${
@@ -1287,6 +1519,7 @@
           <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
             <h2>🎉 Parabéns, Pantoja!</h2>
             <p>Você dominou todos os <strong>30 cartões V/F de ${escapeHtml(subj.title)}</strong> (revisão completa concluída)!</p>
+            ${sessionSummaryHtml}
             <p class="muted-text" style="margin-bottom: 1.25rem;">Agora as provas de ${escapeHtml(subj.title)} estão liberadas.</p>
             <div class="grid">
               ${
@@ -1394,12 +1627,21 @@
       errTotal: cardSt.cardErrorsTotal[currentCardId] || 0,
       vfCompletedToday: Boolean(cardSt.vfCompletedToday),
       wasResolvedVf: Boolean(cardSt.resolvedVfErrors && cardSt.resolvedVfErrors[currentCardId]),
+      statsSnapshot: {
+        answered: vfSessionStats.answered,
+        correct: vfSessionStats.correct,
+        wrong: vfSessionStats.wrong,
+        wrongCardIds: Array.from(vfSessionStats.wrongCardIds),
+        wrongTopics: [...vfSessionStats.wrongTopics],
+      },
     };
 
     const isCorrect = Boolean(userAnswerBoolean) === Boolean(cardObj.answer);
     const liveStatus = document.getElementById('vf-live-status');
 
+    vfSessionStats.answered += 1;
     if (isCorrect) {
+      vfSessionStats.correct += 1;
       const prevBox = boxes[currentCardId] || 0;
       const nextBox = prevBox + 1;
       boxes[currentCardId] = nextBox;
@@ -1435,6 +1677,12 @@
       showCardFeedback(cardObj, userAnswerBoolean, true, nextBox, queueEmpty);
     } else {
       // Wrong answer: resets to Box 0 and goes to middle/back of queue
+      vfSessionStats.wrong += 1;
+      if (!vfSessionStats.wrongCardIds.has(currentCardId)) {
+        vfSessionStats.wrongCardIds.add(currentCardId);
+        const topicLabel = cardObj._subjTitle ? `${cardObj._subjTitle} • ${cardObj.topic}` : cardObj.topic;
+        vfSessionStats.wrongTopics.push({ id: currentCardId, topic: topicLabel });
+      }
       boxes[currentCardId] = 0;
       cardSt.cardErrorsToday[currentCardId] = (cardSt.cardErrorsToday[currentCardId] || 0) + 1;
       cardSt.cardErrorsTotal[currentCardId] = (cardSt.cardErrorsTotal[currentCardId] || 0) + 1;
@@ -1509,6 +1757,10 @@
     if (btnUndo) {
       btnUndo.hidden = !lastVfUndoSnapshot;
     }
+    const skipBtn = document.getElementById('btn-skip-vf');
+    if (skipBtn) {
+      skipBtn.disabled = true;
+    }
     btnNextCard.textContent = queueEmpty ? '🎉 Ver Conclusão →' : 'Próximo Card →';
 
     feedbackBox.hidden = false;
@@ -1537,10 +1789,39 @@
     if (!isErrorMode) {
       cardSt.vfCompletedToday = snap.vfCompletedToday;
     }
+    if (snap.statsSnapshot) {
+      vfSessionStats = {
+        answered: snap.statsSnapshot.answered,
+        correct: snap.statsSnapshot.correct,
+        wrong: snap.statsSnapshot.wrong,
+        wrongCardIds: new Set(snap.statsSnapshot.wrongCardIds),
+        wrongTopics: [...snap.statsSnapshot.wrongTopics],
+      };
+    }
     lastVfUndoSnapshot = null;
     saveState();
     renderCurrentFlashcard();
     showToast('↩️ Última resposta desfeita!');
+  });
+
+  document.getElementById('btn-skip-vf')?.addEventListener('click', () => {
+    const feedbackBox = document.getElementById('vf-feedback-box');
+    if (feedbackBox && !feedbackBox.hidden) return;
+    const { isErrorMode, queue, setQueue, boxes } = getVfRuntime();
+    const pending = queue.filter((id) => (boxes[id] || 0) < 2);
+    if (pending.length <= 1) {
+      showToast('Já há apenas 1 cartão restante na fila.');
+      return;
+    }
+    const skippedId = pending.shift();
+    pending.push(skippedId);
+    setQueue(pending);
+    lastVfUndoSnapshot = null;
+    if (!isErrorMode) {
+      saveState();
+    }
+    renderCurrentFlashcard();
+    showToast('⏭️ Cartão movido para o final da fila.');
   });
 
   document.getElementById('btn-shuffle-vf')?.addEventListener('click', () => {
@@ -1624,6 +1905,9 @@
     } else if (e.key === 'ArrowRight' || key === 'v') {
       e.preventDefault();
       activeItem.querySelector('.btn-vf-true')?.click();
+    } else if (key === 's') {
+      e.preventDefault();
+      document.getElementById('btn-skip-vf')?.click();
     }
   });
 
@@ -1633,7 +1917,9 @@
   let examVisibleObserver = null;
 
   function getExamQuestionDraftKey(q, idx) {
-    return examSessionMode === 'errors' ? (q?._errorKey || q?.id || String(idx)) : String(idx);
+    if (examSessionMode === 'errors') return q?._errorKey || q?.id || String(idx);
+    if (examSessionMode === 'practice' && q?._practiceKey) return q._practiceKey;
+    return String(idx);
   }
 
   function setCurrentExamPill(qIndex) {
@@ -1919,23 +2205,7 @@
   }
 
   function openMixedExamErrorDrill() {
-    const subjects = getSubjectsMap();
-    const mixedQuestions = [];
-    for (const key of ['quimica', 'biologia', 'fisica']) {
-      const subj = subjects[key];
-      const st = appState.subjects[key];
-      if (!subj || !st) continue;
-      for (const q of getPendingExamErrorQuestions(subj, st)) {
-        mixedQuestions.push({
-          ...q,
-          _subjKey: key,
-          _subjTitle: subj.title,
-          _rawErrorKey: q._errorKey,
-          _errorKey: `${key}:${q._errorKey}`,
-          _sourceExamTitle: `${subj.title} • ${q._sourceExamTitle}`,
-        });
-      }
-    }
+    const mixedQuestions = collectMixedPendingExamErrors();
 
     if (mixedQuestions.length === 0) {
       showToast('🎉 Não há erros de prova pendentes nas 3 frentes!');
@@ -1955,6 +2225,89 @@
       attemptLabel: `🌐 ${mixedQuestions.length} questão(ões) errada(s) nas 3 frentes • Não consome tentativas`,
       noticeHtml: '🌐 <strong>Simulado Misto de Erros:</strong> Questões que você acertar aqui saem da lista de pendências da respectiva frente sem gastar suas 3 provas do dia.',
       mode: 'errors',
+    });
+  }
+
+  function shuffleArrayInPlace(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function openMixedCompletedPractice(forceFresh = false) {
+    const draftKey = 'mixed:mixed-general-practice';
+    const { bySubject, byPracticeKey } = collectCompletedExamPoolBySubject();
+    if (byPracticeKey.size === 0) {
+      showToast('Faça pelo menos 1 prova primeiro para liberar o Simulado Geral Misto (sem spoiler)!');
+      return;
+    }
+
+    if (forceFresh) {
+      if (appState.examDrafts?.[draftKey]) delete appState.examDrafts[draftKey];
+      if (appState.examDraftFlags?.[draftKey]) delete appState.examDraftFlags[draftKey];
+      if (appState.examDraftTimers?.[draftKey]) delete appState.examDraftTimers[draftKey];
+      if (appState.examDraftOrders?.[draftKey]) delete appState.examDraftOrders[draftKey];
+    }
+
+    let selected = [];
+    const savedOrder = !forceFresh && Array.isArray(appState.examDraftOrders?.[draftKey])
+      ? appState.examDraftOrders[draftKey]
+      : null;
+
+    if (savedOrder && savedOrder.length > 0) {
+      selected = savedOrder.map((pKey) => byPracticeKey.get(pKey)).filter(Boolean);
+    }
+
+    if (selected.length === 0) {
+      const targetCount = Math.min(12, byPracticeKey.size);
+      const subjectBuckets = ['quimica', 'biologia', 'fisica']
+        .map((k) => {
+          const items = [...(bySubject[k] || [])];
+          shuffleArrayInPlace(items);
+          items.sort((a, b) => b._priority - a._priority);
+          return items;
+        })
+        .filter((b) => b.length > 0);
+
+      const usedKeys = new Set();
+      let roundAdded = true;
+      while (selected.length < targetCount && roundAdded) {
+        roundAdded = false;
+        for (const bucket of subjectBuckets) {
+          if (selected.length >= targetCount) break;
+          while (bucket.length > 0) {
+            const candidate = bucket.shift();
+            if (!usedKeys.has(candidate._practiceKey)) {
+              usedKeys.add(candidate._practiceKey);
+              selected.push(candidate);
+              roundAdded = true;
+              break;
+            }
+          }
+        }
+      }
+
+      shuffleArrayInPlace(selected);
+      if (!appState.examDraftOrders || typeof appState.examDraftOrders !== 'object') {
+        appState.examDraftOrders = {};
+      }
+      appState.examDraftOrders[draftKey] = selected.map((q) => q._practiceKey);
+      saveState();
+    }
+
+    renderExamView({
+      subjKey: 'mixed',
+      subj: { title: 'Simulado Geral Misto' },
+      examObj: {
+        id: 'mixed-general-practice',
+        title: `Revisão de Provas Feitas (${selected.length} Q)`,
+        questions: selected,
+      },
+      attemptLabel: `🎲 ${selected.length} questão(ões) de provas já concluídas • Sem spoiler e sem gastar tentativas`,
+      noticeHtml: '🎲 <strong>Simulado Geral Misto:</strong> Questões equilibradas das 3 frentes sorteadas apenas de provas já feitas (priorizando erros antigos). Acertos também dão baixa nas pendências!',
+      mode: 'practice',
     });
   }
 
@@ -2361,6 +2714,18 @@
     updateToggleAllExplanationsBtn();
   });
 
+  function buildSingleQuestionWhatsAppText({ subj, examObj, q, idx, userAns, hasUserAnswers }) {
+    const letters = ['A', 'B', 'C', 'D'];
+    const lines = [];
+    lines.push(`❓ *DÚVIDA DE PROVA — ${subj.title.toUpperCase()} (${examObj.title})*`);
+    lines.push(`*Q${idx + 1}${q._sourceExamTitle ? ` (${q._sourceExamTitle})` : ''}:* ${q.text}`);
+    if (hasUserAnswers && q.options?.[userAns] !== undefined) {
+      lines.push(`❌ Marquei: ${letters[userAns]}) ${q.options[userAns]}`);
+    }
+    lines.push(`✅ Gabarito: ${letters[q.correct]}) ${q.options?.[q.correct] || ''}`);
+    return lines.join('\n');
+  }
+
   function buildExamErrorsWhatsAppText({ subj, examObj, score, userAnswers, wrongQuestions }) {
     const letters = ['A', 'B', 'C', 'D'];
     const totalQ = examObj.questions.length;
@@ -2435,17 +2800,32 @@
       }
     } else if (isPracticeMode) {
       statusMsg.innerHTML = `🔁 <strong>Treino Livre concluído:</strong> você acertou <strong>${score}/${totalQ}</strong>${durationNote} sem gastar suas tentativas do dia.`;
+      if (subjKey === 'mixed') {
+        const btnNewMixed = document.createElement('button');
+        btnNewMixed.type = 'button';
+        btnNewMixed.className = 'primary';
+        btnNewMixed.textContent = '🎲 Sortear novo Simulado Misto';
+        btnNewMixed.addEventListener('click', () => openMixedCompletedPractice(true));
+        ctaContainer.appendChild(btnNewMixed);
+      }
       const btnRetake = document.createElement('button');
       btnRetake.type = 'button';
-      btnRetake.className = 'primary';
+      btnRetake.className = subjKey === 'mixed' ? 'outline secondary' : 'primary';
       btnRetake.textContent = '🔁 Refazer este treino';
       btnRetake.addEventListener('click', () => {
+        if (subjKey === 'mixed') {
+          if (!appState.examDraftOrders || typeof appState.examDraftOrders !== 'object') {
+            appState.examDraftOrders = {};
+          }
+          appState.examDraftOrders['mixed:mixed-general-practice'] = examObj.questions.map((q) => q._practiceKey).filter(Boolean);
+          saveState();
+        }
         renderExamView({
           subjKey,
           subj,
           examObj,
           attemptLabel: `🔁 Refazendo em modo treino livre • Não consome tentativas do dia`,
-          noticeHtml: '🔁 <strong>Treino Livre:</strong> Refaça esta prova sem gastar suas 3 tentativas diárias. Questões acertadas aqui também saem da lista de pendências.',
+          noticeHtml: '🔁 <strong>Treino Livre:</strong> Refaça estas questões sem gastar suas 3 tentativas diárias. Acertos também dão baixa nas pendências.',
           mode: 'practice',
         });
       });
@@ -2532,6 +2912,7 @@
 
     const reviewContainer = document.getElementById('result-review-container');
     reviewContainer.innerHTML = '';
+    activeResultReviewContext = { subj, examObj, userAnswers, hasUserAnswers };
 
     examObj.questions.forEach((q, idx) => {
       const userAns = hasUserAnswers ? userAnswers[idx] : null;
@@ -2569,7 +2950,12 @@
         : '';
 
       card.innerHTML = `
-        <span class="question-num">Questão ${idx + 1}${q._sourceExamTitle ? ` • ${escapeHtml(q._sourceExamTitle)}` : ''} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
+        <div class="review-q-head">
+          <span class="question-num">Questão ${idx + 1}${q._sourceExamTitle ? ` • ${escapeHtml(q._sourceExamTitle)}` : ''} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
+          <button type="button" class="outline secondary btn-xs btn-copy-single-q" data-q-index="${idx}" title="Copiar apenas esta questão para dúvida no WhatsApp">
+            💬 Copiar dúvida
+          </button>
+        </div>
         <p class="question-text">${escapeHtml(q.text)}</p>
         ${legacyChoiceLine}
         ${optionsReviewHtml}
@@ -2585,6 +2971,29 @@
     updateToggleAllExplanationsBtn();
     showView('view-exam-result');
   }
+
+  document.getElementById('result-review-container')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.btn-copy-single-q');
+    if (!btn || !activeResultReviewContext) return;
+    const idx = Number(btn.dataset.qIndex);
+    const { subj, examObj, userAnswers, hasUserAnswers } = activeResultReviewContext;
+    const q = examObj?.questions?.[idx];
+    if (!q) return;
+    const text = buildSingleQuestionWhatsAppText({
+      subj,
+      examObj,
+      q,
+      idx,
+      userAns: hasUserAnswers ? userAnswers[idx] : null,
+      hasUserAnswers,
+    });
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(`💬 Questão ${idx + 1} copiada para tirar dúvida!`);
+    } catch (err) {
+      showToast('⚠️ Não foi possível copiar automaticamente.');
+    }
+  });
 
   function openHistoryExamResult(subjKey, historyIndex) {
     const subj = getSubjectsMap()[subjKey];
@@ -2741,8 +3150,9 @@
   }
 
   function gradeAndShowPracticeResult(userAnswers, durationSeconds = null) {
-    const subj = getSubjectsMap()[activeSubjectKey];
-    const st = appState.subjects[activeSubjectKey];
+    const isMixedPractice = activeSubjectKey === 'mixed';
+    const subj = isMixedPractice ? { title: 'Simulado Geral Misto' } : getSubjectsMap()[activeSubjectKey];
+    const st = isMixedPractice ? null : appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
     if (appState.examDrafts && appState.examDrafts[draftKey]) {
       delete appState.examDrafts[draftKey];
@@ -2753,8 +3163,8 @@
     if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
       delete appState.examDraftTimers[draftKey];
     }
-    if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') {
-      st.resolvedExamErrors = {};
+    if (appState.examDraftOrders && appState.examDraftOrders[draftKey]) {
+      delete appState.examDraftOrders[draftKey];
     }
 
     const baseExamId = activeExamObj._sourceExamId || activeExamObj.id;
@@ -2762,12 +3172,17 @@
     const wrongQuestions = [];
 
     activeExamObj.questions.forEach((q, idx) => {
-      const qKey = getExamQuestionKey(q, baseExamId, idx + 1);
+      const targetSubjKey = q._subjKey || activeSubjectKey;
+      const targetSt = appState.subjects[targetSubjKey];
+      const qKey = q._rawErrorKey || getExamQuestionKey(q, baseExamId, idx + 1);
+      if (targetSt && (!targetSt.resolvedExamErrors || typeof targetSt.resolvedExamErrors !== 'object')) {
+        targetSt.resolvedExamErrors = {};
+      }
       if (userAnswers[idx] === q.correct) {
         score++;
-        st.resolvedExamErrors[qKey] = true;
+        if (targetSt) targetSt.resolvedExamErrors[qKey] = true;
       } else {
-        delete st.resolvedExamErrors[qKey];
+        if (targetSt) delete targetSt.resolvedExamErrors[qKey];
         wrongQuestions.push({
           id: q.id,
           number: idx + 1,
@@ -2778,13 +3193,14 @@
 
     saveState();
 
+    const passThreshold = Math.ceil(activeExamObj.questions.length * 0.8);
     renderExamResultView({
       subjKey: activeSubjectKey,
       subj,
       st,
       examObj: activeExamObj,
       score,
-      passed: score >= 8,
+      passed: score >= passThreshold,
       userAnswers,
       wrongQuestions,
       isPracticeMode: true,
@@ -2812,24 +3228,10 @@
     lines.push(`📊 *RELATÓRIO DE REVISÃO — PANTOJA (8º ANO)*`);
     lines.push(`📅 Dia ${appState.dayNumber || 1} (${formatDateBR(appState.currentDay)})`);
 
-    let totalUniqueExams = 0;
-    let doneUniqueExams = 0;
-    let passedUniqueExams = 0;
-    for (const key of ['quimica', 'biologia', 'fisica']) {
-      const subj = subjects[key];
-      const st = appState.subjects[key];
-      if (!subj || !st) continue;
-      totalUniqueExams += subj.exams.length;
-      for (const ex of subj.exams) {
-        const matches = (st.examHistory || []).filter((h) => h.examId === ex.id || h.examTitle === ex.title);
-        if (matches.length > 0) {
-          doneUniqueExams++;
-          if (matches.some((h) => h.score >= 8 || h.passed)) passedUniqueExams++;
-        }
-      }
-    }
+    const { totalUniqueExams, doneUniqueExams, passedUniqueExams, avgScore } = getEditalExamStats();
     const { pendingVf, pendingExam } = getTotalPendingErrorsSummary();
-    lines.push(`📚 Edital: ${doneUniqueExams}/${totalUniqueExams} provas feitas (${passedUniqueExams} com meta ≥8) • Pendências: ${pendingVf} V/F, ${pendingExam} de prova`);
+    const avgPart = avgScore !== null ? ` • média ${avgScore.toFixed(1).replace('.', ',')}/10` : '';
+    lines.push(`📚 Edital: ${doneUniqueExams}/${totalUniqueExams} provas feitas (${passedUniqueExams} com meta ≥8${avgPart}) • Pendências: ${pendingVf} V/F, ${pendingExam} de prova`);
     lines.push('');
 
     for (const key of ['quimica', 'biologia', 'fisica']) {
@@ -3341,6 +3743,9 @@
       }
       if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
         delete appState.examDraftTimers[draftKey];
+      }
+      if (appState.examDraftOrders && appState.examDraftOrders[draftKey]) {
+        delete appState.examDraftOrders[draftKey];
       }
       startExamTimer(0);
       saveState();

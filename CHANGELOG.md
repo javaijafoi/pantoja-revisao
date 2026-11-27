@@ -4,6 +4,24 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 9)] — Pular/resumo nos flashcards V/F, pendências de prova no painel e Simulado Geral Misto
+
+### Melhorias implementadas
+1. **Flashcards V/F com botão "Pular", precisão da sessão e resumo final detalhado (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o botão **⏭️ Pular** (`#btn-skip-vf`, atalho `S`) no topo da revisão V/F para enviar o cartão atual ao final da fila sem contabilizar erro (desabilitado quando houver apenas 1 cartão restante ou enquanto o feedback estiver aberto).
+   - Adicionado o rastreamento de desempenho da sessão (`vfSessionStats`) integrado ao **↩️ Desfazer** (`#btn-undo-vf`), exibindo precisão percentual, total de acertos/erros e os tópicos que precisaram de reforço no cartão final de conclusão.
+
+2. **Painel de Pendências de Prova, rascunhos em treinos de erro e cópia individual de dúvida (`app.js`, `style.css`)**
+   - Adicionado o acordeão recolhível **🧠 Pendências de Prova (N)** em cada card do Dashboard (com enunciado, gabarito e comentário das questões erradas ainda não resolvidas, mantendo zero spoiler).
+   - Exibida a retomada de rascunhos (`📝 Continuar ...`) também nos botões **🧠 Treinar Erros de Prova** (por frente e na barra mista global) e corrigido `updateExamTimerBadge()` para habilitar **🧹 Limpar marcações** assim que o cronômetro sair de `00:00`.
+   - Adicionado o botão **💬 Copiar dúvida** (`.btn-copy-single-q` / `buildSingleQuestionWhatsAppText()`) em cada questão do **Gabarito Comentado** para enviar uma única dúvida formatada para o WhatsApp.
+
+3. **Simulado Geral Misto (Sem Spoiler) e indicadores de média/metas no painel e relatório (`app.js`)**
+   - Implementados `collectCompletedExamPoolBySubject()` e `openMixedCompletedPractice()` (botão **🎲 Simulado Geral Misto**), sorteando até 12 questões equilibradas entre Química, Biologia e Física apenas de provas já concluídas (zero spoiler), priorizando erros antigos e dando baixa real nas pendências em modo treino livre (com persistência de ordem/rascunho em `appState.examDraftOrders`).
+   - Adicionado `getEditalExamStats()` para exibir no `#global-day-summary` o total de provas com meta `≥ 8/10` e a média geral (`📈 X,X/10`), além de incluir a média geral na linha de síntese do edital em `generateReportAndSaveText()`.
+
+---
+
 ## [2026-11-27 (Atualização 8)] — Retomada inteligente no simulado, feedback V/F contextualizado e diagnóstico do edital
 
 ### Melhorias implementadas
