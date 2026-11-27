@@ -156,6 +156,7 @@
         examDraftFlags: {},
         examDraftTimers: {},
         examDraftOrders: {},
+        examDraftEliminated: {},
         subjects: {},
       };
     }
@@ -184,6 +185,9 @@
     }
     if (!saved.examDraftOrders || typeof saved.examDraftOrders !== 'object') {
       saved.examDraftOrders = {};
+    }
+    if (!saved.examDraftEliminated || typeof saved.examDraftEliminated !== 'object') {
+      saved.examDraftEliminated = {};
     }
 
     for (const key of Object.keys(subjects)) {
@@ -312,6 +316,7 @@
     appState.examDraftFlags = {};
     appState.examDraftTimers = {};
     appState.examDraftOrders = {};
+    appState.examDraftEliminated = {};
     lastVfUndoSnapshot = null;
     saveState();
     if (shouldRender) {
@@ -351,6 +356,8 @@
       answered: 0,
       correct: 0,
       wrong: 0,
+      currentStreak: 0,
+      bestStreak: 0,
       wrongCardIds: new Set(),
       wrongTopics: [],
     };
@@ -370,6 +377,15 @@
 
   function getCurrentExamDraftKey() {
     return activeSubjectKey && activeExamObj ? `${activeSubjectKey}:${activeExamObj.id}` : '';
+  }
+
+  function clearExamDraftState(draftKey, clearOrder = false) {
+    if (!draftKey) return;
+    if (appState.examDrafts?.[draftKey]) delete appState.examDrafts[draftKey];
+    if (appState.examDraftFlags?.[draftKey]) delete appState.examDraftFlags[draftKey];
+    if (appState.examDraftTimers?.[draftKey]) delete appState.examDraftTimers[draftKey];
+    if (appState.examDraftEliminated?.[draftKey]) delete appState.examDraftEliminated[draftKey];
+    if (clearOrder && appState.examDraftOrders?.[draftKey]) delete appState.examDraftOrders[draftKey];
   }
 
   function getElapsedExamSeconds() {
@@ -1269,12 +1285,17 @@
   function getVfRuntime() {
     const subj = getSubjectsMap()[activeSubjectKey] || { title: 'Revisão Mista', cards: [] };
     const st = appState.subjects[activeSubjectKey] || null;
-    if ((vfSession.mode === 'errors' || vfSession.mode === 'mixed-errors') && Array.isArray(vfSession.cards) && vfSession.cards.length > 0) {
+    const isIsolated = (vfSession.mode === 'errors' || vfSession.mode === 'mixed-errors' || vfSession.mode === 'custom')
+      && Array.isArray(vfSession.cards)
+      && vfSession.cards.length > 0;
+    if (isIsolated) {
       return {
         subj,
         st,
-        isErrorMode: true,
+        isErrorMode: vfSession.mode === 'errors' || vfSession.mode === 'mixed-errors',
         isMixedErrorMode: vfSession.mode === 'mixed-errors',
+        isCustomMode: vfSession.mode === 'custom',
+        isIsolatedMode: true,
         cards: vfSession.cards,
         queue: vfSession.queue,
         setQueue: (q) => { vfSession.queue = q; },
@@ -1286,11 +1307,40 @@
       st,
       isErrorMode: false,
       isMixedErrorMode: false,
+      isCustomMode: false,
+      isIsolatedMode: false,
       cards: subj.cards,
       queue: st.vfQueue || [],
       setQueue: (q) => { st.vfQueue = q; },
       boxes: st.cardBoxes,
     };
+  }
+
+  function openCustomVfPractice(cardsList) {
+    if (!Array.isArray(cardsList) || cardsList.length === 0) {
+      showToast('Selecione pelo menos 1 cartão V/F no glossário para treinar!');
+      return;
+    }
+
+    activeSubjectKey = 'mixed';
+    lastVfUndoSnapshot = null;
+    vfSessionStats = createEmptyVfSessionStats();
+    vfSession = {
+      mode: 'custom',
+      cards: cardsList,
+      queue: cardsList.map((c) => c.id),
+      boxes: Object.fromEntries(cardsList.map((c) => [c.id, 0])),
+    };
+
+    document.getElementById('vf-subject-title').textContent = 'Treino Personalizado — Glossário';
+    const modeLabel = document.getElementById('vf-mode-label');
+    if (modeLabel) {
+      modeLabel.textContent = `🔍 Foco em ${cardsList.length} card(s) selecionado(s) no glossário • Progresso diário preservado`;
+      modeLabel.hidden = false;
+    }
+    document.getElementById('vf-feedback-box').hidden = true;
+    showView('view-flashcards');
+    renderCurrentFlashcard();
   }
 
   function openMixedVfErrorDrill() {
@@ -1426,6 +1476,14 @@
       const qLen = queue.filter((id) => (boxes[id] || 0) < 2).length;
       queueBadge.textContent = `Fila: ${qLen}`;
     }
+    const streakBadge = document.getElementById('vf-streak-badge');
+    if (streakBadge) {
+      const streak = vfSessionStats.currentStreak || 0;
+      streakBadge.hidden = streak < 2;
+      if (streak >= 2) {
+        streakBadge.textContent = `🔥 ${streak} seguidos`;
+      }
+    }
 
     const prog = document.getElementById('vf-progress-bar');
     prog.max = cards.length * 2;
@@ -1442,7 +1500,7 @@
 
   function renderCurrentFlashcard() {
     updateLeitnerCounters();
-    const { subj, st, isErrorMode, isMixedErrorMode, cards, queue, setQueue, boxes } = getVfRuntime();
+    const { subj, st, isErrorMode, isMixedErrorMode, isCustomMode, isIsolatedMode, cards, queue, setQueue, boxes } = getVfRuntime();
     const listEl = document.getElementById('vf-swipe-list');
     const feedbackBox = document.getElementById('vf-feedback-box');
     const swipeHint = document.getElementById('vf-swipe-hint');
@@ -1471,13 +1529,13 @@
     if (filteredQueue.length === 0) {
       if (swipeHint) swipeHint.hidden = true;
       if (keyboardHint) keyboardHint.hidden = true;
-      if (!isErrorMode && st) {
+      if (!isIsolatedMode && st) {
         st.vfCompletedToday = true;
         saveState();
       }
 
-      const canTakeExamNow = !isMixedErrorMode && st && st.vfCompletedToday && !st.passedToday && st.examsTodayCount < 3;
-      const pendingVfErrorsCount = !isMixedErrorMode && st ? getPendingVfErrorCards(subj, st).length : 0;
+      const canTakeExamNow = !isIsolatedMode && st && st.vfCompletedToday && !st.passedToday && st.examsTodayCount < 3;
+      const pendingVfErrorsCount = !isMixedErrorMode && !isCustomMode && st ? getPendingVfErrorCards(subj, st).length : 0;
 
       const accPct = vfSessionStats.answered > 0
         ? Math.round((vfSessionStats.correct / vfSessionStats.answered) * 100)
@@ -1485,19 +1543,35 @@
       const topicsHtml = vfSessionStats.wrongTopics.length > 0
         ? `<p class="vf-session-topics"><strong>⚠️ Precisaram de reforço nesta sessão:</strong> ${vfSessionStats.wrongTopics.map((t) => escapeHtml(t.topic)).join(' • ')}</p>`
         : '';
+      const streakHtml = vfSessionStats.bestStreak >= 2
+        ? `<span>🔥 Melhor sequência: ${vfSessionStats.bestStreak}</span>`
+        : '';
       const sessionSummaryHtml = vfSessionStats.answered > 0
         ? `<div class="vf-session-summary">
             <div class="vf-session-summary-metrics">
               <span>🎯 Precisão: ${accPct}%</span>
               <span>✅ ${vfSessionStats.correct} acerto(s)</span>
               <span>❌ ${vfSessionStats.wrong} erro(s)</span>
+              ${streakHtml}
             </div>
             ${topicsHtml}
           </div>`
         : '';
 
       const doneLi = document.createElement('li');
-      if (isErrorMode) {
+      if (isCustomMode) {
+        doneLi.innerHTML = `
+          <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
+            <h2>🔍 Treino pelo Glossário concluído!</h2>
+            <p>Você dominou todos os <strong>${cards.length} cartões selecionados</strong>.</p>
+            ${sessionSummaryHtml}
+            <p class="muted-text" style="margin-bottom: 1.25rem;">Seu progresso diário no painel foi preservado intacto.</p>
+            <div class="grid">
+              <button type="button" class="outline secondary" id="btn-done-back-dash">← Voltar ao Painel</button>
+            </div>
+          </article>
+        `;
+      } else if (isErrorMode) {
         doneLi.innerHTML = `
           <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
             <h2>🎯 ${isMixedErrorMode ? 'Revisão mista de erros concluída!' : 'Treino de erros concluído!'}</h2>
@@ -1560,7 +1634,7 @@
     const cardSt = appState.subjects[getVfCardSubjectKey(cardObj)] || st;
     const currentBox = boxes[currentCardId] || 0;
     const totalErrs = cardSt?.cardErrorsTotal[currentCardId] || 0;
-    const topicLabel = isMixedErrorMode && cardObj._subjTitle
+    const topicLabel = (isMixedErrorMode || isCustomMode) && cardObj._subjTitle
       ? `${cardObj._subjTitle} • ${cardObj.topic}`
       : cardObj.topic;
     const flagBadge = totalErrs > 0
@@ -1604,7 +1678,7 @@
 
   function handleFlashcardAnswer(userAnswerBoolean) {
     if (document.getElementById('view-flashcards')?.hidden) return;
-    const { subj, st, isErrorMode, cards, queue, boxes } = getVfRuntime();
+    const { subj, st, isErrorMode, isIsolatedMode, cards, queue, boxes } = getVfRuntime();
     if (!queue || queue.length === 0) return;
 
     const queueSnapshot = [...queue];
@@ -1620,6 +1694,7 @@
       sessionMode: vfSession.mode,
       subjKey: cardSubjKey,
       isErrorMode,
+      isIsolatedMode,
       cardId: currentCardId,
       queue: queueSnapshot,
       boxValue: boxes[currentCardId] || 0,
@@ -1631,6 +1706,8 @@
         answered: vfSessionStats.answered,
         correct: vfSessionStats.correct,
         wrong: vfSessionStats.wrong,
+        currentStreak: vfSessionStats.currentStreak,
+        bestStreak: vfSessionStats.bestStreak,
         wrongCardIds: Array.from(vfSessionStats.wrongCardIds),
         wrongTopics: [...vfSessionStats.wrongTopics],
       },
@@ -1642,6 +1719,8 @@
     vfSessionStats.answered += 1;
     if (isCorrect) {
       vfSessionStats.correct += 1;
+      vfSessionStats.currentStreak += 1;
+      vfSessionStats.bestStreak = Math.max(vfSessionStats.bestStreak, vfSessionStats.currentStreak);
       const prevBox = boxes[currentCardId] || 0;
       const nextBox = prevBox + 1;
       boxes[currentCardId] = nextBox;
@@ -1659,7 +1738,7 @@
 
       const remaining = queue.filter((id) => (boxes[id] || 0) < 2);
       const queueEmpty = remaining.length === 0;
-      if (queueEmpty && !isErrorMode) {
+      if (queueEmpty && !isIsolatedMode) {
         cardSt.vfCompletedToday = true;
       }
 
@@ -1669,7 +1748,7 @@
           : 'Acertou! Cartão subiu para a Caixa 1.';
       }
 
-      if (!isErrorMode || nextBox >= 2) {
+      if (!isIsolatedMode || (isErrorMode && nextBox >= 2)) {
         saveState();
       }
       updateLeitnerCounters();
@@ -1678,6 +1757,7 @@
     } else {
       // Wrong answer: resets to Box 0 and goes to middle/back of queue
       vfSessionStats.wrong += 1;
+      vfSessionStats.currentStreak = 0;
       if (!vfSessionStats.wrongCardIds.has(currentCardId)) {
         vfSessionStats.wrongCardIds.add(currentCardId);
         const topicLabel = cardObj._subjTitle ? `${cardObj._subjTitle} • ${cardObj.topic}` : cardObj.topic;
@@ -1770,9 +1850,9 @@
   document.getElementById('btn-undo-vf')?.addEventListener('click', () => {
     const snap = lastVfUndoSnapshot;
     if (!snap || snap.sessionSubjectKey !== activeSubjectKey || snap.sessionMode !== vfSession.mode) return;
-    const { isErrorMode, setQueue, boxes } = getVfRuntime();
+    const { isIsolatedMode, setQueue, boxes } = getVfRuntime();
     const cardSt = appState.subjects[snap.subjKey];
-    if (!cardSt || Boolean(isErrorMode) !== Boolean(snap.isErrorMode)) return;
+    if (!cardSt || Boolean(isIsolatedMode) !== Boolean(snap.isIsolatedMode)) return;
 
     boxes[snap.cardId] = snap.boxValue;
     setQueue([...snap.queue]);
@@ -1786,7 +1866,7 @@
     } else {
       delete cardSt.resolvedVfErrors[snap.cardId];
     }
-    if (!isErrorMode) {
+    if (!isIsolatedMode) {
       cardSt.vfCompletedToday = snap.vfCompletedToday;
     }
     if (snap.statsSnapshot) {
@@ -1794,6 +1874,8 @@
         answered: snap.statsSnapshot.answered,
         correct: snap.statsSnapshot.correct,
         wrong: snap.statsSnapshot.wrong,
+        currentStreak: snap.statsSnapshot.currentStreak || 0,
+        bestStreak: snap.statsSnapshot.bestStreak || 0,
         wrongCardIds: new Set(snap.statsSnapshot.wrongCardIds),
         wrongTopics: [...snap.statsSnapshot.wrongTopics],
       };
@@ -1807,7 +1889,7 @@
   document.getElementById('btn-skip-vf')?.addEventListener('click', () => {
     const feedbackBox = document.getElementById('vf-feedback-box');
     if (feedbackBox && !feedbackBox.hidden) return;
-    const { isErrorMode, queue, setQueue, boxes } = getVfRuntime();
+    const { isIsolatedMode, queue, setQueue, boxes } = getVfRuntime();
     const pending = queue.filter((id) => (boxes[id] || 0) < 2);
     if (pending.length <= 1) {
       showToast('Já há apenas 1 cartão restante na fila.');
@@ -1817,7 +1899,7 @@
     pending.push(skippedId);
     setQueue(pending);
     lastVfUndoSnapshot = null;
-    if (!isErrorMode) {
+    if (!isIsolatedMode) {
       saveState();
     }
     renderCurrentFlashcard();
@@ -1825,7 +1907,7 @@
   });
 
   document.getElementById('btn-shuffle-vf')?.addEventListener('click', () => {
-    const { isErrorMode, queue, setQueue, boxes } = getVfRuntime();
+    const { isIsolatedMode, queue, setQueue, boxes } = getVfRuntime();
     const pending = queue.filter((id) => (boxes[id] || 0) < 2);
     if (pending.length <= 1) {
       showToast('Já há apenas 1 cartão restante na fila.');
@@ -1837,7 +1919,7 @@
     }
     setQueue(pending);
     lastVfUndoSnapshot = null;
-    if (!isErrorMode) {
+    if (!isIsolatedMode) {
       saveState();
     }
     renderCurrentFlashcard();
@@ -2060,6 +2142,7 @@
     const draftKey = `${subjKey}:${activeExamObj.id}`;
     const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
     const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
+    const savedEliminated = (appState.examDraftEliminated && appState.examDraftEliminated[draftKey]) || {};
     const savedTimer = (appState.examDraftTimers && appState.examDraftTimers[draftKey]) || 0;
     const totalQ = activeExamObj.questions.length;
     const firstUnansweredIdx = activeExamObj.questions.findIndex((q, idx) => {
@@ -2097,16 +2180,24 @@
       article.dataset.draftKey = dKey;
       const savedChoice = savedDraft[dKey];
       const hasSavedChoice = savedChoice !== undefined && savedChoice !== null && savedChoice !== '';
+      const elimList = Array.isArray(savedEliminated[dKey]) ? savedEliminated[dKey] : [];
 
       const optionsHtml = q.options
-        .map(
-          (optText, optIdx) => `
-          <label class="option-label">
-            <input type="radio" name="q_${idx}" value="${optIdx}" ${hasSavedChoice && Number(savedChoice) === optIdx ? 'checked' : ''}>
-            <span><strong>${letters[optIdx]})</strong> ${escapeHtml(optText)}</span>
-          </label>
-        `
-        )
+        .map((optText, optIdx) => {
+          const isCheckedOpt = hasSavedChoice && Number(savedChoice) === optIdx;
+          const isElim = elimList.includes(optIdx) && !isCheckedOpt;
+          return `
+          <div class="option-row${isElim ? ' is-eliminated' : ''}" data-opt-index="${optIdx}">
+            <label class="option-label">
+              <input type="radio" name="q_${idx}" value="${optIdx}" ${isCheckedOpt ? 'checked' : ''}>
+              <span><strong>${letters[optIdx]})</strong> ${escapeHtml(optText)}</span>
+            </label>
+            <button type="button" class="btn-eliminate-opt" data-q-index="${idx}" data-opt-index="${optIdx}" aria-pressed="${isElim ? 'true' : 'false'}" title="${isElim ? 'Desfazer risco desta alternativa' : 'Riscar alternativa descartada'}">
+              ${isElim ? '↩️' : '✂️'}
+            </button>
+          </div>
+        `;
+        })
         .join('');
 
       article.innerHTML = `
@@ -2245,10 +2336,7 @@
     }
 
     if (forceFresh) {
-      if (appState.examDrafts?.[draftKey]) delete appState.examDrafts[draftKey];
-      if (appState.examDraftFlags?.[draftKey]) delete appState.examDraftFlags[draftKey];
-      if (appState.examDraftTimers?.[draftKey]) delete appState.examDraftTimers[draftKey];
-      if (appState.examDraftOrders?.[draftKey]) delete appState.examDraftOrders[draftKey];
+      clearExamDraftState(draftKey, true);
     }
 
     let selected = [];
@@ -2344,13 +2432,18 @@
     const total = activeExamObj.questions.length;
     const draftKey = activeSubjectKey ? `${activeSubjectKey}:${activeExamObj.id}` : '';
     const savedFlags = (draftKey && appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
+    const savedEliminated = (draftKey && appState.examDraftEliminated && appState.examDraftEliminated[draftKey]) || {};
     let answered = 0;
     let flaggedCount = 0;
+    let eliminatedCount = 0;
 
     for (let i = 0; i < total; i++) {
       const dKey = getExamQuestionDraftKey(activeExamObj.questions[i], i);
       const isChecked = Boolean(form?.querySelector(`input[name="q_${i}"]:checked`));
       const isFlagged = Boolean(savedFlags[dKey]);
+      if (Array.isArray(savedEliminated[dKey])) {
+        eliminatedCount += savedEliminated[dKey].length;
+      }
       if (isChecked) answered++;
       if (isFlagged) flaggedCount++;
       const pill = qNav?.querySelector(`.exam-nav-pill[data-q-index="${i}"]`);
@@ -2377,7 +2470,7 @@
     }
     const btnClearDraft = document.getElementById('btn-clear-exam-draft');
     if (btnClearDraft) {
-      btnClearDraft.disabled = answered === 0 && flaggedCount === 0 && getElapsedExamSeconds() === 0;
+      btnClearDraft.disabled = answered === 0 && flaggedCount === 0 && eliminatedCount === 0 && getElapsedExamSeconds() === 0;
     }
     if (progBar) {
       progBar.max = total;
@@ -2470,6 +2563,50 @@
   });
 
   document.getElementById('exam-questions-container').addEventListener('click', (e) => {
+    const elimBtn = e.target.closest('.btn-eliminate-opt');
+    if (elimBtn && activeExamObj && activeSubjectKey) {
+      const qIdx = Number(elimBtn.dataset.qIndex);
+      const optIdx = Number(elimBtn.dataset.optIndex);
+      const dKey = getExamQuestionDraftKey(activeExamObj.questions[qIdx], qIdx);
+      const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+      const row = elimBtn.closest('.option-row');
+      const radio = row?.querySelector('input[type="radio"]');
+      if (radio?.checked) {
+        showToast('Desmarque ou troque sua resposta antes de riscar esta alternativa.');
+        return;
+      }
+      if (!appState.examDraftEliminated || typeof appState.examDraftEliminated !== 'object') {
+        appState.examDraftEliminated = {};
+      }
+      if (!appState.examDraftEliminated[draftKey] || typeof appState.examDraftEliminated[draftKey] !== 'object') {
+        appState.examDraftEliminated[draftKey] = {};
+      }
+      const currList = Array.isArray(appState.examDraftEliminated[draftKey][dKey])
+        ? [...appState.examDraftEliminated[draftKey][dKey]]
+        : [];
+      const pos = currList.indexOf(optIdx);
+      const willEliminate = pos === -1;
+      if (willEliminate) {
+        currList.push(optIdx);
+      } else {
+        currList.splice(pos, 1);
+      }
+      if (currList.length > 0) {
+        appState.examDraftEliminated[draftKey][dKey] = currList;
+      } else {
+        delete appState.examDraftEliminated[draftKey][dKey];
+      }
+      saveState();
+
+      if (row) row.classList.toggle('is-eliminated', willEliminate);
+      elimBtn.setAttribute('aria-pressed', willEliminate ? 'true' : 'false');
+      elimBtn.textContent = willEliminate ? '↩️' : '✂️';
+      elimBtn.title = willEliminate ? 'Desfazer risco desta alternativa' : 'Riscar alternativa descartada';
+      setCurrentExamPill(qIdx);
+      updateExamNavAndProgress();
+      return;
+    }
+
     const clearBtn = e.target.closest('.btn-clear-question');
     if (clearBtn && activeExamObj && activeSubjectKey) {
       const qIdx = Number(clearBtn.dataset.qIndex);
@@ -2534,6 +2671,28 @@
       }
       appState.examDrafts[draftKey][dKey] = Number(radio.value);
       saveState();
+
+      const optIdx = Number(radio.value);
+      const row = radio.closest('.option-row');
+      if (row?.classList.contains('is-eliminated')) {
+        row.classList.remove('is-eliminated');
+        const elimBtn = row.querySelector('.btn-eliminate-opt');
+        if (elimBtn) {
+          elimBtn.setAttribute('aria-pressed', 'false');
+          elimBtn.textContent = '✂️';
+          elimBtn.title = 'Riscar alternativa descartada';
+        }
+        const elimList = appState.examDraftEliminated?.[draftKey]?.[dKey];
+        if (Array.isArray(elimList)) {
+          const filtered = elimList.filter((i) => i !== optIdx);
+          if (filtered.length > 0) {
+            appState.examDraftEliminated[draftKey][dKey] = filtered;
+          } else {
+            delete appState.examDraftEliminated[draftKey][dKey];
+          }
+          saveState();
+        }
+      }
 
       const card = radio.closest('.question-card');
       if (card) {
@@ -2869,12 +3028,8 @@
       btnCopyErrors.textContent = `💬 Copiar ${wrongCount} erro(s) p/ dúvida`;
       btnCopyErrors.addEventListener('click', async () => {
         const text = buildExamErrorsWhatsAppText({ subj, examObj, score, userAnswers, wrongQuestions });
-        try {
-          await navigator.clipboard.writeText(text);
-          showToast('💬 Erros copiados! Só colar no WhatsApp para tirar dúvida.');
-        } catch (err) {
-          showToast('⚠️ Não foi possível copiar automaticamente.');
-        }
+        const copied = await copyTextToClipboard(text);
+        showToast(copied ? '💬 Erros copiados! Só colar no WhatsApp para tirar dúvida.' : '⚠️ Não foi possível copiar automaticamente.');
       });
       ctaContainer.appendChild(btnCopyErrors);
     }
@@ -2910,6 +3065,12 @@
       applyResultReviewFilter('all');
     }
 
+    const resultNav = document.getElementById('result-question-nav');
+    if (resultNav) {
+      resultNav.innerHTML = '';
+      resultNav.style.gridTemplateColumns = totalQ < 10 ? `repeat(${Math.max(1, totalQ)}, minmax(0, 1fr))` : '';
+    }
+
     const reviewContainer = document.getElementById('result-review-container');
     reviewContainer.innerHTML = '';
     activeResultReviewContext = { subj, examObj, userAnswers, hasUserAnswers };
@@ -2920,8 +3081,20 @@
         ? userAns === q.correct
         : !(wrongById.has(q.id) || wrongByNum.has(idx + 1));
 
+      if (resultNav) {
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = `exam-nav-pill ${isRight ? 'is-result-correct' : 'is-result-wrong'}`;
+        pill.dataset.qIndex = String(idx);
+        pill.textContent = String(idx + 1);
+        pill.title = `Questão ${idx + 1}: ${isRight ? 'Acertou' : 'Errou'}`;
+        pill.setAttribute('aria-label', `Ir para questão ${idx + 1} (${isRight ? 'Acertou' : 'Errou'})`);
+        resultNav.appendChild(pill);
+      }
+
       const card = document.createElement('article');
       card.className = `review-q-card ${isRight ? 'is-correct' : 'is-wrong'}`;
+      card.dataset.qIndex = String(idx);
 
       const optionsReviewHtml = Array.isArray(q.options)
         ? `<ul class="review-options-list">
@@ -2972,6 +3145,19 @@
     showView('view-exam-result');
   }
 
+  document.getElementById('result-question-nav')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.exam-nav-pill');
+    if (!btn) return;
+    const qIdx = btn.dataset.qIndex;
+    const reviewContainer = document.getElementById('result-review-container');
+    const targetCard = reviewContainer?.querySelector(`.review-q-card[data-q-index="${qIdx}"]`);
+    if (!targetCard) return;
+    if (targetCard.hidden) {
+      applyResultReviewFilter('all');
+    }
+    targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
   document.getElementById('result-review-container')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('.btn-copy-single-q');
     if (!btn || !activeResultReviewContext) return;
@@ -2987,12 +3173,8 @@
       userAns: hasUserAnswers ? userAnswers[idx] : null,
       hasUserAnswers,
     });
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast(`💬 Questão ${idx + 1} copiada para tirar dúvida!`);
-    } catch (err) {
-      showToast('⚠️ Não foi possível copiar automaticamente.');
-    }
+    const copied = await copyTextToClipboard(text);
+    showToast(copied ? `💬 Questão ${idx + 1} copiada para tirar dúvida!` : '⚠️ Não foi possível copiar automaticamente.');
   });
 
   function openHistoryExamResult(subjKey, historyIndex) {
@@ -3024,15 +3206,7 @@
     const subj = getSubjectsMap()[activeSubjectKey];
     const st = appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
-    if (appState.examDrafts && appState.examDrafts[draftKey]) {
-      delete appState.examDrafts[draftKey];
-    }
-    if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
-      delete appState.examDraftFlags[draftKey];
-    }
-    if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
-      delete appState.examDraftTimers[draftKey];
-    }
+    clearExamDraftState(draftKey, false);
 
     let score = 0;
     const wrongQuestions = [];
@@ -3098,15 +3272,7 @@
     const subj = isMixedDrill ? { title: 'Revisão Mista' } : getSubjectsMap()[activeSubjectKey];
     const st = isMixedDrill ? null : appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
-    if (appState.examDrafts && appState.examDrafts[draftKey]) {
-      delete appState.examDrafts[draftKey];
-    }
-    if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
-      delete appState.examDraftFlags[draftKey];
-    }
-    if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
-      delete appState.examDraftTimers[draftKey];
-    }
+    clearExamDraftState(draftKey, false);
 
     let score = 0;
     const wrongQuestions = [];
@@ -3154,18 +3320,7 @@
     const subj = isMixedPractice ? { title: 'Simulado Geral Misto' } : getSubjectsMap()[activeSubjectKey];
     const st = isMixedPractice ? null : appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
-    if (appState.examDrafts && appState.examDrafts[draftKey]) {
-      delete appState.examDrafts[draftKey];
-    }
-    if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
-      delete appState.examDraftFlags[draftKey];
-    }
-    if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
-      delete appState.examDraftTimers[draftKey];
-    }
-    if (appState.examDraftOrders && appState.examDraftOrders[draftKey]) {
-      delete appState.examDraftOrders[draftKey];
-    }
+    clearExamDraftState(draftKey, true);
 
     const baseExamId = activeExamObj._sourceExamId || activeExamObj.id;
     let score = 0;
@@ -3295,6 +3450,35 @@
   let glossaryToastTimer = null;
   let globalToastTimer = null;
 
+  async function copyTextToClipboard(text) {
+    const content = String(text ?? '');
+    if (!content) return false;
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(content);
+        return true;
+      } catch (err) {
+        // Fallback below when Clipboard API is unavailable or denied
+      }
+    }
+    const tempTa = document.createElement('textarea');
+    tempTa.value = content;
+    tempTa.setAttribute('readonly', '');
+    tempTa.style.position = 'fixed';
+    tempTa.style.left = '-9999px';
+    tempTa.style.opacity = '0';
+    document.body.appendChild(tempTa);
+    tempTa.select();
+    let ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (err) {
+      ok = false;
+    }
+    tempTa.remove();
+    return ok;
+  }
+
   function showToast(msg) {
     const isReportOpen = Boolean(dialogReport && dialogReport.open);
     const isGlossaryOpen = Boolean(dialogGlossary && dialogGlossary.open);
@@ -3335,13 +3519,12 @@
   document.getElementById('btn-copy-report').addEventListener('click', async () => {
     updateReportTextarea();
     const ta = document.getElementById('report-textarea');
-    try {
-      await navigator.clipboard.writeText(ta.value);
+    const copied = await copyTextToClipboard(ta.value);
+    if (copied) {
       showToast('✅ Relatório + Save JSON copiado! Só colar no WhatsApp do Peter.');
-    } catch (err) {
+    } else {
       ta.select();
-      document.execCommand('copy');
-      showToast('✅ Relatório copiado para a área de transferência!');
+      showToast('⚠️ Selecione e copie o texto manualmente.');
     }
   });
 
@@ -3453,6 +3636,7 @@
   let glossarySubjectFilter = 'all';
   let glossarySource = 'cards'; // 'cards' | 'exams'
   let lastGlossaryExportText = '';
+  let lastGlossaryMatchedCards = [];
 
   function normalizeSearchText(value) {
     return String(value || '')
@@ -3512,6 +3696,7 @@
     const countEl = document.getElementById('glossary-count-label');
     const pendingWrap = document.getElementById('glossary-pending-wrap');
     const copyBtn = document.getElementById('btn-copy-glossary');
+    const practiceBtn = document.getElementById('btn-glossary-practice-vf');
     if (!listEl || !countEl) return;
 
     if (pendingWrap) {
@@ -3525,6 +3710,8 @@
     const keys = glossarySubjectFilter === 'all' ? ['quimica', 'biologia', 'fisica'] : [glossarySubjectFilter];
 
     if (glossarySource === 'exams') {
+      lastGlossaryMatchedCards = [];
+      if (practiceBtn) practiceBtn.hidden = true;
       const letters = ['A', 'B', 'C', 'D'];
       const matches = [];
       let totalAttempted = 0;
@@ -3646,8 +3833,13 @@
     }
 
     matches.sort((a, b) => Number(b.errCount > 0 && !b.isResolvedErr) - Number(a.errCount > 0 && !a.isResolvedErr) || b.errCount - a.errCount);
+    lastGlossaryMatchedCards = matches.map(({ key, subjTitle, card }) => ({ ...card, _subjKey: key, _subjTitle: subjTitle }));
     countEl.textContent = `Exibindo ${matches.length} de ${totalScope} cartões V/F`;
     if (copyBtn) copyBtn.disabled = matches.length === 0;
+    if (practiceBtn) {
+      practiceBtn.hidden = matches.length === 0;
+      practiceBtn.textContent = `🎯 Treinar estes cards (${matches.length})`;
+    }
 
     lastGlossaryExportText = matches
       .map(({ subjTitle, card }) => `[${subjTitle} • ${card.topic}] (${card.answer ? 'V' : 'F'}) ${card.statement}\n→ ${card.explanation}`)
@@ -3718,14 +3910,19 @@
     renderGlossaryResults();
   });
 
+  document.getElementById('btn-glossary-practice-vf')?.addEventListener('click', () => {
+    if (glossarySource !== 'cards' || lastGlossaryMatchedCards.length === 0) return;
+    const cardsToPractice = [...lastGlossaryMatchedCards];
+    if (dialogGlossary?.open) {
+      dialogGlossary.close();
+    }
+    openCustomVfPractice(cardsToPractice);
+  });
+
   document.getElementById('btn-copy-glossary')?.addEventListener('click', async () => {
     if (!lastGlossaryExportText) return;
-    try {
-      await navigator.clipboard.writeText(lastGlossaryExportText);
-      showToast('📋 Lista copiada para revisar!');
-    } catch (err) {
-      showToast('⚠️ Não foi possível copiar automaticamente.');
-    }
+    const copied = await copyTextToClipboard(lastGlossaryExportText);
+    showToast(copied ? '📋 Lista copiada para revisar!' : '⚠️ Não foi possível copiar automaticamente.');
   });
 
   const resetClearDraftConfirm = setupTwoStepConfirm(
@@ -3735,24 +3932,22 @@
       if (!activeExamObj || !activeSubjectKey) return;
       clearExamAutoAdvanceTimer();
       const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
-      if (appState.examDrafts && appState.examDrafts[draftKey]) {
-        delete appState.examDrafts[draftKey];
-      }
-      if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
-        delete appState.examDraftFlags[draftKey];
-      }
-      if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
-        delete appState.examDraftTimers[draftKey];
-      }
-      if (appState.examDraftOrders && appState.examDraftOrders[draftKey]) {
-        delete appState.examDraftOrders[draftKey];
-      }
+      clearExamDraftState(draftKey, false);
       startExamTimer(0);
       saveState();
       const form = document.getElementById('exam-form');
       if (form) {
         for (const input of form.querySelectorAll('input[type="radio"]:checked')) {
           input.checked = false;
+        }
+        for (const row of form.querySelectorAll('.option-row.is-eliminated')) {
+          row.classList.remove('is-eliminated');
+          const elimBtn = row.querySelector('.btn-eliminate-opt');
+          if (elimBtn) {
+            elimBtn.setAttribute('aria-pressed', 'false');
+            elimBtn.textContent = '✂️';
+            elimBtn.title = 'Riscar alternativa descartada';
+          }
         }
         for (const card of form.querySelectorAll('.question-card')) {
           card.classList.remove('is-missing', 'is-flagged');

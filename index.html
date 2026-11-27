@@ -87,6 +87,7 @@
           <small id="vf-mode-label" class="block-sub" hidden></small>
         </div>
         <div class="vf-header-badges">
+          <span class="badge-pill vf-streak-pill" id="vf-streak-badge" hidden>🔥 0 seguidos</span>
           <button type="button" class="outline secondary btn-xs" id="btn-skip-vf" title="Mover cartão atual para o final da fila (atalho S)">⏭️ Pular</button>
           <button type="button" class="outline secondary btn-xs" id="btn-shuffle-vf" title="Embaralhar fila restante">🔀 Embaralhar</button>
           <span class="badge-pill" id="vf-queue-badge">Fila: 30</span>
@@ -253,6 +254,7 @@
           <button type="button" class="btn-sm outline secondary" id="btn-toggle-all-explanations">📖 Abrir comentários</button>
         </div>
       </div>
+      <nav class="exam-question-nav result-question-nav" id="result-question-nav" aria-label="Navegação rápida do gabarito"></nav>
       <div id="result-review-container">
         <!-- Detailed review of each question with optional/expanded explanation -->
       </div>
@@ -353,7 +355,10 @@
 
       <div class="glossary-meta-row">
         <small id="glossary-count-label" class="muted-text glossary-count-label"></small>
-        <button type="button" class="outline secondary btn-xs" id="btn-copy-glossary">📋 Copiar lista</button>
+        <div class="glossary-meta-actions">
+          <button type="button" class="outline primary btn-xs" id="btn-glossary-practice-vf" hidden>🎯 Treinar estes cards (0)</button>
+          <button type="button" class="outline secondary btn-xs" id="btn-copy-glossary">📋 Copiar lista</button>
+        </div>
       </div>
       <p id="glossary-feedback-toast" role="status" class="toast-msg" hidden></p>
       <div id="glossary-results-list" class="glossary-results-list"></div>

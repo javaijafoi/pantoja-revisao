@@ -4,6 +4,24 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 10)] — Riscar alternativas no simulado, treino pelo Glossário com streak V/F e mapa do gabarito
+
+### Melhorias implementadas
+1. **Eliminação de alternativas no Simulado ("Riscar opção") e correção de rascunho (`app.js`, `style.css`)**
+   - Adicionado o botão **✂️ / ↩️** (`.btn-eliminate-opt`) ao lado de cada alternativa (`A`–`D`) durante provas e treinos no `#view-exam`, aplicando destaque riscado (`.option-row.is-eliminated`) para descartar distratores sem afetar a seleção do rádio.
+   - Persistidas as eliminações por rascunho em `appState.examDraftEliminated` (normalizado em `loadState()`, limpo via `clearExamDraftState()` ao concluir, limpar marcações ou virar o dia, e desfeito automaticamente ao marcar a alternativa).
+   - Corrigido `#btn-clear-exam-draft` para preservar `appState.examDraftOrders` ao limpar marcações de uma sessão em andamento (evitando dessincronia no **Simulado Geral Misto**).
+
+2. **Flashcards V/F com sequência de acertos (🔥 Streak) e treino direto pelo Glossário (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o indicador **🔥 X seguidos** (`#vf-streak-badge`) no topo dos flashcards V/F durante sequências de 2 ou mais acertos, integrado ao **↩️ Desfazer** (`#btn-undo-vf`), além do recorde da sessão no resumo final de conclusão.
+   - Adicionado o botão **🎯 Treinar estes cards (N)** (`#btn-glossary-practice-vf`) no modal `#dialog-glossary` (quando a fonte é **🃏 Cartões V/F**), iniciando `openCustomVfPractice()` em sessão isolada apenas com os cartões filtrados na busca e preservando o progresso diário.
+
+3. **Mapa navegável no Gabarito Comentado e cópia universal com fallback (`index.html`, `app.js`, `style.css`)**
+   - Adicionada a barra de pílulas coloridas `#result-question-nav` (`.is-result-correct` / `.is-result-wrong`) no topo do **Gabarito Comentado** (`#view-exam-result`) para visualizar acertos/erros de relance e saltar diretamente para qualquer questão (restaurando o filtro `Todas` automaticamente ao clicar em questão oculta pelo filtro `Apenas Erros`).
+   - Extraído o helper compartilhado `copyTextToClipboard()` com fallback via `<textarea>` + `document.execCommand('copy')` para todos os botões de cópia do app (`Relatório + Save`, `Copiar erro(s) p/ dúvida`, `Copiar dúvida` individual e `Copiar lista` do Glossário).
+
+---
+
 ## [2026-11-27 (Atualização 9)] — Pular/resumo nos flashcards V/F, pendências de prova no painel e Simulado Geral Misto
 
 ### Melhorias implementadas
