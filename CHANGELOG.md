@@ -4,6 +4,23 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 7)] — Auto-explicação nos erros V/F, rascunho no painel e revisão mista das 3 frentes
+
+### Melhorias implementadas
+1. **Explicação automática ao errar V/F e botão "Refazer esta prova" no Gabarito do Histórico (`app.js`)**
+   - Atualizada `showCardFeedback()` para expandir automaticamente o bloco `#vf-explanation-content` sempre que a resposta for incorreta (mantendo-o recolhido nos acertos), garantindo leitura imediata do macete sem clique extra, e removido o listener morto `#btn-retry-errors-now`.
+   - Adicionado o botão **🔁 Refazer esta prova (treino livre)** diretamente na tela de gabarito ao abrir uma prova pelo histórico ou pelo **📚 Mapa das 9 Provas** (`isHistoryReview`), conectando a revisão de notas passadas ao treino livre sem gastar tentativas diárias.
+
+2. **Indicador de rascunho em andamento no Painel e limpeza individual de resposta (`app.js`, `style.css`)**
+   - Atualizado `renderDashboard()` para detectar rascunhos e cronômetros salvos (`examDrafts` e `examDraftTimers`) na próxima prova disponível e exibir **📝 Continuar Prova X (Y/10 • ⏱️ MM:SS)** no botão principal da frente.
+   - Adicionado o botão **↺ Limpar** (`.btn-clear-question`) no cabeçalho de cada questão respondida no simulado, permitindo desmarcar uma única alternativa (atualizando rascunho, barra de progresso, pílulas e Modo Foco) sem apagar o restante da prova.
+
+3. **Revisão Mista Geral (Sem Spoiler) entre Química, Biologia e Física (`app.js`, `style.css`)**
+   - Adicionado `getTotalPendingErrorsSummary()` e os atalhos **🎯 Erros V/F (N)** e **🧠 Erros de Prova (N)** no resumo global do painel (`#global-day-summary`) sempre que houver pendências em aberto.
+   - Implementados `openMixedVfErrorDrill()` e `openMixedExamErrorDrill()`, permitindo treinar em sessão única e intercalada os erros pendentes das 3 frentes (com rótulo da matéria em cada item, suporte completo a Desfazer, Embaralhar, Modo Foco, Cronômetro e baixa real em `resolvedVfErrors` / `resolvedExamErrors` na frente correta de origem).
+
+---
+
 ## [2026-11-27 (Atualização 6)] — Resolução real nos erros V/F, mapa das 9 provas e cronômetro/foco persistentes
 
 ### Melhorias implementadas

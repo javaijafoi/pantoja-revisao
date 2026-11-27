@@ -494,6 +494,20 @@
       .sort((a, b) => (st.cardErrorsTotal[b.id] || 0) - (st.cardErrorsTotal[a.id] || 0));
   }
 
+  function getTotalPendingErrorsSummary() {
+    const subjects = getSubjectsMap();
+    let pendingVf = 0;
+    let pendingExam = 0;
+    for (const k of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[k];
+      const st = appState.subjects[k];
+      if (!subj || !st) continue;
+      pendingVf += getPendingVfErrorCards(subj, st).length;
+      pendingExam += getPendingExamErrorQuestions(subj, st).length;
+    }
+    return { pendingVf, pendingExam };
+  }
+
   function renderDashboard() {
     const subjects = getSubjectsMap();
     const container = document.getElementById('subject-cards-container');
@@ -531,6 +545,15 @@
         ).length;
       }
 
+      const { pendingVf: totalPendingVfErrors, pendingExam: totalPendingExamErrors } = getTotalPendingErrorsSummary();
+      const mixedActionsHtml = (totalPendingVfErrors > 0 || totalPendingExamErrors > 0)
+        ? `<div class="global-mixed-actions">
+            <small class="muted-text">🌐 <strong>Revisão mista (3 frentes):</strong></small>
+            ${totalPendingVfErrors > 0 ? `<button type="button" class="outline secondary btn-xs" id="btn-mixed-vf-errors">🎯 Erros V/F (${totalPendingVfErrors})</button>` : ''}
+            ${totalPendingExamErrors > 0 ? `<button type="button" class="outline secondary btn-xs" id="btn-mixed-exam-errors">🧠 Erros de Prova (${totalPendingExamErrors})</button>` : ''}
+          </div>`
+        : '';
+
       const maxSteps = totalCardsAll * 2 + subjectKeys.length * 2;
       const doneSteps = totalHitsAll + passedSubjects * 2;
       globalSummaryEl.innerHTML = `
@@ -539,7 +562,10 @@
           <span>🃏 <strong>${totalMasteredAll}/${totalCardsAll}</strong> V/F • 📝 <strong>${totalExamsToday}</strong> hoje • 📚 <strong>${doneUniqueExams}/${totalUniqueExams}</strong> provas do edital</span>
         </div>
         <progress value="${doneSteps}" max="${maxSteps}"></progress>
+        ${mixedActionsHtml}
       `;
+      document.getElementById('btn-mixed-vf-errors')?.addEventListener('click', () => openMixedVfErrorDrill());
+      document.getElementById('btn-mixed-exam-errors')?.addEventListener('click', () => openMixedExamErrorDrill());
     }
 
     const nextDayBanner = document.getElementById('next-day-banner');
@@ -594,7 +620,14 @@
         chipText = 'Em Andamento';
       }
 
-      const nextExamNum = (st.nextExamIndex % subj.exams.length) + 1;
+      const nextExamIdx = st.nextExamIndex % subj.exams.length;
+      const nextExamNum = nextExamIdx + 1;
+      const nextExamObj = subj.exams[nextExamIdx];
+      const nextDraftKey = nextExamObj ? `${key}:${nextExamObj.id}` : '';
+      const nextDraftMap = (nextDraftKey && appState.examDrafts && appState.examDrafts[nextDraftKey]) || {};
+      const nextDraftAnswered = Object.values(nextDraftMap).filter((v) => v !== undefined && v !== null && v !== '').length;
+      const nextDraftTimer = (nextDraftKey && Number(appState.examDraftTimers?.[nextDraftKey])) || 0;
+      const hasNextDraft = nextDraftAnswered > 0 || nextDraftTimer > 0;
       const canTakeExam = vfUnlocked && !st.passedToday && st.examsTodayCount < 3;
       const pendingExamErrorsCount = getPendingExamErrorQuestions(subj, st).length;
       const pendingVfErrorsCount = getPendingVfErrorCards(subj, st).length;
@@ -794,6 +827,8 @@
                 ? '🔒 Limite de 3 Provas Hoje Atingido'
                 : !vfUnlocked
                 ? '🔒 Fazer Prova (Conclua os 30 V/F antes)'
+                : hasNextDraft
+                ? `📝 Continuar Prova ${nextExamNum} (${nextDraftAnswered}/${nextExamObj.questions.length}${nextDraftTimer > 0 ? ` • ⏱️ ${formatDuration(nextDraftTimer)}` : ''})`
                 : `📝 Fazer Prova ${nextExamNum} (Tentativa ${st.examsTodayCount + 1}/3)`
             }
           </button>
@@ -968,14 +1003,19 @@
     });
   }
 
+  function getVfCardSubjectKey(cardObj) {
+    return cardObj?._subjKey || activeSubjectKey;
+  }
+
   function getVfRuntime() {
-    const subj = getSubjectsMap()[activeSubjectKey];
-    const st = appState.subjects[activeSubjectKey];
-    if (vfSession.mode === 'errors' && Array.isArray(vfSession.cards) && vfSession.cards.length > 0) {
+    const subj = getSubjectsMap()[activeSubjectKey] || { title: 'Revisão Mista', cards: [] };
+    const st = appState.subjects[activeSubjectKey] || null;
+    if ((vfSession.mode === 'errors' || vfSession.mode === 'mixed-errors') && Array.isArray(vfSession.cards) && vfSession.cards.length > 0) {
       return {
         subj,
         st,
         isErrorMode: true,
+        isMixedErrorMode: vfSession.mode === 'mixed-errors',
         cards: vfSession.cards,
         queue: vfSession.queue,
         setQueue: (q) => { vfSession.queue = q; },
@@ -986,11 +1026,55 @@
       subj,
       st,
       isErrorMode: false,
+      isMixedErrorMode: false,
       cards: subj.cards,
       queue: st.vfQueue || [],
       setQueue: (q) => { st.vfQueue = q; },
       boxes: st.cardBoxes,
     };
+  }
+
+  function openMixedVfErrorDrill() {
+    const subjects = getSubjectsMap();
+    const mixedCards = [];
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st) continue;
+      for (const c of getPendingVfErrorCards(subj, st)) {
+        mixedCards.push({ ...c, _subjKey: key, _subjTitle: subj.title });
+      }
+    }
+
+    if (mixedCards.length === 0) {
+      showToast('🎉 Não há erros V/F pendentes nas 3 frentes!');
+      return;
+    }
+
+    mixedCards.sort((a, b) => {
+      const errA = appState.subjects[a._subjKey]?.cardErrorsTotal[a.id] || 0;
+      const errB = appState.subjects[b._subjKey]?.cardErrorsTotal[b.id] || 0;
+      return errB - errA;
+    });
+
+    activeSubjectKey = 'mixed';
+    lastVfUndoSnapshot = null;
+    vfSession = {
+      mode: 'mixed-errors',
+      cards: mixedCards,
+      queue: mixedCards.map((c) => c.id),
+      boxes: Object.fromEntries(mixedCards.map((c) => [c.id, 0])),
+    };
+
+    document.getElementById('vf-subject-title').textContent = 'Revisão Mista — Erros V/F';
+    const modeLabel = document.getElementById('vf-mode-label');
+    if (modeLabel) {
+      modeLabel.textContent = `🌐 Foco em ${mixedCards.length} card(s) pendente(s) nas 3 frentes • Progresso diário preservado`;
+      modeLabel.hidden = false;
+    }
+    document.getElementById('vf-feedback-box').hidden = true;
+    showView('view-flashcards');
+    renderCurrentFlashcard();
   }
 
   function openFlashcards(subjKey, mode = 'daily') {
@@ -1097,7 +1181,7 @@
 
   function renderCurrentFlashcard() {
     updateLeitnerCounters();
-    const { subj, st, isErrorMode, cards, queue, setQueue, boxes } = getVfRuntime();
+    const { subj, st, isErrorMode, isMixedErrorMode, cards, queue, setQueue, boxes } = getVfRuntime();
     const listEl = document.getElementById('vf-swipe-list');
     const feedbackBox = document.getElementById('vf-feedback-box');
     const swipeHint = document.getElementById('vf-swipe-hint');
@@ -1122,20 +1206,20 @@
     if (filteredQueue.length === 0) {
       if (swipeHint) swipeHint.hidden = true;
       if (keyboardHint) keyboardHint.hidden = true;
-      if (!isErrorMode) {
+      if (!isErrorMode && st) {
         st.vfCompletedToday = true;
         saveState();
       }
 
-      const canTakeExamNow = st.vfCompletedToday && !st.passedToday && st.examsTodayCount < 3;
-      const pendingVfErrorsCount = getPendingVfErrorCards(subj, st).length;
+      const canTakeExamNow = !isMixedErrorMode && st && st.vfCompletedToday && !st.passedToday && st.examsTodayCount < 3;
+      const pendingVfErrorsCount = !isMixedErrorMode && st ? getPendingVfErrorCards(subj, st).length : 0;
 
       const doneLi = document.createElement('li');
       if (isErrorMode) {
         doneLi.innerHTML = `
           <article style="text-align:center; padding: 2rem 1.25rem; border-top: 5px solid var(--vf-true-color);">
-            <h2>🎯 Treino de erros concluído!</h2>
-            <p>Você dominou e deu baixa em todos os <strong>${cards.length} cartões pendentes de ${escapeHtml(subj.title)}</strong>.</p>
+            <h2>🎯 ${isMixedErrorMode ? 'Revisão mista de erros concluída!' : 'Treino de erros concluído!'}</h2>
+            <p>Você dominou e deu baixa em todos os <strong>${cards.length} cartões pendentes ${isMixedErrorMode ? 'das 3 frentes' : `de ${escapeHtml(subj.title)}`}</strong>.</p>
             <p class="muted-text" style="margin-bottom: 1.25rem;">Seu progresso principal no painel foi mantido intacto e esses erros saíram da lista de pendências.</p>
             <div class="grid">
               ${
@@ -1174,9 +1258,6 @@
       document.getElementById('btn-go-to-exam-now')?.addEventListener('click', () => {
         openExam(activeSubjectKey);
       });
-      document.getElementById('btn-retry-errors-now')?.addEventListener('click', () => {
-        openFlashcards(activeSubjectKey, 'errors');
-      });
       document.getElementById('btn-go-to-errors-now')?.addEventListener('click', () => {
         openFlashcards(activeSubjectKey, 'errors');
       });
@@ -1192,8 +1273,12 @@
 
     const currentCardId = filteredQueue[0];
     const cardObj = cards.find((c) => c.id === currentCardId) || subj.cards.find((c) => c.id === currentCardId);
+    const cardSt = appState.subjects[getVfCardSubjectKey(cardObj)] || st;
     const currentBox = boxes[currentCardId] || 0;
-    const totalErrs = st.cardErrorsTotal[currentCardId] || 0;
+    const totalErrs = cardSt?.cardErrorsTotal[currentCardId] || 0;
+    const topicLabel = isMixedErrorMode && cardObj._subjTitle
+      ? `${cardObj._subjTitle} • ${cardObj.topic}`
+      : cardObj.topic;
     const flagBadge = totalErrs > 0
       ? `<span class="card-flag-tag">⚠️ Reforço (${totalErrs}x)</span>`
       : cardObj.fastTrack
@@ -1209,7 +1294,7 @@
         <div class="SwipeableList-content">
           <div>
             <div class="card-meta-top">
-              <span class="card-topic-tag">${escapeHtml(cardObj.topic)}</span>
+              <span class="card-topic-tag">${escapeHtml(topicLabel)}</span>
               <div class="card-badge-group">
                 ${flagBadge}
                 <span class="card-box-tag">Caixa ${currentBox} (${currentBox}/2 acertos)</span>
@@ -1241,17 +1326,22 @@
     const currentCardId = queue.shift();
     const cardObj = cards.find((c) => c.id === currentCardId) || subj.cards.find((c) => c.id === currentCardId);
     if (!cardObj) return;
+    const cardSubjKey = getVfCardSubjectKey(cardObj);
+    const cardSt = appState.subjects[cardSubjKey] || st;
+    if (!cardSt) return;
 
     lastVfUndoSnapshot = {
-      subjKey: activeSubjectKey,
+      sessionSubjectKey: activeSubjectKey,
+      sessionMode: vfSession.mode,
+      subjKey: cardSubjKey,
       isErrorMode,
       cardId: currentCardId,
       queue: queueSnapshot,
       boxValue: boxes[currentCardId] || 0,
-      errToday: st.cardErrorsToday[currentCardId] || 0,
-      errTotal: st.cardErrorsTotal[currentCardId] || 0,
-      vfCompletedToday: Boolean(st.vfCompletedToday),
-      wasResolvedVf: Boolean(st.resolvedVfErrors && st.resolvedVfErrors[currentCardId]),
+      errToday: cardSt.cardErrorsToday[currentCardId] || 0,
+      errTotal: cardSt.cardErrorsTotal[currentCardId] || 0,
+      vfCompletedToday: Boolean(cardSt.vfCompletedToday),
+      wasResolvedVf: Boolean(cardSt.resolvedVfErrors && cardSt.resolvedVfErrors[currentCardId]),
     };
 
     const isCorrect = Boolean(userAnswerBoolean) === Boolean(cardObj.answer);
@@ -1267,16 +1357,16 @@
         const insertAt = Math.max(1, Math.floor(queue.length * 0.6));
         queue.splice(insertAt, 0, currentCardId);
       } else if (isErrorMode) {
-        if (!st.resolvedVfErrors || typeof st.resolvedVfErrors !== 'object') {
-          st.resolvedVfErrors = {};
+        if (!cardSt.resolvedVfErrors || typeof cardSt.resolvedVfErrors !== 'object') {
+          cardSt.resolvedVfErrors = {};
         }
-        st.resolvedVfErrors[currentCardId] = true;
+        cardSt.resolvedVfErrors[currentCardId] = true;
       }
 
       const remaining = queue.filter((id) => (boxes[id] || 0) < 2);
       const queueEmpty = remaining.length === 0;
       if (queueEmpty && !isErrorMode) {
-        st.vfCompletedToday = true;
+        cardSt.vfCompletedToday = true;
       }
 
       if (liveStatus) {
@@ -1294,10 +1384,10 @@
     } else {
       // Wrong answer: resets to Box 0 and goes to middle/back of queue
       boxes[currentCardId] = 0;
-      st.cardErrorsToday[currentCardId] = (st.cardErrorsToday[currentCardId] || 0) + 1;
-      st.cardErrorsTotal[currentCardId] = (st.cardErrorsTotal[currentCardId] || 0) + 1;
-      if (st.resolvedVfErrors && st.resolvedVfErrors[currentCardId]) {
-        delete st.resolvedVfErrors[currentCardId];
+      cardSt.cardErrorsToday[currentCardId] = (cardSt.cardErrorsToday[currentCardId] || 0) + 1;
+      cardSt.cardErrorsTotal[currentCardId] = (cardSt.cardErrorsTotal[currentCardId] || 0) + 1;
+      if (cardSt.resolvedVfErrors && cardSt.resolvedVfErrors[currentCardId]) {
+        delete cardSt.resolvedVfErrors[currentCardId];
       }
 
       const insertAt = Math.max(1, Math.min(4, queue.length));
@@ -1352,9 +1442,10 @@
     stmtEl.textContent = `"${cardObj.statement}"`;
     expText.textContent = cardObj.explanation;
 
-    // Optional explanation button: hidden by default!
-    expContent.hidden = true;
-    btnToggleExp.textContent = '💡 Ver Explicação';
+    // Auto-expand explanation on wrong answers so the student immediately sees the macete; keep collapsed when right
+    const showExpNow = !isCorrect;
+    expContent.hidden = !showExpNow;
+    btnToggleExp.textContent = showExpNow ? '🙈 Ocultar Explicação' : '💡 Ver Explicação';
     const btnUndo = document.getElementById('btn-undo-vf');
     if (btnUndo) {
       btnUndo.hidden = !lastVfUndoSnapshot;
@@ -1367,24 +1458,25 @@
 
   document.getElementById('btn-undo-vf')?.addEventListener('click', () => {
     const snap = lastVfUndoSnapshot;
-    if (!snap || snap.subjKey !== activeSubjectKey) return;
-    const { st, isErrorMode, setQueue, boxes } = getVfRuntime();
-    if (Boolean(isErrorMode) !== Boolean(snap.isErrorMode)) return;
+    if (!snap || snap.sessionSubjectKey !== activeSubjectKey || snap.sessionMode !== vfSession.mode) return;
+    const { isErrorMode, setQueue, boxes } = getVfRuntime();
+    const cardSt = appState.subjects[snap.subjKey];
+    if (!cardSt || Boolean(isErrorMode) !== Boolean(snap.isErrorMode)) return;
 
     boxes[snap.cardId] = snap.boxValue;
     setQueue([...snap.queue]);
-    st.cardErrorsToday[snap.cardId] = snap.errToday;
-    st.cardErrorsTotal[snap.cardId] = snap.errTotal;
-    if (!st.resolvedVfErrors || typeof st.resolvedVfErrors !== 'object') {
-      st.resolvedVfErrors = {};
+    cardSt.cardErrorsToday[snap.cardId] = snap.errToday;
+    cardSt.cardErrorsTotal[snap.cardId] = snap.errTotal;
+    if (!cardSt.resolvedVfErrors || typeof cardSt.resolvedVfErrors !== 'object') {
+      cardSt.resolvedVfErrors = {};
     }
     if (snap.wasResolvedVf) {
-      st.resolvedVfErrors[snap.cardId] = true;
+      cardSt.resolvedVfErrors[snap.cardId] = true;
     } else {
-      delete st.resolvedVfErrors[snap.cardId];
+      delete cardSt.resolvedVfErrors[snap.cardId];
     }
     if (!isErrorMode) {
-      st.vfCompletedToday = snap.vfCompletedToday;
+      cardSt.vfCompletedToday = snap.vfCompletedToday;
     }
     lastVfUndoSnapshot = null;
     saveState();
@@ -1658,9 +1750,14 @@
       article.innerHTML = `
         <div class="question-card-top">
           <span class="question-num">Questão ${idx + 1} de ${totalQ}${q._sourceExamTitle ? ` • ${escapeHtml(q._sourceExamTitle)}` : ''}</span>
-          <button type="button" class="btn-flag-question outline secondary btn-xs${isFlagged ? ' is-flagged' : ''}" data-q-index="${idx}" aria-pressed="${isFlagged ? 'true' : 'false'}">
-            ${isFlagged ? '🚩 Marcada p/ revisar' : '🏳️ Revisar depois'}
-          </button>
+          <div class="question-card-actions">
+            <button type="button" class="btn-clear-question outline secondary btn-xs" data-q-index="${idx}" ${hasSavedChoice ? '' : 'hidden'} title="Desmarcar resposta desta questão">
+              ↺ Limpar
+            </button>
+            <button type="button" class="btn-flag-question outline secondary btn-xs${isFlagged ? ' is-flagged' : ''}" data-q-index="${idx}" aria-pressed="${isFlagged ? 'true' : 'false'}">
+              ${isFlagged ? '🚩 Marcada p/ revisar' : '🏳️ Revisar depois'}
+            </button>
+          </div>
         </div>
         <p class="question-text">${escapeHtml(q.text)}</p>
         <div class="options-group">
@@ -1736,6 +1833,46 @@
       },
       attemptLabel: `🧠 ${errorQuestions.length} questão(ões) errada(s) anteriormente • Não consome tentativas`,
       noticeHtml: '🧠 <strong>Treino Focado de Erros:</strong> Questões que você acertar aqui saem da lista de pendências sem gastar suas 3 provas do dia.',
+      mode: 'errors',
+    });
+  }
+
+  function openMixedExamErrorDrill() {
+    const subjects = getSubjectsMap();
+    const mixedQuestions = [];
+    for (const key of ['quimica', 'biologia', 'fisica']) {
+      const subj = subjects[key];
+      const st = appState.subjects[key];
+      if (!subj || !st) continue;
+      for (const q of getPendingExamErrorQuestions(subj, st)) {
+        mixedQuestions.push({
+          ...q,
+          _subjKey: key,
+          _subjTitle: subj.title,
+          _rawErrorKey: q._errorKey,
+          _errorKey: `${key}:${q._errorKey}`,
+          _sourceExamTitle: `${subj.title} • ${q._sourceExamTitle}`,
+        });
+      }
+    }
+
+    if (mixedQuestions.length === 0) {
+      showToast('🎉 Não há erros de prova pendentes nas 3 frentes!');
+      renderDashboard();
+      showView('view-dashboard');
+      return;
+    }
+
+    renderExamView({
+      subjKey: 'mixed',
+      subj: { title: 'Revisão Mista' },
+      examObj: {
+        id: 'mixed-error-drill',
+        title: 'Erros de Prova (3 Frentes)',
+        questions: mixedQuestions,
+      },
+      attemptLabel: `🌐 ${mixedQuestions.length} questão(ões) errada(s) nas 3 frentes • Não consome tentativas`,
+      noticeHtml: '🌐 <strong>Simulado Misto de Erros:</strong> Questões que você acertar aqui saem da lista de pendências da respectiva frente sem gastar suas 3 provas do dia.',
       mode: 'errors',
     });
   }
@@ -1885,6 +2022,24 @@
   });
 
   document.getElementById('exam-questions-container').addEventListener('click', (e) => {
+    const clearBtn = e.target.closest('.btn-clear-question');
+    if (clearBtn && activeExamObj && activeSubjectKey) {
+      const qIdx = Number(clearBtn.dataset.qIndex);
+      const dKey = getExamQuestionDraftKey(activeExamObj.questions[qIdx], qIdx);
+      const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+      const form = document.getElementById('exam-form');
+      const checked = form?.querySelector(`input[name="q_${qIdx}"]:checked`);
+      if (checked) checked.checked = false;
+      if (appState.examDrafts && appState.examDrafts[draftKey]) {
+        delete appState.examDrafts[draftKey][dKey];
+        saveState();
+      }
+      clearBtn.hidden = true;
+      setCurrentExamPill(qIdx);
+      updateExamNavAndProgress();
+      return;
+    }
+
     const flagBtn = e.target.closest('.btn-flag-question');
     if (!flagBtn || !activeExamObj || !activeSubjectKey) return;
 
@@ -1933,7 +2088,11 @@
       saveState();
 
       const card = radio.closest('.question-card');
-      if (card) card.classList.remove('is-missing');
+      if (card) {
+        card.classList.remove('is-missing');
+        const clearBtn = card.querySelector('.btn-clear-question');
+        if (clearBtn) clearBtn.hidden = false;
+      }
       setCurrentExamPill(qIdx);
     }
 
@@ -2099,7 +2258,7 @@
     return lines.join('\n').trim();
   }
 
-  function renderExamResultView({ subjKey, subj, st, examObj, score, passed, userAnswers, wrongQuestions, isHistoryReview = false, isErrorDrill = false, isPracticeMode = false, dayNumber = 1, durationSeconds = null }) {
+  function renderExamResultView({ subjKey, subj, st, examObj, score, passed, userAnswers, wrongQuestions, isHistoryReview = false, historyIndex = null, isErrorDrill = false, isPracticeMode = false, dayNumber = 1, durationSeconds = null }) {
     const letters = ['A', 'B', 'C', 'D'];
     const totalQ = examObj.questions.length;
 
@@ -2120,16 +2279,25 @@
       : '';
 
     if (isErrorDrill) {
-      const remainingErrors = getPendingExamErrorQuestions(subj, st).length;
+      const isMixedDrill = subjKey === 'mixed';
+      const remainingErrors = isMixedDrill
+        ? getTotalPendingErrorsSummary().pendingExam
+        : getPendingExamErrorQuestions(subj, st).length;
       statusMsg.innerHTML = remainingErrors === 0
-        ? `<strong>Mandou muito bem, Pantoja!</strong> Você acertou todas as <strong>${totalQ}</strong> questões que tinha errado antes em <strong>${escapeHtml(subj.title)}</strong>!${durationNote}`
+        ? `<strong>Mandou muito bem, Pantoja!</strong> Você acertou todas as <strong>${totalQ}</strong> questões que tinha errado antes ${isMixedDrill ? 'nas <strong>3 frentes</strong>' : `em <strong>${escapeHtml(subj.title)}</strong>`}!${durationNote}`
         : `Você resolveu <strong>${score}/${totalQ}</strong> questão(ões) neste treino${durationNote}. Ainda restam <strong>${remainingErrors}</strong> pendente(s) para revisar sem gastar tentativas do dia.`;
       if (remainingErrors > 0) {
         const btnRetryErrors = document.createElement('button');
         btnRetryErrors.type = 'button';
         btnRetryErrors.className = 'primary';
         btnRetryErrors.textContent = `🧠 Treinar Erros Restantes (${remainingErrors})`;
-        btnRetryErrors.addEventListener('click', () => openExamErrorDrill(subjKey));
+        btnRetryErrors.addEventListener('click', () => {
+          if (isMixedDrill) {
+            openMixedExamErrorDrill();
+          } else {
+            openExamErrorDrill(subjKey);
+          }
+        });
         ctaContainer.appendChild(btnRetryErrors);
       }
     } else if (isPracticeMode) {
@@ -2151,6 +2319,14 @@
       ctaContainer.appendChild(btnRetake);
     } else if (isHistoryReview) {
       statusMsg.innerHTML = `📜 <strong>Revisão do Histórico (Dia ${escapeHtml(dayNumber)}):</strong> você tirou <strong>${score}/${totalQ}</strong> nesta tentativa${durationNote}. Confira abaixo todas as questões e comentários.`;
+      if (typeof historyIndex === 'number' && historyIndex >= 0) {
+        const btnRetakeHistory = document.createElement('button');
+        btnRetakeHistory.type = 'button';
+        btnRetakeHistory.className = 'primary';
+        btnRetakeHistory.textContent = '🔁 Refazer esta prova (treino livre)';
+        btnRetakeHistory.addEventListener('click', () => openHistoryExamPractice(subjKey, historyIndex));
+        ctaContainer.appendChild(btnRetakeHistory);
+      }
     } else if (passed) {
       statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/${totalQ}</strong>${durationNote} (meta era ≥ 8) e concluiu <strong>${escapeHtml(subj.title)}</strong> por hoje!`;
     } else if (st.examsTodayCount < 3) {
@@ -2283,6 +2459,7 @@
       userAnswers: entry.userAnswers,
       wrongQuestions: entry.wrongQuestions,
       isHistoryReview: true,
+      historyIndex,
       dayNumber: entry.dayNumber || 1,
       durationSeconds: entry.durationSeconds ?? null,
     });
@@ -2362,8 +2539,9 @@
   }
 
   function gradeAndShowErrorDrillResult(userAnswers, durationSeconds = null) {
-    const subj = getSubjectsMap()[activeSubjectKey];
-    const st = appState.subjects[activeSubjectKey];
+    const isMixedDrill = activeSubjectKey === 'mixed';
+    const subj = isMixedDrill ? { title: 'Revisão Mista' } : getSubjectsMap()[activeSubjectKey];
+    const st = isMixedDrill ? null : appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
     if (appState.examDrafts && appState.examDrafts[draftKey]) {
       delete appState.examDrafts[draftKey];
@@ -2374,18 +2552,22 @@
     if (appState.examDraftTimers && appState.examDraftTimers[draftKey]) {
       delete appState.examDraftTimers[draftKey];
     }
-    if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') {
-      st.resolvedExamErrors = {};
-    }
 
     let score = 0;
     const wrongQuestions = [];
 
     activeExamObj.questions.forEach((q, idx) => {
-      const qKey = q._errorKey || getExamQuestionKey(q, activeExamObj.id, idx + 1);
+      const targetSubjKey = q._subjKey || activeSubjectKey;
+      const targetSt = appState.subjects[targetSubjKey];
+      const qKey = q._rawErrorKey || q._errorKey || getExamQuestionKey(q, activeExamObj.id, idx + 1);
       if (userAnswers[idx] === q.correct) {
         score++;
-        st.resolvedExamErrors[qKey] = true;
+        if (targetSt) {
+          if (!targetSt.resolvedExamErrors || typeof targetSt.resolvedExamErrors !== 'object') {
+            targetSt.resolvedExamErrors = {};
+          }
+          targetSt.resolvedExamErrors[qKey] = true;
+        }
       } else {
         wrongQuestions.push({
           id: q.id,
@@ -3007,6 +3189,9 @@
           flagBtn.classList.remove('is-flagged');
           flagBtn.setAttribute('aria-pressed', 'false');
           flagBtn.textContent = '🏳️ Revisar depois';
+        }
+        for (const clearBtn of form.querySelectorAll('.btn-clear-question')) {
+          clearBtn.hidden = true;
         }
       }
       const incMsg = document.getElementById('exam-incomplete-msg');

@@ -179,6 +179,18 @@ body {
   height: 0.55rem;
 }
 
+.global-mixed-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-top: 0.65rem;
+}
+
+.global-mixed-actions button {
+  margin-bottom: 0;
+}
+
 /* Subject Cards */
 .subject-grid {
   grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
@@ -773,6 +785,17 @@ body {
 }
 
 .question-card-top .question-num {
+  margin-bottom: 0;
+}
+
+.question-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.btn-clear-question {
   margin-bottom: 0;
 }
 
