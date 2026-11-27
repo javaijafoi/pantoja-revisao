@@ -409,6 +409,14 @@ body {
   flex-shrink: 0;
 }
 
+.history-item-side-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .btn-xs {
   padding: 0.16rem 0.45rem;
   font-size: 0.72rem;
@@ -528,6 +536,46 @@ body {
   align-items: center;
   gap: 0.55rem;
   flex-wrap: wrap;
+}
+
+.exam-sticky-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.exam-sticky-actions button {
+  margin-bottom: 0;
+}
+
+.exam-focus-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  background: var(--pico-card-sectioning-background-color);
+}
+
+.exam-focus-pager button {
+  margin-bottom: 0;
+}
+
+.exam-keyboard-hint {
+  display: none;
+  margin-top: 0.4rem;
+  margin-bottom: 0;
+  text-align: left;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .exam-keyboard-hint {
+    display: block;
+  }
 }
 
 .exam-flagged-btn {
@@ -955,12 +1003,13 @@ button.is-confirming {
 }
 
 .feedback-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
 }
 
 .feedback-actions button {
+  flex: 1 1 140px;
   margin-bottom: 0;
 }
 
@@ -1249,6 +1298,17 @@ dialog::backdrop {
   max-width: 720px;
 }
 
+.glossary-source-tabs {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.65rem;
+}
+
+.glossary-source-tabs button {
+  margin-bottom: 0;
+}
+
 .glossary-dialog-box input[type="search"] {
   margin-bottom: 0.65rem;
 }
@@ -1260,6 +1320,13 @@ dialog::backdrop {
   gap: 0.6rem;
   flex-wrap: wrap;
   margin-bottom: 0.55rem;
+}
+
+.glossary-toggles {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .glossary-error-toggle {
@@ -1275,10 +1342,26 @@ dialog::backdrop {
   margin: 0;
 }
 
+.glossary-meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
 .glossary-count-label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
   font-size: 0.8rem;
+}
+
+.glossary-item mark {
+  background: rgba(245, 158, 11, 0.28);
+  color: inherit;
+  padding: 0 0.14rem;
+  border-radius: 0.25rem;
 }
 
 .glossary-results-list {

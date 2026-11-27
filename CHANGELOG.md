@@ -4,6 +4,25 @@ Todas as melhorias e atualizações desta aplicação são registradas neste mes
 
 ---
 
+## [2026-11-27 (Atualização 5)] — Modo foco no simulado, desfazer/embaralhar V/F, refazer prova e glossário unificado
+
+### Melhorias implementadas
+1. **Simulado Inteligente: Modo Foco (1 questão por vez), Cronômetro, Atalhos e Correções (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o botão **🎯 1 por vez / 📄 Ver todas** (`#btn-toggle-exam-focus`) e o paginador `#exam-focus-pager` para alternar entre lista completa e foco em uma questão por vez.
+   - Adicionado o cronômetro informativo `#exam-timer-badge` (`⏱️ MM:SS`) durante a prova/treino, gravando `durationSeconds` no histórico (`examHistory`), exibindo o tempo no resultado, no histórico do painel e no relatório do WhatsApp.
+   - Adicionados atalhos de teclado no simulado (`A`–`D` ou `1`–`4` para marcar alternativa, `R` para marcar `🚩 Revisar depois`, `[`/`]` ou `←`/`→` para navegar).
+   - Corrigidos 3 pontos de confiabilidade: bloqueio global de atalhos V/F quando qualquer `<dialog open>` estiver aberto (incluindo `#dialog-glossary`), exibição do título da prova de origem (`_sourceExamTitle`) também no gabarito do treino de erros, e chaveamento estável dos rascunhos/marcadores de `error-drill` por ID da questão.
+
+2. **Flashcards V/F com "Desfazer" e "Embaralhar", Refazer Prova pelo Histórico e Cópia de Erros (`index.html`, `app.js`, `style.css`)**
+   - Adicionado o botão **↩️ Desfazer** (`#btn-undo-vf`) no feedback do flashcard para reverter toques/swipes acidentais antes de avançar, restaurando caixas, fila e contadores de erro.
+   - Adicionado o botão **🔀 Embaralhar** (`#btn-shuffle-vf`) no topo dos flashcards V/F para reordenar aleatoriamente os cartões ainda pendentes na fila.
+   - Adicionado o botão **🔁 Refazer** (`openHistoryExamPractice`) em cada item de **📜 Histórico de provas** para praticar provas anteriores em modo treino livre (sem gastar as 3 tentativas diárias) e o botão **💬 Copiar erro(s) p/ dúvida** (`buildExamErrorsWhatsAppText`) no gabarito para enviar dúvidas formatadas no WhatsApp.
+
+3. **Glossário Unificado (V/F + Provas já Feitas), Destaque de Busca e Exportação (`index.html`, `app.js`, `style.css`)**
+   - Expandido `#dialog-glossary` com alternância de fonte (**🃏 Cartões V/F** / **📝 Provas já feitas** sem spoiler de provas não realizadas), filtro **Falta dominar** (`#glossary-only-pending`), destaque visual seguro (`<mark>`) com `highlightSearchMatch()` e botão **📋 Copiar lista** (`#btn-copy-glossary`) com toast próprio `#glossary-feedback-toast` visível dentro do modal.
+
+---
+
 ## [2026-11-27 (Atualização 4)] — Navegação inteligente no simulado, treino de erros de prova e glossário V/F
 
 ### Melhorias implementadas

@@ -259,6 +259,7 @@
 
     appState.examDrafts = {};
     appState.examDraftFlags = {};
+    lastVfUndoSnapshot = null;
     saveState();
     if (shouldRender) {
       renderDashboard();
@@ -283,8 +284,46 @@
   checkDailyRollover();
   let activeSubjectKey = null;
   let activeExamObj = null;
-  let examSessionMode = 'official'; // 'official' | 'errors'
+  let examSessionMode = 'official'; // 'official' | 'errors' | 'practice'
+  let examFocusMode = false;
+  let examCurrentIndex = 0;
+  let examStartedAt = null;
+  let examTimerInterval = null;
+  let lastVfUndoSnapshot = null;
   let vfSession = { mode: 'daily', cards: null, queue: [], boxes: {} };
+
+  function formatDuration(totalSeconds) {
+    const secs = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+    const mins = Math.floor(secs / 60);
+    const rem = secs % 60;
+    return `${String(mins).padStart(2, '0')}:${String(rem).padStart(2, '0')}`;
+  }
+
+  function updateExamTimerBadge() {
+    const badge = document.getElementById('exam-timer-badge');
+    if (!badge) return;
+    const elapsed = examStartedAt ? Math.floor((Date.now() - examStartedAt) / 1000) : 0;
+    badge.textContent = `⏱️ ${formatDuration(elapsed)}`;
+  }
+
+  function startExamTimer() {
+    stopExamTimer();
+    examStartedAt = Date.now();
+    updateExamTimerBadge();
+    examTimerInterval = setInterval(updateExamTimerBadge, 1000);
+  }
+
+  function stopExamTimer() {
+    if (examTimerInterval) {
+      clearInterval(examTimerInterval);
+      examTimerInterval = null;
+    }
+  }
+
+  function getElapsedExamSeconds() {
+    if (!examStartedAt) return null;
+    return Math.max(1, Math.floor((Date.now() - examStartedAt) / 1000));
+  }
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && checkDailyRollover()) {
@@ -311,6 +350,9 @@
 
   // Views switcher
   function showView(viewId) {
+    if (viewId !== 'view-exam') {
+      stopExamTimer();
+    }
     const views = ['view-dashboard', 'view-flashcards', 'view-exam', 'view-exam-result'];
     for (const id of views) {
       const el = document.getElementById(id);
@@ -534,17 +576,25 @@
                       </details>
                     `
                     : '';
+                  const durationPart = typeof h.durationSeconds === 'number' && h.durationSeconds > 0
+                    ? ` • ⏱️ ${formatDuration(h.durationSeconds)}`
+                    : '';
                   return `
                   <li>
                     <div class="history-item-main">
-                      <span>Dia ${escapeHtml(h.dayNumber || 1)} • ${escapeHtml(h.examTitle)}</span>
+                      <span>Dia ${escapeHtml(h.dayNumber || 1)} • ${escapeHtml(h.examTitle)}${durationPart}</span>
                       ${wrongDetailsHtml}
                     </div>
                     <div class="history-item-side">
                       <strong>${escapeHtml(h.score)}/10 ${h.passed ? '✅' : '⚠️'}</strong>
-                      <button type="button" class="outline secondary btn-xs" data-action="review-history-exam" data-subject="${key}" data-history-index="${h._idx}">
-                        🔍 Gabarito
-                      </button>
+                      <div class="history-item-side-actions">
+                        <button type="button" class="outline secondary btn-xs" data-action="review-history-exam" data-subject="${key}" data-history-index="${h._idx}">
+                          🔍 Gabarito
+                        </button>
+                        <button type="button" class="outline secondary btn-xs" data-action="retake-history-exam" data-subject="${key}" data-history-index="${h._idx}">
+                          🔁 Refazer
+                        </button>
+                      </div>
                     </div>
                   </li>
                 `;
@@ -645,6 +695,8 @@
       openExamErrorDrill(subjKey);
     } else if (action === 'review-history-exam') {
       openHistoryExamResult(subjKey, Number(btn.dataset.historyIndex));
+    } else if (action === 'retake-history-exam') {
+      openHistoryExamPractice(subjKey, Number(btn.dataset.historyIndex));
     }
   });
 
@@ -811,6 +863,7 @@
 
   function openFlashcards(subjKey, mode = 'daily') {
     activeSubjectKey = subjKey;
+    lastVfUndoSnapshot = null;
     const subj = getSubjectsMap()[subjKey];
     const st = appState.subjects[subjKey];
     const modeLabel = document.getElementById('vf-mode-label');
@@ -924,6 +977,15 @@
     // Filter queue to ensure only cards with box < 2 remain
     const filteredQueue = queue.filter((id) => (boxes[id] || 0) < 2);
     setQueue(filteredQueue);
+
+    const shuffleBtn = document.getElementById('btn-shuffle-vf');
+    if (shuffleBtn) {
+      shuffleBtn.disabled = filteredQueue.length <= 1;
+    }
+    const undoBtn = document.getElementById('btn-undo-vf');
+    if (undoBtn) {
+      undoBtn.hidden = true;
+    }
 
     if (filteredQueue.length === 0) {
       if (swipeHint) swipeHint.hidden = true;
@@ -1044,9 +1106,21 @@
     const { subj, st, isErrorMode, cards, queue, boxes } = getVfRuntime();
     if (!queue || queue.length === 0) return;
 
+    const queueSnapshot = [...queue];
     const currentCardId = queue.shift();
     const cardObj = cards.find((c) => c.id === currentCardId) || subj.cards.find((c) => c.id === currentCardId);
     if (!cardObj) return;
+
+    lastVfUndoSnapshot = {
+      subjKey: activeSubjectKey,
+      isErrorMode,
+      cardId: currentCardId,
+      queue: queueSnapshot,
+      boxValue: boxes[currentCardId] || 0,
+      errToday: st.cardErrorsToday[currentCardId] || 0,
+      errTotal: st.cardErrorsTotal[currentCardId] || 0,
+      vfCompletedToday: Boolean(st.vfCompletedToday),
+    };
 
     const isCorrect = Boolean(userAnswerBoolean) === Boolean(cardObj.answer);
     const liveStatus = document.getElementById('vf-live-status');
@@ -1141,11 +1215,54 @@
     // Optional explanation button: hidden by default!
     expContent.hidden = true;
     btnToggleExp.textContent = '💡 Ver Explicação';
+    const btnUndo = document.getElementById('btn-undo-vf');
+    if (btnUndo) {
+      btnUndo.hidden = !lastVfUndoSnapshot;
+    }
     btnNextCard.textContent = queueEmpty ? '🎉 Ver Conclusão →' : 'Próximo Card →';
 
     feedbackBox.hidden = false;
     btnNextCard.focus();
   }
+
+  document.getElementById('btn-undo-vf')?.addEventListener('click', () => {
+    const snap = lastVfUndoSnapshot;
+    if (!snap || snap.subjKey !== activeSubjectKey) return;
+    const { st, isErrorMode, setQueue, boxes } = getVfRuntime();
+    if (Boolean(isErrorMode) !== Boolean(snap.isErrorMode)) return;
+
+    boxes[snap.cardId] = snap.boxValue;
+    setQueue([...snap.queue]);
+    st.cardErrorsToday[snap.cardId] = snap.errToday;
+    st.cardErrorsTotal[snap.cardId] = snap.errTotal;
+    if (!isErrorMode) {
+      st.vfCompletedToday = snap.vfCompletedToday;
+    }
+    lastVfUndoSnapshot = null;
+    saveState();
+    renderCurrentFlashcard();
+    showToast('↩️ Última resposta desfeita!');
+  });
+
+  document.getElementById('btn-shuffle-vf')?.addEventListener('click', () => {
+    const { isErrorMode, queue, setQueue, boxes } = getVfRuntime();
+    const pending = queue.filter((id) => (boxes[id] || 0) < 2);
+    if (pending.length <= 1) {
+      showToast('Já há apenas 1 cartão restante na fila.');
+      return;
+    }
+    for (let i = pending.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [pending[i], pending[j]] = [pending[j], pending[i]];
+    }
+    setQueue(pending);
+    lastVfUndoSnapshot = null;
+    if (!isErrorMode) {
+      saveState();
+    }
+    renderCurrentFlashcard();
+    showToast('🔀 Fila de cartões embaralhada!');
+  });
 
   document.getElementById('btn-toggle-explanation').addEventListener('click', () => {
     const expContent = document.getElementById('vf-explanation-content');
@@ -1156,10 +1273,12 @@
   });
 
   document.getElementById('btn-next-card').addEventListener('click', () => {
+    lastVfUndoSnapshot = null;
     renderCurrentFlashcard();
   });
 
   document.getElementById('btn-back-from-vf').addEventListener('click', () => {
+    lastVfUndoSnapshot = null;
     renderDashboard();
     showView('view-dashboard');
   });
@@ -1168,7 +1287,7 @@
   document.addEventListener('keydown', (e) => {
     const vfView = document.getElementById('view-flashcards');
     if (!vfView || vfView.hidden) return;
-    if (dialogReport && dialogReport.open) return;
+    if (document.querySelector('dialog[open]')) return;
 
     const tag = document.activeElement?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
@@ -1210,11 +1329,19 @@
   // ==========================================================================
   let examVisibleObserver = null;
 
+  function getExamQuestionDraftKey(q, idx) {
+    return examSessionMode === 'errors' ? (q?._errorKey || q?.id || String(idx)) : String(idx);
+  }
+
   function setCurrentExamPill(qIndex) {
+    const numIdx = Number(qIndex);
+    if (!Number.isNaN(numIdx) && numIdx >= 0) {
+      examCurrentIndex = numIdx;
+    }
     const qNav = document.getElementById('exam-question-nav');
     if (!qNav) return;
     for (const pill of qNav.querySelectorAll('.exam-nav-pill')) {
-      const isCurrent = pill.dataset.qIndex === String(qIndex);
+      const isCurrent = pill.dataset.qIndex === String(examCurrentIndex);
       pill.classList.toggle('is-current', isCurrent);
       if (isCurrent) {
         pill.setAttribute('aria-current', 'location');
@@ -1224,11 +1351,58 @@
     }
   }
 
+  function applyExamFocusLayout() {
+    if (!activeExamObj) return;
+    const totalQ = activeExamObj.questions.length;
+    if (examCurrentIndex < 0 || examCurrentIndex >= totalQ) {
+      examCurrentIndex = 0;
+    }
+
+    const qContainer = document.getElementById('exam-questions-container');
+    if (qContainer) {
+      for (const card of qContainer.querySelectorAll('.question-card')) {
+        const idx = Number(card.dataset.qIndex);
+        card.hidden = examFocusMode && idx !== examCurrentIndex;
+      }
+    }
+
+    const btnToggle = document.getElementById('btn-toggle-exam-focus');
+    if (btnToggle) {
+      btnToggle.textContent = examFocusMode ? '📄 Ver todas' : '🎯 1 por vez';
+      btnToggle.disabled = totalQ <= 1;
+    }
+
+    const pager = document.getElementById('exam-focus-pager');
+    const posEl = document.getElementById('exam-focus-pos');
+    const prevBtn = document.getElementById('btn-exam-prev-q');
+    const nextBtn = document.getElementById('btn-exam-next-q');
+    if (pager) pager.hidden = !examFocusMode || totalQ <= 1;
+    if (posEl) posEl.textContent = `Questão ${examCurrentIndex + 1} de ${totalQ}`;
+    if (prevBtn) prevBtn.disabled = examCurrentIndex <= 0;
+    if (nextBtn) nextBtn.disabled = examCurrentIndex >= totalQ - 1;
+
+    setCurrentExamPill(examCurrentIndex);
+  }
+
+  function navigateExamToIndex(targetIdx, shouldScroll = true) {
+    if (!activeExamObj) return;
+    const totalQ = activeExamObj.questions.length;
+    if (totalQ === 0) return;
+    const clamped = Math.max(0, Math.min(totalQ - 1, Number(targetIdx) || 0));
+    examCurrentIndex = clamped;
+    applyExamFocusLayout();
+    if (shouldScroll) {
+      const card = document.querySelector(`.question-card[data-q-index="${clamped}"]`);
+      card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
   function setupExamVisibilityObserver() {
     if (examVisibleObserver) {
       examVisibleObserver.disconnect();
       examVisibleObserver = null;
     }
+    if (examFocusMode) return;
     const qContainer = document.getElementById('exam-questions-container');
     if (!qContainer || typeof IntersectionObserver === 'undefined') return;
 
@@ -1259,7 +1433,13 @@
     const btnSubmit = document.getElementById('btn-submit-exam');
     if (!btnSubmit) return;
     btnSubmit.dataset.confirmPending = 'false';
-    btnSubmit.textContent = examSessionMode === 'errors' ? '✅ Finalizar Treino de Erros' : DEFAULT_SUBMIT_LABEL;
+    if (examSessionMode === 'errors') {
+      btnSubmit.textContent = '✅ Finalizar Treino de Erros';
+    } else if (examSessionMode === 'practice') {
+      btnSubmit.textContent = '✅ Finalizar Treino Livre';
+    } else {
+      btnSubmit.textContent = DEFAULT_SUBMIT_LABEL;
+    }
     btnSubmit.classList.remove('is-confirming');
     if (submitConfirmTimer) {
       clearTimeout(submitConfirmTimer);
@@ -1271,6 +1451,7 @@
     activeSubjectKey = subjKey;
     examSessionMode = mode;
     activeExamObj = examObj;
+    examCurrentIndex = 0;
     const draftKey = `${subjKey}:${activeExamObj.id}`;
     const savedDraft = (appState.examDrafts && appState.examDrafts[draftKey]) || {};
     const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
@@ -1296,11 +1477,13 @@
     const letters = ['A', 'B', 'C', 'D'];
 
     activeExamObj.questions.forEach((q, idx) => {
-      const isFlagged = Boolean(savedFlags[idx]);
+      const dKey = getExamQuestionDraftKey(q, idx);
+      const isFlagged = Boolean(savedFlags[dKey]);
       const article = document.createElement('article');
       article.className = `question-card${isFlagged ? ' is-flagged' : ''}`;
       article.dataset.qIndex = String(idx);
-      const savedChoice = savedDraft[idx];
+      article.dataset.draftKey = dKey;
+      const savedChoice = savedDraft[dKey];
       const hasSavedChoice = savedChoice !== undefined && savedChoice !== null && savedChoice !== '';
 
       const optionsHtml = q.options
@@ -1341,8 +1524,9 @@
     });
 
     updateExamNavAndProgress();
-    setCurrentExamPill(0);
+    applyExamFocusLayout();
     setupExamVisibilityObserver();
+    startExamTimer();
     showView('view-exam');
   }
 
@@ -1398,6 +1582,31 @@
     });
   }
 
+  function openHistoryExamPractice(subjKey, historyIndex) {
+    const subj = getSubjectsMap()[subjKey];
+    const st = appState.subjects[subjKey];
+    if (!subj || !st || !Array.isArray(st.examHistory)) return;
+    const entry = st.examHistory[historyIndex];
+    if (!entry) return;
+    const sourceExam = subj.exams.find((ex) => ex.id === entry.examId) || subj.exams.find((ex) => ex.title === entry.examTitle);
+    if (!sourceExam) return;
+
+    renderExamView({
+      subjKey,
+      subj,
+      examObj: {
+        id: `practice-${sourceExam.id}`,
+        title: `${sourceExam.title} (Treino Livre)`,
+        questions: sourceExam.questions,
+        _sourceExamId: sourceExam.id,
+        _sourceExamTitle: sourceExam.title,
+      },
+      attemptLabel: `🔁 Refazendo em modo treino livre • Não consome tentativas do dia`,
+      noticeHtml: '🔁 <strong>Treino Livre:</strong> Refaça esta prova sem gastar suas 3 tentativas diárias. Questões acertadas aqui também saem da lista de pendências.',
+      mode: 'practice',
+    });
+  }
+
   function updateExamNavAndProgress() {
     if (!activeExamObj) return;
     const form = document.getElementById('exam-form');
@@ -1410,8 +1619,9 @@
     let flaggedCount = 0;
 
     for (let i = 0; i < total; i++) {
+      const dKey = getExamQuestionDraftKey(activeExamObj.questions[i], i);
       const isChecked = Boolean(form?.querySelector(`input[name="q_${i}"]:checked`));
-      const isFlagged = Boolean(savedFlags[i]);
+      const isFlagged = Boolean(savedFlags[dKey]);
       if (isChecked) answered++;
       if (isFlagged) flaggedCount++;
       const pill = qNav?.querySelector(`.exam-nav-pill[data-q-index="${i}"]`);
@@ -1458,19 +1668,31 @@
     for (let offset = 0; offset < total; offset++) {
       const idx = (startIdx + offset) % total;
       if (predicate(idx)) {
-        setCurrentExamPill(idx);
-        const card = document.querySelector(`.question-card[data-q-index="${idx}"]`);
-        card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        navigateExamToIndex(idx, true);
         return;
       }
     }
   }
 
+  document.getElementById('btn-toggle-exam-focus')?.addEventListener('click', () => {
+    examFocusMode = !examFocusMode;
+    applyExamFocusLayout();
+    setupExamVisibilityObserver();
+  });
+
+  document.getElementById('btn-exam-prev-q')?.addEventListener('click', () => {
+    navigateExamToIndex(examCurrentIndex - 1, true);
+  });
+
+  document.getElementById('btn-exam-next-q')?.addEventListener('click', () => {
+    navigateExamToIndex(examCurrentIndex + 1, true);
+  });
+
   document.getElementById('exam-flagged-status')?.addEventListener('click', () => {
     if (!activeExamObj || !activeSubjectKey) return;
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
     const savedFlags = (appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
-    jumpToExamQuestionByPredicate((idx) => Boolean(savedFlags[idx]));
+    jumpToExamQuestionByPredicate((idx) => Boolean(savedFlags[getExamQuestionDraftKey(activeExamObj.questions[idx], idx)]));
   });
 
   document.getElementById('exam-jump-unanswered')?.addEventListener('click', () => {
@@ -1481,11 +1703,7 @@
   document.getElementById('exam-question-nav')?.addEventListener('click', (e) => {
     const btn = e.target.closest('.exam-nav-pill');
     if (!btn) return;
-    setCurrentExamPill(btn.dataset.qIndex);
-    const card = document.querySelector(`.question-card[data-q-index="${btn.dataset.qIndex}"]`);
-    if (card) {
-      card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    navigateExamToIndex(Number(btn.dataset.qIndex), true);
   });
 
   document.getElementById('exam-questions-container').addEventListener('click', (e) => {
@@ -1493,6 +1711,7 @@
     if (!flagBtn || !activeExamObj || !activeSubjectKey) return;
 
     const qIdx = Number(flagBtn.dataset.qIndex);
+    const dKey = getExamQuestionDraftKey(activeExamObj.questions[qIdx], qIdx);
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
     if (!appState.examDraftFlags || typeof appState.examDraftFlags !== 'object') {
       appState.examDraftFlags = {};
@@ -1501,11 +1720,11 @@
       appState.examDraftFlags[draftKey] = {};
     }
 
-    const willFlag = !appState.examDraftFlags[draftKey][qIdx];
+    const willFlag = !appState.examDraftFlags[draftKey][dKey];
     if (willFlag) {
-      appState.examDraftFlags[draftKey][qIdx] = true;
+      appState.examDraftFlags[draftKey][dKey] = true;
     } else {
-      delete appState.examDraftFlags[draftKey][qIdx];
+      delete appState.examDraftFlags[draftKey][dKey];
     }
     saveState();
 
@@ -1524,6 +1743,7 @@
     const radio = e.target.closest('input[type="radio"]');
     if (radio && radio.name.startsWith('q_')) {
       const qIdx = Number(radio.name.slice(2));
+      const dKey = getExamQuestionDraftKey(activeExamObj.questions[qIdx], qIdx);
       const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
       if (!appState.examDrafts || typeof appState.examDrafts !== 'object') {
         appState.examDrafts = {};
@@ -1531,7 +1751,7 @@
       if (!appState.examDrafts[draftKey]) {
         appState.examDrafts[draftKey] = {};
       }
-      appState.examDrafts[draftKey][qIdx] = Number(radio.value);
+      appState.examDrafts[draftKey][dKey] = Number(radio.value);
       saveState();
 
       const card = radio.closest('.question-card');
@@ -1542,6 +1762,49 @@
     updateExamNavAndProgress();
   });
 
+  // Keyboard shortcuts for Exam view
+  document.addEventListener('keydown', (e) => {
+    const examView = document.getElementById('view-exam');
+    if (!examView || examView.hidden || !activeExamObj) return;
+    if (document.querySelector('dialog[open]')) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+    const activeEl = document.activeElement;
+    const tag = activeEl?.tagName;
+    if (tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (tag === 'INPUT' && activeEl.type !== 'radio') return;
+
+    const key = e.key.toLowerCase();
+    const optionMap = { '1': 0, '2': 1, '3': 2, '4': 3, a: 0, b: 1, c: 2, d: 3 };
+    if (key in optionMap) {
+      const optIdx = optionMap[key];
+      const radio = document.querySelector(`#exam-form input[name="q_${examCurrentIndex}"][value="${optIdx}"]`);
+      if (radio) {
+        e.preventDefault();
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      return;
+    }
+
+    if (key === 'r') {
+      const flagBtn = document.querySelector(`.question-card[data-q-index="${examCurrentIndex}"] .btn-flag-question`);
+      if (flagBtn) {
+        e.preventDefault();
+        flagBtn.click();
+      }
+      return;
+    }
+
+    if (e.key === '[' || (e.key === 'ArrowLeft' && activeEl?.type !== 'radio')) {
+      e.preventDefault();
+      navigateExamToIndex(examCurrentIndex - 1, true);
+    } else if (e.key === ']' || (e.key === 'ArrowRight' && activeEl?.type !== 'radio')) {
+      e.preventDefault();
+      navigateExamToIndex(examCurrentIndex + 1, true);
+    }
+  });
+
   document.getElementById('exam-form').addEventListener('submit', (e) => {
     e.preventDefault();
     if (!activeExamObj) return;
@@ -1549,19 +1812,15 @@
     const form = e.target;
     const qNav = document.getElementById('exam-question-nav');
     const userAnswers = [];
-    const missingNumbers = [];
-    let firstMissingCard = null;
+    const missingIndices = [];
 
     for (let i = 0; i < activeExamObj.questions.length; i++) {
       const card = form.querySelector(`.question-card[data-q-index="${i}"]`);
       const pill = qNav?.querySelector(`.exam-nav-pill[data-q-index="${i}"]`);
       const checked = form.querySelector(`input[name="q_${i}"]:checked`);
       if (!checked) {
-        missingNumbers.push(i + 1);
-        if (card) {
-          card.classList.add('is-missing');
-          if (!firstMissingCard) firstMissingCard = card;
-        }
+        missingIndices.push(i);
+        if (card) card.classList.add('is-missing');
         if (pill) pill.classList.add('is-missing');
       } else {
         if (card) card.classList.remove('is-missing');
@@ -1570,19 +1829,17 @@
       }
     }
 
-    if (missingNumbers.length > 0) {
+    if (missingIndices.length > 0) {
       const msgEl = document.getElementById('exam-incomplete-msg');
-      msgEl.textContent = `⚠️ Falta responder a(s) questão(ões): ${missingNumbers.join(', ')}`;
+      msgEl.textContent = `⚠️ Falta responder a(s) questão(ões): ${missingIndices.map((idx) => idx + 1).join(', ')}`;
       msgEl.hidden = false;
-      if (firstMissingCard) {
-        firstMissingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      navigateExamToIndex(missingIndices[0], true);
       return;
     }
 
     const draftKey = activeSubjectKey ? `${activeSubjectKey}:${activeExamObj.id}` : '';
     const savedFlags = (draftKey && appState.examDraftFlags && appState.examDraftFlags[draftKey]) || {};
-    const flaggedCount = activeExamObj.questions.filter((_, idx) => Boolean(savedFlags[idx])).length;
+    const flaggedCount = activeExamObj.questions.filter((q, idx) => Boolean(savedFlags[getExamQuestionDraftKey(q, idx)])).length;
     const btnSubmit = document.getElementById('btn-submit-exam');
     if (flaggedCount > 0 && btnSubmit && btnSubmit.dataset.confirmPending !== 'true') {
       btnSubmit.dataset.confirmPending = 'true';
@@ -1594,10 +1851,14 @@
     }
 
     resetSubmitExamConfirm();
+    const durationSeconds = getElapsedExamSeconds();
+    stopExamTimer();
     if (examSessionMode === 'errors') {
-      gradeAndShowErrorDrillResult(userAnswers);
+      gradeAndShowErrorDrillResult(userAnswers, durationSeconds);
+    } else if (examSessionMode === 'practice') {
+      gradeAndShowPracticeResult(userAnswers, durationSeconds);
     } else {
-      gradeAndShowExamResult(userAnswers);
+      gradeAndShowExamResult(userAnswers, durationSeconds);
     }
   });
 
@@ -1622,7 +1883,37 @@
     applyResultReviewFilter(btn.dataset.filter);
   });
 
-  function renderExamResultView({ subjKey, subj, st, examObj, score, passed, userAnswers, wrongQuestions, isHistoryReview = false, isErrorDrill = false, dayNumber = 1 }) {
+  function buildExamErrorsWhatsAppText({ subj, examObj, score, userAnswers, wrongQuestions }) {
+    const letters = ['A', 'B', 'C', 'D'];
+    const totalQ = examObj.questions.length;
+    const hasUserAnswers = Array.isArray(userAnswers) && userAnswers.length === totalQ;
+    const wrongById = new Set((wrongQuestions || []).map((w) => w.id).filter(Boolean));
+    const wrongByNum = new Set((wrongQuestions || []).map((w) => Number(w.number)).filter((n) => !Number.isNaN(n)));
+
+    const lines = [];
+    lines.push(`❓ *DÚVIDA DE PROVA — ${subj.title.toUpperCase()} (${examObj.title})*`);
+    lines.push(`Nota: ${score}/${totalQ}`);
+    lines.push('');
+
+    examObj.questions.forEach((q, idx) => {
+      const userAns = hasUserAnswers ? userAnswers[idx] : null;
+      const isRight = hasUserAnswers
+        ? userAns === q.correct
+        : !(wrongById.has(q.id) || wrongByNum.has(idx + 1));
+      if (isRight) return;
+
+      lines.push(`*Q${idx + 1}${q._sourceExamTitle ? ` (${q._sourceExamTitle})` : ''}:* ${q.text}`);
+      if (hasUserAnswers && q.options[userAns] !== undefined) {
+        lines.push(`❌ Marquei: ${letters[userAns]}) ${q.options[userAns]}`);
+      }
+      lines.push(`✅ Gabarito: ${letters[q.correct]}) ${q.options[q.correct]}`);
+      lines.push('');
+    });
+
+    return lines.join('\n').trim();
+  }
+
+  function renderExamResultView({ subjKey, subj, st, examObj, score, passed, userAnswers, wrongQuestions, isHistoryReview = false, isErrorDrill = false, isPracticeMode = false, dayNumber = 1, durationSeconds = null }) {
     const letters = ['A', 'B', 'C', 'D'];
     const totalQ = examObj.questions.length;
 
@@ -1638,12 +1929,15 @@
       : `Nota: ${score} / ${totalQ} ${passed ? '🎉' : '💪'}`;
 
     ctaContainer.innerHTML = '';
+    const durationNote = typeof durationSeconds === 'number' && durationSeconds > 0
+      ? ` (⏱️ Tempo: <strong>${formatDuration(durationSeconds)}</strong>)`
+      : '';
 
     if (isErrorDrill) {
       const remainingErrors = getPendingExamErrorQuestions(subj, st).length;
       statusMsg.innerHTML = remainingErrors === 0
-        ? `<strong>Mandou muito bem, Pantoja!</strong> Você acertou todas as <strong>${totalQ}</strong> questões que tinha errado antes em <strong>${escapeHtml(subj.title)}</strong>!`
-        : `Você resolveu <strong>${score}/${totalQ}</strong> questão(ões) neste treino. Ainda restam <strong>${remainingErrors}</strong> pendente(s) para revisar sem gastar tentativas do dia.`;
+        ? `<strong>Mandou muito bem, Pantoja!</strong> Você acertou todas as <strong>${totalQ}</strong> questões que tinha errado antes em <strong>${escapeHtml(subj.title)}</strong>!${durationNote}`
+        : `Você resolveu <strong>${score}/${totalQ}</strong> questão(ões) neste treino${durationNote}. Ainda restam <strong>${remainingErrors}</strong> pendente(s) para revisar sem gastar tentativas do dia.`;
       if (remainingErrors > 0) {
         const btnRetryErrors = document.createElement('button');
         btnRetryErrors.type = 'button';
@@ -1652,13 +1946,30 @@
         btnRetryErrors.addEventListener('click', () => openExamErrorDrill(subjKey));
         ctaContainer.appendChild(btnRetryErrors);
       }
+    } else if (isPracticeMode) {
+      statusMsg.innerHTML = `🔁 <strong>Treino Livre concluído:</strong> você acertou <strong>${score}/${totalQ}</strong>${durationNote} sem gastar suas tentativas do dia.`;
+      const btnRetake = document.createElement('button');
+      btnRetake.type = 'button';
+      btnRetake.className = 'primary';
+      btnRetake.textContent = '🔁 Refazer este treino';
+      btnRetake.addEventListener('click', () => {
+        renderExamView({
+          subjKey,
+          subj,
+          examObj,
+          attemptLabel: `🔁 Refazendo em modo treino livre • Não consome tentativas do dia`,
+          noticeHtml: '🔁 <strong>Treino Livre:</strong> Refaça esta prova sem gastar suas 3 tentativas diárias. Questões acertadas aqui também saem da lista de pendências.',
+          mode: 'practice',
+        });
+      });
+      ctaContainer.appendChild(btnRetake);
     } else if (isHistoryReview) {
-      statusMsg.innerHTML = `📜 <strong>Revisão do Histórico (Dia ${escapeHtml(dayNumber)}):</strong> você tirou <strong>${score}/${totalQ}</strong> nesta tentativa. Confira abaixo todas as questões e comentários.`;
+      statusMsg.innerHTML = `📜 <strong>Revisão do Histórico (Dia ${escapeHtml(dayNumber)}):</strong> você tirou <strong>${score}/${totalQ}</strong> nesta tentativa${durationNote}. Confira abaixo todas as questões e comentários.`;
     } else if (passed) {
-      statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/${totalQ}</strong> (meta era ≥ 8) e concluiu <strong>${escapeHtml(subj.title)}</strong> por hoje!`;
+      statusMsg.innerHTML = `<strong>Excelente, Pantoja!</strong> Você tirou <strong>${score}/${totalQ}</strong>${durationNote} (meta era ≥ 8) e concluiu <strong>${escapeHtml(subj.title)}</strong> por hoje!`;
     } else if (st.examsTodayCount < 3) {
       const remaining = 3 - st.examsTodayCount;
-      statusMsg.innerHTML = `Você tirou <strong>${score}/${totalQ}</strong> (a meta é ≥ 8). Revise o gabarito abaixo com atenção e tente a próxima prova! Você ainda tem <strong>${remaining} tentativa(s)</strong> hoje em ${escapeHtml(subj.title)}.`;
+      statusMsg.innerHTML = `Você tirou <strong>${score}/${totalQ}</strong>${durationNote} (a meta é ≥ 8). Revise o gabarito abaixo com atenção e tente a próxima prova! Você ainda tem <strong>${remaining} tentativa(s)</strong> hoje em ${escapeHtml(subj.title)}.`;
       const btnRetry = document.createElement('button');
       btnRetry.type = 'button';
       btnRetry.className = 'primary';
@@ -1666,7 +1977,31 @@
       btnRetry.addEventListener('click', () => openExam(subjKey));
       ctaContainer.appendChild(btnRetry);
     } else {
-      statusMsg.innerHTML = `Você tirou <strong>${score}/${totalQ}</strong> e completou o limite de <strong>3 provas de hoje</strong> em ${escapeHtml(subj.title)} (Melhor nota: ${st.bestScoreToday}/${totalQ}). Revise o gabarito abaixo e mande o Relatório do Dia para o Peter ajustar a revisão de amanhã!`;
+      statusMsg.innerHTML = `Você tirou <strong>${score}/${totalQ}</strong>${durationNote} e completou o limite de <strong>3 provas de hoje</strong> em ${escapeHtml(subj.title)} (Melhor nota: ${st.bestScoreToday}/${totalQ}). Revise o gabarito abaixo e mande o Relatório do Dia para o Peter ajustar a revisão de amanhã!`;
+    }
+
+    const hasUserAnswers = Array.isArray(userAnswers) && userAnswers.length === totalQ;
+    const wrongById = new Set((wrongQuestions || []).map((w) => w.id).filter(Boolean));
+    const wrongByNum = new Set((wrongQuestions || []).map((w) => Number(w.number)).filter((n) => !Number.isNaN(n)));
+    const wrongCount = hasUserAnswers
+      ? examObj.questions.filter((q, idx) => userAnswers[idx] !== q.correct).length
+      : (wrongQuestions || []).length;
+
+    if (wrongCount > 0) {
+      const btnCopyErrors = document.createElement('button');
+      btnCopyErrors.type = 'button';
+      btnCopyErrors.className = 'outline secondary';
+      btnCopyErrors.textContent = `💬 Copiar ${wrongCount} erro(s) p/ dúvida`;
+      btnCopyErrors.addEventListener('click', async () => {
+        const text = buildExamErrorsWhatsAppText({ subj, examObj, score, userAnswers, wrongQuestions });
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('💬 Erros copiados! Só colar no WhatsApp para tirar dúvida.');
+        } catch (err) {
+          showToast('⚠️ Não foi possível copiar automaticamente.');
+        }
+      });
+      ctaContainer.appendChild(btnCopyErrors);
     }
 
     const btnBackDash = document.createElement('button');
@@ -1678,13 +2013,6 @@
       showView('view-dashboard');
     });
     ctaContainer.appendChild(btnBackDash);
-
-    const hasUserAnswers = Array.isArray(userAnswers) && userAnswers.length === totalQ;
-    const wrongById = new Set((wrongQuestions || []).map((w) => w.id).filter(Boolean));
-    const wrongByNum = new Set((wrongQuestions || []).map((w) => Number(w.number)).filter((n) => !Number.isNaN(n)));
-    const wrongCount = hasUserAnswers
-      ? examObj.questions.filter((q, idx) => userAnswers[idx] !== q.correct).length
-      : (wrongQuestions || []).length;
 
     const btnAll = document.getElementById('btn-filter-all');
     const btnWrong = document.getElementById('btn-filter-wrong');
@@ -1734,7 +2062,7 @@
         : '';
 
       card.innerHTML = `
-        <span class="question-num">Questão ${idx + 1} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
+        <span class="question-num">Questão ${idx + 1}${q._sourceExamTitle ? ` • ${escapeHtml(q._sourceExamTitle)}` : ''} • ${isRight ? '✅ Acertou' : '❌ Errou'}</span>
         <p class="question-text">${escapeHtml(q.text)}</p>
         ${legacyChoiceLine}
         ${optionsReviewHtml}
@@ -1770,10 +2098,11 @@
       wrongQuestions: entry.wrongQuestions,
       isHistoryReview: true,
       dayNumber: entry.dayNumber || 1,
+      durationSeconds: entry.durationSeconds ?? null,
     });
   }
 
-  function gradeAndShowExamResult(userAnswers) {
+  function gradeAndShowExamResult(userAnswers, durationSeconds = null) {
     const subj = getSubjectsMap()[activeSubjectKey];
     const st = appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
@@ -1821,6 +2150,7 @@
       examTitle: activeExamObj.title,
       score,
       passed,
+      durationSeconds,
       userAnswers: [...userAnswers],
       wrongQuestions,
     });
@@ -1838,10 +2168,11 @@
       wrongQuestions,
       isHistoryReview: false,
       dayNumber: appState.dayNumber || 1,
+      durationSeconds,
     });
   }
 
-  function gradeAndShowErrorDrillResult(userAnswers) {
+  function gradeAndShowErrorDrillResult(userAnswers, durationSeconds = null) {
     const subj = getSubjectsMap()[activeSubjectKey];
     const st = appState.subjects[activeSubjectKey];
     const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
@@ -1885,6 +2216,57 @@
       wrongQuestions,
       isErrorDrill: true,
       dayNumber: appState.dayNumber || 1,
+      durationSeconds,
+    });
+  }
+
+  function gradeAndShowPracticeResult(userAnswers, durationSeconds = null) {
+    const subj = getSubjectsMap()[activeSubjectKey];
+    const st = appState.subjects[activeSubjectKey];
+    const draftKey = `${activeSubjectKey}:${activeExamObj.id}`;
+    if (appState.examDrafts && appState.examDrafts[draftKey]) {
+      delete appState.examDrafts[draftKey];
+    }
+    if (appState.examDraftFlags && appState.examDraftFlags[draftKey]) {
+      delete appState.examDraftFlags[draftKey];
+    }
+    if (!st.resolvedExamErrors || typeof st.resolvedExamErrors !== 'object') {
+      st.resolvedExamErrors = {};
+    }
+
+    const baseExamId = activeExamObj._sourceExamId || activeExamObj.id;
+    let score = 0;
+    const wrongQuestions = [];
+
+    activeExamObj.questions.forEach((q, idx) => {
+      const qKey = getExamQuestionKey(q, baseExamId, idx + 1);
+      if (userAnswers[idx] === q.correct) {
+        score++;
+        st.resolvedExamErrors[qKey] = true;
+      } else {
+        delete st.resolvedExamErrors[qKey];
+        wrongQuestions.push({
+          id: q.id,
+          number: idx + 1,
+          text: q.text,
+        });
+      }
+    });
+
+    saveState();
+
+    renderExamResultView({
+      subjKey: activeSubjectKey,
+      subj,
+      st,
+      examObj: activeExamObj,
+      score,
+      passed: score >= 8,
+      userAnswers,
+      wrongQuestions,
+      isPracticeMode: true,
+      dayNumber: appState.dayNumber || 1,
+      durationSeconds,
     });
   }
 
@@ -1936,8 +2318,11 @@
       if (todayExams.length > 0) {
         for (const ex of todayExams) {
           const wrongIds = (ex.wrongQuestions || []).map((w) => `Q${w.number}`).join(', ');
+          const durText = typeof ex.durationSeconds === 'number' && ex.durationSeconds > 0
+            ? ` [${formatDuration(ex.durationSeconds)}]`
+            : '';
           lines.push(
-            `• ${ex.examTitle}: Nota *${ex.score}/10* ${ex.passed ? '✅' : '⚠️'} ${
+            `• ${ex.examTitle}: Nota *${ex.score}/10*${durText} ${ex.passed ? '✅' : '⚠️'} ${
               wrongIds ? `(Errou: ${wrongIds})` : '(Gabaritou!)'
             }`
           );
@@ -1963,22 +2348,34 @@
   }
 
   let toastTimer = null;
+  let glossaryToastTimer = null;
   let globalToastTimer = null;
 
   function showToast(msg) {
-    const isDialogOpen = Boolean(dialogReport && dialogReport.open);
-    const toast = isDialogOpen
+    const isReportOpen = Boolean(dialogReport && dialogReport.open);
+    const isGlossaryOpen = Boolean(dialogGlossary && dialogGlossary.open);
+    const toast = isReportOpen
       ? document.getElementById('report-feedback-toast')
+      : isGlossaryOpen
+      ? document.getElementById('glossary-feedback-toast')
       : document.getElementById('global-toast');
     if (!toast) return;
 
-    if (isDialogOpen) {
+    if (isReportOpen) {
       if (toastTimer) clearTimeout(toastTimer);
       toast.textContent = msg;
       toast.hidden = false;
       toastTimer = setTimeout(() => {
         toast.hidden = true;
         toastTimer = null;
+      }, 3500);
+    } else if (isGlossaryOpen) {
+      if (glossaryToastTimer) clearTimeout(glossaryToastTimer);
+      toast.textContent = msg;
+      toast.hidden = false;
+      glossaryToastTimer = setTimeout(() => {
+        toast.hidden = true;
+        glossaryToastTimer = null;
       }, 3500);
     } else {
       if (globalToastTimer) clearTimeout(globalToastTimer);
@@ -2039,6 +2436,7 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
       appState = loadState();
       checkDailyRollover();
+      lastVfUndoSnapshot = null;
       saveState();
       applyTheme(appState.theme || 'light');
       renderDashboard();
@@ -2107,6 +2505,8 @@
   // GLOSSARY / QUICK CONCEPT SEARCH MODAL
   // ==========================================================================
   let glossarySubjectFilter = 'all';
+  let glossarySource = 'cards'; // 'cards' | 'exams'
+  let lastGlossaryExportText = '';
 
   function normalizeSearchText(value) {
     return String(value || '')
@@ -2116,15 +2516,163 @@
       .trim();
   }
 
+  function highlightSearchMatch(text, normalizedQuery) {
+    const raw = String(text ?? '');
+    if (!normalizedQuery) return escapeHtml(raw);
+
+    let norm = '';
+    const starts = [];
+    const ends = [];
+    let origPos = 0;
+
+    for (const ch of raw) {
+      const base = ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      for (const bCh of base) {
+        norm += bCh;
+        starts.push(origPos);
+        ends.push(origPos + ch.length);
+      }
+      origPos += ch.length;
+    }
+
+    const qLen = normalizedQuery.length;
+    if (!norm.includes(normalizedQuery)) return escapeHtml(raw);
+
+    let out = '';
+    let lastOrigIdx = 0;
+    let searchFrom = 0;
+
+    while (searchFrom < norm.length) {
+      const matchIdx = norm.indexOf(normalizedQuery, searchFrom);
+      if (matchIdx === -1) break;
+      const origStart = starts[matchIdx];
+      const origEnd = ends[matchIdx + qLen - 1];
+      if (origStart > lastOrigIdx) {
+        out += escapeHtml(raw.slice(lastOrigIdx, origStart));
+      }
+      out += `<mark>${escapeHtml(raw.slice(origStart, origEnd))}</mark>`;
+      lastOrigIdx = origEnd;
+      searchFrom = matchIdx + qLen;
+    }
+
+    if (lastOrigIdx < raw.length) {
+      out += escapeHtml(raw.slice(lastOrigIdx));
+    }
+    return out;
+  }
+
   function renderGlossaryResults() {
     const listEl = document.getElementById('glossary-results-list');
     const countEl = document.getElementById('glossary-count-label');
+    const pendingWrap = document.getElementById('glossary-pending-wrap');
+    const copyBtn = document.getElementById('btn-copy-glossary');
     if (!listEl || !countEl) return;
+
+    if (pendingWrap) {
+      pendingWrap.hidden = glossarySource !== 'cards';
+    }
 
     const query = normalizeSearchText(document.getElementById('glossary-search-input')?.value);
     const onlyErrors = Boolean(document.getElementById('glossary-only-errors')?.checked);
+    const onlyPending = Boolean(document.getElementById('glossary-only-pending')?.checked);
     const subjects = getSubjectsMap();
     const keys = glossarySubjectFilter === 'all' ? ['quimica', 'biologia', 'fisica'] : [glossarySubjectFilter];
+
+    if (glossarySource === 'exams') {
+      const letters = ['A', 'B', 'C', 'D'];
+      const matches = [];
+      let totalAttempted = 0;
+
+      for (const key of keys) {
+        const subj = subjects[key];
+        const st = appState.subjects[key];
+        if (!subj || !st || !Array.isArray(st.examHistory)) continue;
+
+        const seenExams = new Set();
+        const wrongSet = new Set();
+        for (const h of st.examHistory) {
+          const examObj = subj.exams.find((ex) => ex.id === h.examId) || subj.exams.find((ex) => ex.title === h.examTitle);
+          if (!examObj) continue;
+          seenExams.add(examObj.id);
+          for (const w of h.wrongQuestions || []) {
+            const qObj = findExamQuestion(subj, examObj.id, w);
+            if (qObj) wrongSet.add(getExamQuestionKey(qObj, examObj.id, w.number));
+          }
+        }
+
+        for (const examObj of subj.exams) {
+          if (!seenExams.has(examObj.id)) continue;
+          examObj.questions.forEach((q, idx) => {
+            totalAttempted++;
+            const qKey = getExamQuestionKey(q, examObj.id, idx + 1);
+            const wasWrong = wrongSet.has(qKey);
+            const isResolved = Boolean(st.resolvedExamErrors && st.resolvedExamErrors[qKey]);
+            if (onlyErrors && !wasWrong) return;
+
+            if (query) {
+              const haystack = normalizeSearchText(
+                `${subj.title} ${examObj.title} ${q.text} ${(q.options || []).join(' ')} ${q.explanation}`
+              );
+              if (!haystack.includes(query)) return;
+            }
+
+            matches.push({
+              subjTitle: subj.title,
+              examTitle: examObj.title,
+              qNumber: idx + 1,
+              question: q,
+              wasWrong,
+              isResolved,
+            });
+          });
+        }
+      }
+
+      matches.sort((a, b) => Number(b.wasWrong && !b.isResolved) - Number(a.wasWrong && !a.isResolved) || Number(b.wasWrong) - Number(a.wasWrong));
+      countEl.textContent = `Exibindo ${matches.length} de ${totalAttempted} questões de provas já feitas`;
+      if (copyBtn) copyBtn.disabled = matches.length === 0;
+
+      lastGlossaryExportText = matches
+        .map((m) => `${m.subjTitle} • ${m.examTitle} Q${m.qNumber}\n${m.question.text}\nGabarito: ${letters[m.question.correct]}) ${m.question.options[m.question.correct]}\nComentário: ${m.question.explanation}`)
+        .join('\n\n');
+
+      if (totalAttempted === 0) {
+        listEl.innerHTML = '<p class="muted-text">As questões de prova aparecem aqui automaticamente depois que você concluir sua primeira prova (sem dar spoiler das próximas!).</p>';
+        return;
+      }
+
+      if (matches.length === 0) {
+        listEl.innerHTML = '<p class="muted-text">Nenhuma questão encontrada para esse filtro.</p>';
+        return;
+      }
+
+      listEl.innerHTML = matches
+        .map(({ subjTitle, examTitle, qNumber, question, wasWrong, isResolved }) => {
+          const correctLetter = letters[question.correct] || '?';
+          const correctText = question.options?.[question.correct] || '';
+          const errBadge = wasWrong
+            ? isResolved
+              ? '<span class="glossary-ans-pill is-true">✅ Erro revisado</span>'
+              : '<span class="card-flag-tag">⚠️ Erro pendente</span>'
+            : '';
+          return `
+            <article class="glossary-item">
+              <div class="glossary-item-head">
+                <span class="card-topic-tag">${escapeHtml(subjTitle)} • ${escapeHtml(examTitle)} Q${qNumber}</span>
+                <div class="glossary-item-badges">
+                  ${errBadge}
+                  <span class="glossary-ans-pill is-true">Gabarito: ${correctLetter}</span>
+                </div>
+              </div>
+              <p class="glossary-item-stmt">${highlightSearchMatch(question.text, query)}</p>
+              <p class="glossary-item-stmt"><strong>${correctLetter})</strong> ${highlightSearchMatch(correctText, query)}</p>
+              <p class="muted-text glossary-item-exp">${highlightSearchMatch(question.explanation, query)}</p>
+            </article>
+          `;
+        })
+        .join('');
+      return;
+    }
 
     const matches = [];
     let totalScope = 0;
@@ -2137,19 +2685,26 @@
       for (const c of subj.cards) {
         totalScope++;
         const errCount = st.cardErrorsTotal[c.id] || 0;
+        const boxVal = st.cardBoxes[c.id] || 0;
         if (onlyErrors && errCount === 0) continue;
+        if (onlyPending && boxVal >= 2) continue;
 
         if (query) {
           const haystack = normalizeSearchText(`${c.topic} ${c.statement} ${c.explanation} ${subj.title}`);
           if (!haystack.includes(query)) continue;
         }
 
-        matches.push({ key, subjTitle: subj.title, card: c, errCount });
+        matches.push({ key, subjTitle: subj.title, card: c, errCount, boxVal });
       }
     }
 
     matches.sort((a, b) => b.errCount - a.errCount);
     countEl.textContent = `Exibindo ${matches.length} de ${totalScope} cartões V/F`;
+    if (copyBtn) copyBtn.disabled = matches.length === 0;
+
+    lastGlossaryExportText = matches
+      .map(({ subjTitle, card }) => `[${subjTitle} • ${card.topic}] (${card.answer ? 'V' : 'F'}) ${card.statement}\n→ ${card.explanation}`)
+      .join('\n\n');
 
     if (matches.length === 0) {
       listEl.innerHTML = '<p class="muted-text">Nenhum conceito encontrado para esse filtro.</p>';
@@ -2158,19 +2713,20 @@
 
     listEl.innerHTML = matches
       .map(
-        ({ subjTitle, card, errCount }) => `
+        ({ subjTitle, card, errCount, boxVal }) => `
         <article class="glossary-item">
           <div class="glossary-item-head">
-            <span class="card-topic-tag">${escapeHtml(subjTitle)} • ${escapeHtml(card.topic)}</span>
+            <span class="card-topic-tag">${highlightSearchMatch(`${subjTitle} • ${card.topic}`, query)}</span>
             <div class="glossary-item-badges">
+              <span class="card-box-tag">Caixa ${boxVal}/2</span>
               ${errCount > 0 ? `<span class="card-flag-tag">⚠️ ${errCount}x erro</span>` : ''}
               <span class="glossary-ans-pill ${card.answer ? 'is-true' : 'is-false'}">
                 ${card.answer ? 'VERDADEIRO ✅' : 'FALSO ❌'}
               </span>
             </div>
           </div>
-          <p class="glossary-item-stmt">${escapeHtml(card.statement)}</p>
-          <p class="muted-text glossary-item-exp">${escapeHtml(card.explanation)}</p>
+          <p class="glossary-item-stmt">${highlightSearchMatch(card.statement, query)}</p>
+          <p class="muted-text glossary-item-exp">${highlightSearchMatch(card.explanation, query)}</p>
         </article>
       `
       )
@@ -2185,6 +2741,20 @@
     renderGlossaryResults();
   });
 
+  document.getElementById('glossary-only-pending')?.addEventListener('change', () => {
+    renderGlossaryResults();
+  });
+
+  document.getElementById('glossary-source-tabs')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-source]');
+    if (!btn) return;
+    glossarySource = btn.dataset.source;
+    for (const b of e.currentTarget.querySelectorAll('button[data-source]')) {
+      b.className = b === btn ? 'btn-xs primary' : 'btn-xs outline secondary';
+    }
+    renderGlossaryResults();
+  });
+
   document.getElementById('glossary-subject-filters')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-subj]');
     if (!btn) return;
@@ -2193,6 +2763,16 @@
       b.className = b === btn ? 'btn-xs primary' : 'btn-xs outline secondary';
     }
     renderGlossaryResults();
+  });
+
+  document.getElementById('btn-copy-glossary')?.addEventListener('click', async () => {
+    if (!lastGlossaryExportText) return;
+    try {
+      await navigator.clipboard.writeText(lastGlossaryExportText);
+      showToast('📋 Lista copiada para revisar!');
+    } catch (err) {
+      showToast('⚠️ Não foi possível copiar automaticamente.');
+    }
   });
 
   const resetClearDraftConfirm = setupTwoStepConfirm(
@@ -2224,6 +2804,7 @@
       }
       const incMsg = document.getElementById('exam-incomplete-msg');
       if (incMsg) incMsg.hidden = true;
+      resetSubmitExamConfirm();
       updateExamNavAndProgress();
     }
   );
@@ -2245,6 +2826,7 @@
     '⚠️ Clique de novo para ZERAR TUDO',
     () => {
       localStorage.removeItem(STORAGE_KEY);
+      lastVfUndoSnapshot = null;
       appState = loadState();
       renderDashboard();
       updateReportTextarea();

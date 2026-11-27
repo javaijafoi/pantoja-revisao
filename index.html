@@ -87,6 +87,7 @@
           <small id="vf-mode-label" class="block-sub" hidden></small>
         </div>
         <div class="vf-header-badges">
+          <button type="button" class="outline secondary btn-xs" id="btn-shuffle-vf" title="Embaralhar fila restante">🔀 Embaralhar</button>
           <span class="badge-pill" id="vf-queue-badge">Fila: 30</span>
           <span class="badge-pill" id="vf-counter-badge">0 / 30</span>
         </div>
@@ -138,6 +139,9 @@
           <button type="button" class="outline secondary" id="btn-toggle-explanation">
             💡 Ver Explicação
           </button>
+          <button type="button" class="outline secondary" id="btn-undo-vf" hidden>
+            ↩️ Desfazer
+          </button>
           <button type="button" class="primary" id="btn-next-card">
             Próximo Card →
           </button>
@@ -158,7 +162,10 @@
           <strong id="exam-subject-title">Química — Prova 1</strong>
           <small id="exam-attempt-label" class="block-sub">Tentativa 1 de 3 hoje</small>
         </div>
-        <span class="badge-pill" id="exam-answered-badge">0 / 10 respondidas</span>
+        <div class="vf-header-badges">
+          <span class="badge-pill" id="exam-timer-badge" aria-live="off">⏱️ 00:00</span>
+          <span class="badge-pill" id="exam-answered-badge">0 / 10 respondidas</span>
+        </div>
       </div>
 
       <div class="exam-sticky-bar">
@@ -172,9 +179,14 @@
               🚩 0 para revisar ↻
             </button>
           </div>
-          <button type="button" class="outline secondary btn-sm" id="btn-clear-exam-draft" disabled>
-            🧹 Limpar marcações
-          </button>
+          <div class="exam-sticky-actions">
+            <button type="button" class="outline secondary btn-sm" id="btn-toggle-exam-focus">
+              🎯 1 por vez
+            </button>
+            <button type="button" class="outline secondary btn-sm" id="btn-clear-exam-draft" disabled>
+              🧹 Limpar marcações
+            </button>
+          </div>
         </div>
         <progress id="exam-progress-bar" value="0" max="10"></progress>
         <nav class="exam-question-nav" id="exam-question-nav" aria-label="Navegação rápida das questões"></nav>
@@ -182,11 +194,20 @@
 
       <article class="simulado-notice">
         <small id="exam-simulado-notice-text">📝 <strong>Modo Simulado:</strong> Responda as 10 questões com calma. A nota e o gabarito comentado aparecem ao entregar a prova no final.</small>
+        <small class="keyboard-hint exam-keyboard-hint">
+          ⌨️ Atalhos: <kbd>A</kbd>-<kbd>D</kbd> (ou <kbd>1</kbd>-<kbd>4</kbd>) = Marcar • <kbd>R</kbd> = Revisar depois • <kbd>[</kbd> <kbd>]</kbd> = Questão anterior/próxima
+        </small>
       </article>
 
       <form id="exam-form">
         <div id="exam-questions-container">
           <!-- 10 questions rendered here -->
+        </div>
+
+        <div id="exam-focus-pager" class="exam-focus-pager" hidden>
+          <button type="button" class="outline secondary btn-sm" id="btn-exam-prev-q">← Anterior</button>
+          <span id="exam-focus-pos" class="muted-text">Questão 1 de 10</span>
+          <button type="button" class="outline primary btn-sm" id="btn-exam-next-q">Próxima →</button>
         </div>
 
         <footer class="exam-submit-footer">
@@ -287,13 +308,18 @@
   <dialog id="dialog-glossary" closedby="any" aria-labelledby="dialog-glossary-title">
     <article class="dialog-box glossary-dialog-box">
       <header class="dialog-header">
-        <h1 id="dialog-glossary-title">🔍 Glossário & Busca Rápida (V/F)</h1>
+        <h1 id="dialog-glossary-title">🔍 Glossário & Busca Rápida</h1>
         <form method="dialog">
           <button value="close" aria-label="Fechar glossário" class="outline secondary btn-sm">✕</button>
         </form>
       </header>
 
-      <input type="search" id="glossary-search-input" placeholder="Buscar tema, palavra ou macete (ex: xilema, Kepler, barômetro)..." aria-label="Buscar conceitos nos cartões V/F">
+      <div class="glossary-source-tabs" id="glossary-source-tabs" role="group" aria-label="Fonte da busca">
+        <button type="button" class="btn-xs primary" data-source="cards">🃏 Cartões V/F</button>
+        <button type="button" class="btn-xs outline secondary" data-source="exams">📝 Provas já feitas</button>
+      </div>
+
+      <input type="search" id="glossary-search-input" placeholder="Buscar tema, palavra ou macete (ex: xilema, Kepler, barômetro)..." aria-label="Buscar conceitos nos cartões V/F e provas feitas">
 
       <div class="glossary-controls">
         <div class="result-filter-group" id="glossary-subject-filters" role="group" aria-label="Filtrar por frente">
@@ -302,13 +328,23 @@
           <button type="button" class="btn-xs outline secondary" data-subj="biologia">Biologia</button>
           <button type="button" class="btn-xs outline secondary" data-subj="fisica">Física</button>
         </div>
-        <label class="glossary-error-toggle">
-          <input type="checkbox" id="glossary-only-errors">
-          <span>Só com erros</span>
-        </label>
+        <div class="glossary-toggles">
+          <label class="glossary-error-toggle">
+            <input type="checkbox" id="glossary-only-errors">
+            <span>Só com erros</span>
+          </label>
+          <label class="glossary-error-toggle" id="glossary-pending-wrap">
+            <input type="checkbox" id="glossary-only-pending">
+            <span>Falta dominar</span>
+          </label>
+        </div>
       </div>
 
-      <small id="glossary-count-label" class="muted-text glossary-count-label"></small>
+      <div class="glossary-meta-row">
+        <small id="glossary-count-label" class="muted-text glossary-count-label"></small>
+        <button type="button" class="outline secondary btn-xs" id="btn-copy-glossary">📋 Copiar lista</button>
+      </div>
+      <p id="glossary-feedback-toast" role="status" class="toast-msg" hidden></p>
       <div id="glossary-results-list" class="glossary-results-list"></div>
     </article>
   </dialog>
